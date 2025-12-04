@@ -1,39 +1,7 @@
+import { webpack } from "@/src/helpers/webpack";
 import * as bippy from "bippy";
-
-const loadWebpack = () => {
-	try {
-		const require = window.webpackChunk_twitter_responsive_web.push([
-			[Symbol()],
-			{},
-			(re) => re,
-		]);
-		window.req = require;
-		const cache = Object.keys(require.m)
-			.map((id) => {
-				try {
-					return require(id);
-				} catch (ex) {
-					console.error(ex);
-					return -1;
-				}
-			})
-			.filter((i) => i !== -1);
-		const modules = cache
-			.filter((module) => typeof module === "object")
-			.flatMap((module) => {
-				try {
-					if ("createPortal" in module) console.log(module);
-					return Object.values(module);
-				} catch {
-					console.error(module);
-				}
-			});
-		return { cache, modules };
-	} catch (error) {
-		console.error("Failed to load webpack", error);
-		return { cache: [], functionModules: [] };
-	}
-};
+import { createPortal } from "react-dom";
+import { createRoot } from "react-dom/client";
 
 export default defineContentScript({
 	matches: ["*://*.x.com/*"],
@@ -41,7 +9,18 @@ export default defineContentScript({
 	main() {
 		console.log("hello from content script!");
 		let found = false;
-		console.log(loadWebpack());
+		webpack.load();
+		const reactModule = webpack.findByProperty("createPortal");
+		if (!reactModule) {
+			console.error("couldn't find the webpack module containing react");
+			return;
+		}
+
+		const react = reactModule.module as {
+			createPortal: typeof createPortal;
+			createRoot: typeof createRoot;
+		};
+
 		bippy.instrument({
 			onCommitFiberRoot: (id, root) => {
 				bippy.traverseFiber(root.current, (fiber) => {
@@ -49,12 +28,20 @@ export default defineContentScript({
 						found = true;
 						console.log("found tweet", fiber);
 
-						const type = fiber.type;
-						const props = fiber.memoizedProps;
-						const host = bippy.getNearestHostFiber(fiber)?.stateNode as
-							| HTMLElement
-							| undefined;
-						if (!host || !host.parentElement) return;
+						try {
+							const contexts = bippy
+								.getFiberStack(fiber)
+								.filter((f) => typeof f.type === "object" && f.type !== null && f.type._context)
+								.map((f) => f.type._context);
+							console.log();
+
+							const type = bippy.getType(fiber);
+							const props = fiber.memoizedProps;
+							react.createPortal(new type(), document.body);
+							console.log(type, "success??");
+						} catch (err) {
+							console.error(err);
+						}
 					}
 				});
 			},
