@@ -25,14 +25,12 @@ export const webpack: WebpackHelper = {
 					try {
 						return [kv[0], require(kv[0])];
 					} catch (ex) {
-						console.error(`failed to load module ${kv[0]}: ${ex}`);
+						console.warn(`failed to load module ${kv[0]}: ${ex}`);
 						return undefined;
 					}
 				})
 				.filter((kv) => kv && kv[1] !== undefined) as [string, unknown][],
 		);
-
-		console.log(this.cache);
 	},
 
 	findByProperty(key) {
