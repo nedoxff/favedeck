@@ -1,3 +1,4 @@
+import { SelectBoardPopupRenderer } from "@/src/components/SelectBoardPopup";
 import { waitForSelector } from "@/src/helpers/observer";
 import { webpack } from "@/src/helpers/webpack";
 import * as bippy from "bippy";
@@ -12,12 +13,18 @@ export default defineContentScript({
 	matches: ["*://*.x.com/*"],
 	world: "MAIN",
 	main() {
+		SelectBoardPopupRenderer.create();
+
 		const injectTweetCallbacks = async (tweet: Element) => {
 			const bookmarkButton = (await waitForSelector(tweet, [
 				"button[data-testid=bookmark]",
 				"button[data-testid=removeBookmark]",
 			])) as HTMLButtonElement;
-			bookmarkButton.onclick = () => console.log("meow");
+			bookmarkButton.onclick = () => {
+				bookmarkButton.getAttribute("data-testid") === "bookmark"
+					? SelectBoardPopupRenderer.show(bookmarkButton)
+					: SelectBoardPopupRenderer.hide();
+			};
 			//bookmarkButton.addEventListener("click", () => console.log("meow"));
 		};
 

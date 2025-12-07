@@ -11,6 +11,9 @@ importers:
       bippy:
         specifier: ^0.5.22
         version: 0.5.22(@types/react@19.2.7)(react@19.2.0)
+      dexie:
+        specifier: ^4.2.1
+        version: 4.2.1
       react:
         specifier: ^19.1.1
         version: 19.2.0
@@ -855,6 +858,9 @@ packages:
 
   destr@2.0.5:
     resolution: {integrity: sha512-ugFTXCtDZunbzasqBxrK93Ik/DRYsO6S/fedkWEMKqt04xZ4csmnmwGDBAb07QWNaGMAmnTIemsYZCksjATwsA==}
+
+  dexie@4.2.1:
+    resolution: {integrity: sha512-Ckej0NS6jxQ4Po3OrSQBFddayRhTCic2DoCAG5zacOfOVB9P2Q5Xc5uL/nVa7ZVs+HdMnvUPzLFCB/JwpB6Csg==}
 
   dom-serializer@2.0.0:
     resolution: {integrity: sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==}
@@ -2562,6 +2568,8 @@ snapshots:
   dequal@2.0.3: {}
 
   destr@2.0.5: {}
+
+  dexie@4.2.1: {}
 
   dom-serializer@2.0.0:
     dependencies:
