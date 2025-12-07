@@ -1,3 +1,4 @@
+import { waitForSelector } from "@/src/helpers/observer";
 import { webpack } from "@/src/helpers/webpack";
 import * as bippy from "bippy";
 
@@ -11,42 +12,44 @@ export default defineContentScript({
 	matches: ["*://*.x.com/*"],
 	world: "MAIN",
 	main() {
-		//window.__FAVEDECK_OVERRIDES.onBookmark = () => console.log("MEOW");
+		const injectTweetCallbacks = async (tweet: Element) => {
+			const bookmarkButton = (await waitForSelector(tweet, [
+				"button[data-testid=bookmark]",
+				"button[data-testid=removeBookmark]",
+			])) as HTMLButtonElement;
+			bookmarkButton.onclick = () => console.log("meow");
+			//bookmarkButton.addEventListener("click", () => console.log("meow"));
+		};
 
-		setTimeout(() => {
-			console.log("hello from content script!");
-			const found = false;
-			webpack.load();
-			window.wp = webpack;
+		const tweetObserver = new MutationObserver((mutations) => {
+			for (const mutation of mutations) {
+				if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+					for (const node of mutation.addedNodes) {
+						if (node.nodeType !== Node.ELEMENT_NODE) continue;
+						for (const tweet of (node as HTMLElement).querySelectorAll(
+							"article[data-testid=tweet]",
+						))
+							injectTweetCallbacks(tweet);
+					}
+				}
+			}
+		});
+		tweetObserver.observe(document.body, { childList: true, subtree: true });
 
-			React = webpack.findByProperty("useState")?.module as ReactType;
-			ReactDOM = webpack.findByProperty("createPortal")
-				?.module as ReactDOMType & ReactDOMClientType;
-			console.log(React, ReactDOM);
+		let found = false;
+		bippy.instrument({
+			onCommitFiberRoot: (id, root) => {
+				bippy.traverseRenderedFibers(root.current, (fiber) => {
+					if (bippy.getDisplayName(fiber) === "Tweet" && !found) {
+						found = true;
+						setTimeout(() => {
+							console.log("hello from content script!");
+							webpack.load();
 
-			bippy.instrument({
-				onCommitFiberRoot: (id, root) => {
-					bippy.traverseRenderedFibers(root.current, (fiber) => {
-						if (bippy.getDisplayName(fiber) === "Tweet" && !found) {
-							console.log("found tweet", fiber);
-							bippy.traverseRenderedFibers(fiber, (f) => {
-								let matches = false;
-								bippy.traverseProps(f, (name) => {
-									if (name.toLowerCase().includes("bookmark"))
-										console.log(name);
-									if (matches) return false;
-									if (name === "isBookmarked") matches = true;
-								});
-								if (matches) {
-									bippy.overrideProps(f, {
-										onPress: () => console.error("meow"),
-										color: "red700",
-									});
-									console.error("teehee", f);
-									return true;
-								}
-								return false;
-							});
+							React = webpack.findByProperty("useState")?.module as ReactType;
+							ReactDOM = webpack.findByProperty("createPortal")
+								?.module as ReactDOMType & ReactDOMClientType;
+							console.log(React, ReactDOM);
 							/* try {
 								const contexts = bippy
 									.getFiberStack(fiber)
@@ -105,10 +108,10 @@ export default defineContentScript({
 							} catch (err) {
 								console.error(err);
 							} */
-						}
-					});
-				},
-			});
-		}, 0);
+						}, 1000);
+					}
+				});
+			},
+		});
 	},
 });
