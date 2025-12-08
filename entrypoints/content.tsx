@@ -3,6 +3,8 @@ import { waitForSelector } from "@/src/helpers/observer";
 import { webpack } from "@/src/helpers/webpack";
 import * as bippy from "bippy";
 
+import "@/assets/root.css";
+
 type ReactType = typeof import("react");
 type ReactDOMType = typeof import("react-dom");
 type ReactDOMClientType = typeof import("react-dom/client");
@@ -11,7 +13,7 @@ let ReactDOM: ReactDOMType & ReactDOMClientType;
 
 export default defineContentScript({
 	matches: ["*://*.x.com/*"],
-	world: "MAIN",
+	world: "MAIN",	
 	main() {
 		SelectBoardPopupRenderer.create();
 
@@ -88,13 +90,13 @@ export default defineContentScript({
 
 								const App = () => ContextBridge;
 
-								console.log("rendering");
+								consale.log("rendering");
 								ReactDOM.createRoot(
 									document.querySelector("#testtweet"),
 								).render(React.createElement(App));
-								console.log("success");
+								consale.log("success");
 
-								 console.log(ContextBridge);
+								 consale.log(ContextBridge);
 							const portal = react.createPortal(
 								React.createElement("input"),
 								document.querySelector("#testtweet"),
@@ -110,10 +112,10 @@ export default defineContentScript({
 									.render(<ContextBridge></ContextBridge>);
 							});
 
-							console.log("render success?");
-								//console.log(type, "success??");
+							consale.log("render success?");
+								//consale.log(type, "success??");
 							} catch (err) {
-								console.error(err);
+								consale.error(err);
 							} */
 						}, 1000);
 					}

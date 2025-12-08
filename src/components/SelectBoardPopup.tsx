@@ -1,7 +1,13 @@
 import { createRoot } from "react-dom/client";
+import PopupArrowIcon from "@/assets/icons/popup-arrow.svg?inline";
 
 export function SelectBoardPopup() {
-	return "meow";
+	const bg = getComputedStyle(document.body).backgroundColor;
+	return (
+		<div className="p-4 shadow-white shadow-sm" style={{ backgroundColor: bg }}>
+			meow
+		</div>
+	);
 }
 
 export const SelectBoardPopupRenderer = (() => {
@@ -15,7 +21,7 @@ export const SelectBoardPopupRenderer = (() => {
 		if (!container) return;
 		container.style.left = "0";
 		container.style.top = "0";
-        bookmarkButton = undefined;
+		bookmarkButton = undefined;
 	};
 
 	const layoutCallback = () => {
