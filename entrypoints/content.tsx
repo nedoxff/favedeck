@@ -1,4 +1,4 @@
-import { SelectBoardPopupRenderer } from "@/src/components/SelectBoardPopup";
+import { SelectDeckPopupRenderer } from "@/src/components/SelectDeckPopup";
 import { waitForSelector } from "@/src/helpers/observer";
 import { webpack } from "@/src/helpers/webpack";
 import * as bippy from "bippy";
@@ -13,9 +13,9 @@ let ReactDOM: ReactDOMType & ReactDOMClientType;
 
 export default defineContentScript({
 	matches: ["*://*.x.com/*"],
-	world: "MAIN",	
+	world: "MAIN",
 	main() {
-		SelectBoardPopupRenderer.create();
+		SelectDeckPopupRenderer.create();
 
 		const injectTweetCallbacks = async (tweet: Element) => {
 			const bookmarkButton = (await waitForSelector(tweet, [
@@ -24,8 +24,8 @@ export default defineContentScript({
 			])) as HTMLButtonElement;
 			bookmarkButton.onclick = () => {
 				bookmarkButton.getAttribute("data-testid") === "bookmark"
-					? SelectBoardPopupRenderer.show(bookmarkButton)
-					: SelectBoardPopupRenderer.hide();
+					? SelectDeckPopupRenderer.show(bookmarkButton)
+					: SelectDeckPopupRenderer.hide();
 			};
 			//bookmarkButton.addEventListener("click", () => console.log("meow"));
 		};

@@ -1,16 +1,46 @@
+/** biome-ignore-all lint/style/noNonNullAssertion: <explanation> */
 import { createRoot } from "react-dom/client";
-import PopupArrowIcon from "@/assets/icons/popup-arrow.svg?inline";
 
-export function SelectBoardPopup() {
-	const bg = getComputedStyle(document.body).backgroundColor;
+function DeckCard(props: { id?: string }) {
+	const iconRef = useRef<HTMLImageElement>(null!);
+
+	useEffect(() => {
+		fetch("https://dummyimage.com/200").then(async (r) => {
+			const blob = await r.blob();
+			const url = URL.createObjectURL(blob);
+			iconRef.current.src = url;
+		});
+	}, []);
+
 	return (
-		<div className="p-4 shadow-white shadow-sm" style={{ backgroundColor: bg }}>
-			meow
+		<div className="bg-red-400 w-sm flex flex-row justify-between items-center gap-4">
+			<div className="flex flex-row h-full gap-4 justify-center items-center">
+				<img ref={iconRef} />
+				meow
+			</div>
+
+			<button>save</button>
 		</div>
 	);
 }
 
-export const SelectBoardPopupRenderer = (() => {
+export function SelectDeckPopup() {
+	const bg = getComputedStyle(document.body).backgroundColor;
+	return (
+		<div
+			className="p-4 rounded-xl"
+			style={{
+				backgroundColor: bg,
+				boxShadow:
+					"rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px",
+			}}
+		>
+			<DeckCard />
+		</div>
+	);
+}
+
+export const SelectDeckPopupRenderer = (() => {
 	let bookmarkButton: HTMLButtonElement | undefined;
 	let container: HTMLDivElement | undefined;
 
@@ -49,19 +79,21 @@ export const SelectBoardPopupRenderer = (() => {
 
 	return {
 		create() {
-			if (document.querySelector("#favedeck-select-board") !== null)
-				document.querySelector("#favedeck-select-board")?.remove();
+			if (container !== undefined) {
+				hide();
+				container.remove();
+			}
 
 			const div = document.createElement("div");
 			div.style.zIndex = "1000";
 			div.style.position = "absolute";
 			div.style.left = "0";
 			div.style.top = "0";
-			if (import.meta.env.DEV) div.style.border = "2px solid red";
+			div.id = "favedeck-select-deck";
 			document.body.append(div);
 			container = div;
 
-			createRoot(div).render(<SelectBoardPopup />);
+			createRoot(div).render(<SelectDeckPopup />);
 		},
 		show(bb) {
 			bookmarkButton = bb;
