@@ -16,9 +16,11 @@ export interface Deck {
 export const db = new Dexie("favedeck") as Dexie & {
 	tweets: EntityTable<Tweet>;
 	decks: EntityTable<Deck, "id">;
+	kv: EntityTable<{ key: string; value: unknown }, "key">;
 };
 
 db.version(1).stores({
 	tweets: "++, id, user, deck",
 	decks: "&id, user, name",
+	kv: "&key, value",
 });

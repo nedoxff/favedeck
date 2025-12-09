@@ -1,11 +1,12 @@
-/** biome-ignore-all lint/style/noNonNullAssertion: <explanation> */
 import { useLiveQuery } from "dexie-react-hooks";
 import { createRoot } from "react-dom/client";
-import { db, Deck } from "../features/storage/definition";
 import { v6 } from "uuid";
+import { type Deck, db } from "../features/storage/definition";
+import { getBackgroundColor, getPrimaryColor } from "../features/storage/kv";
 
 function DeckCard(props: { index: number; deck?: Deck }) {
 	const iconRef = useRef<HTMLImageElement>(null!);
+	const primaryColor = useLiveQuery(getPrimaryColor);
 
 	useEffect(() => {
 		fetch("https://dummyimage.com/200").then(async (r) => {
@@ -17,15 +18,16 @@ function DeckCard(props: { index: number; deck?: Deck }) {
 
 	const save = () => {
 		if (!props.deck) {
+			db.decks.add({ id: v6(), name: "furries", user: 1 });
 		}
 	};
 
 	return (
-		<button
+		<div
 			tabIndex={props.index}
 			onClick={save}
-			type="button"
-			className="hover:shadow-lighten hover:cursor-pointer p-2 rounded-lg h-20 w-sm flex flex-row justify-between items-center gap-4"
+			role="button"
+			className="hover:shadow-lighten focus:shadow-lighten hover:cursor-pointer p-2 rounded-lg h-20 w-sm flex flex-row justify-between items-center gap-4"
 		>
 			<div className="flex flex-row h-full gap-4 justify-center items-center">
 				{props.deck ? (
@@ -42,28 +44,29 @@ function DeckCard(props: { index: number; deck?: Deck }) {
 						</svg>
 					</div>
 				)}
-				{props.deck ? props.deck.name : "Create new deck"}
+				{props.deck ? props.deck.name : "Create a new deck"}
 			</div>
 
 			{props.deck && (
 				<button
 					onClick={save}
 					type="button"
-					className="rounded-full hover:shadow-darken hover:cursor-pointer px-8 py-3 bg-red-500"
+					className="rounded-full hover:shadow-darken hover:cursor-pointer px-4 py-2 font-bold bg-red-500"
+					style={{ backgroundColor: primaryColor ?? "" }}
 				>
 					Save
 				</button>
 			)}
-		</button>
+		</div>
 	);
 }
 
 export function SelectDeckPopup() {
 	const decks = useLiveQuery(() => db.decks.toArray());
-	const bg = getComputedStyle(document.body).backgroundColor;
+	const bg = useLiveQuery(getBackgroundColor);
 	return (
 		<div
-			className="p-2 rounded-xl"
+			className="p-2 rounded-xl gap-1 flex flex-col"
 			style={{
 				backgroundColor: bg,
 				boxShadow:

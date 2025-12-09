@@ -1,9 +1,5 @@
 declare global {
-	interface Window {
-		__FAVEDECK_OVERRIDES: {
-			onBookmark: () => void;
-		};
-	}
+	interface Window {}
 }
 export { };
 

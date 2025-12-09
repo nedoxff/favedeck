@@ -4,6 +4,7 @@ import { webpack } from "@/src/helpers/webpack";
 import * as bippy from "bippy";
 
 import "@/assets/root.css";
+import { setBackgroundColor, setPrimaryColor } from "@/src/features/storage/kv";
 
 type ReactType = typeof import("react");
 type ReactDOMType = typeof import("react-dom");
@@ -15,51 +16,117 @@ export default defineContentScript({
 	matches: ["*://*.x.com/*"],
 	world: "MAIN",
 	main() {
-		SelectDeckPopupRenderer.create();
+		console.log("hello from content script!");
 
-		const injectTweetCallbacks = async (tweet: Element) => {
-			const bookmarkButton = (await waitForSelector(tweet, [
-				"button[data-testid=bookmark]",
-				"button[data-testid=removeBookmark]",
-			])) as HTMLButtonElement;
-			bookmarkButton.onclick = () => {
-				bookmarkButton.getAttribute("data-testid") === "bookmark"
-					? SelectDeckPopupRenderer.show(bookmarkButton)
-					: SelectDeckPopupRenderer.hide();
-			};
-			//bookmarkButton.addEventListener("click", () => console.log("meow"));
+		const inject = () => {
+			initializeWebpack();
+			injectFiberObserver();
+			injectTweetObserver();
+			injectRenderers();
 		};
 
-		const tweetObserver = new MutationObserver((mutations) => {
-			for (const mutation of mutations) {
-				if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-					for (const node of mutation.addedNodes) {
-						if (node.nodeType !== Node.ELEMENT_NODE) continue;
-						for (const tweet of (node as HTMLElement).querySelectorAll(
-							"article[data-testid=tweet]",
-						))
-							injectTweetCallbacks(tweet);
-					}
+		if (document.readyState === "complete") inject();
+		else
+			document.addEventListener("readystatechange", () => {
+				if (document.readyState === "complete") inject();
+			});
+	},
+});
+
+const initializeWebpack = () => {
+	console.log("loading webpack");
+	webpack.load();
+
+	const reactModule = webpack.findByProperty("useState");
+	if (reactModule === undefined) throw new Error("failed to find React");
+	React = reactModule.module as ReactType;
+	console.log("webpack: found react");
+
+	const reactDOMModule = webpack.findByProperty("createPortal");
+	if (reactDOMModule === undefined) throw new Error("failed to find ReactDOM");
+	ReactDOM = reactDOMModule.module as ReactDOMType & ReactDOMClientType;
+	console.log("webpack: found reactDOM");
+
+	const themeModule = webpack.findByProperty("_activeTheme", {
+		maxDepth: 1,
+	});
+	if (themeModule === undefined)
+		throw new Error("failed to find the theme module (_activeTheme)");
+
+	type ThemeSample = {
+		colors: Record<string, string>;
+		primaryColorName: string;
+	};
+	// @ts-expect-error
+	const theme = themeModule.module.Z as {
+		_activeTheme: ThemeSample;
+		_themeChangeListeners: ((newTheme: ThemeSample) => void)[];
+	};
+
+	theme._themeChangeListeners.push((th) =>
+		setPrimaryColor(th.colors[th.primaryColorName]),
+	);
+
+	const primaryColor =
+		theme._activeTheme.colors[theme._activeTheme.primaryColorName];
+	console.log(
+		`found primary color: ${theme._activeTheme.primaryColorName} (${primaryColor})`,
+	);
+	setPrimaryColor(primaryColor);
+
+	const bgColor = getComputedStyle(document.body).backgroundColor;
+	console.log(`found background color: ${bgColor}`);
+	setBackgroundColor(bgColor);
+};
+
+const injectRenderers = () => {
+	console.log("renderers: injecting SelectDeckPopup");
+	SelectDeckPopupRenderer.create();
+};
+
+const injectTweetObserver = () => {
+	console.log("injecting tweet MutationObserver");
+
+	const injectTweetCallbacks = async (tweet: Element) => {
+		const bookmarkButton = (await waitForSelector(tweet, [
+			"button[data-testid=bookmark]",
+			"button[data-testid=removeBookmark]",
+		])) as HTMLButtonElement;
+		bookmarkButton.onclick = () => {
+			bookmarkButton.getAttribute("data-testid") === "bookmark"
+				? SelectDeckPopupRenderer.show(bookmarkButton)
+				: SelectDeckPopupRenderer.hide();
+		};
+		//bookmarkButton.addEventListener("click", () => console.log("meow"));
+	};
+
+	const tweetObserver = new MutationObserver((mutations) => {
+		for (const mutation of mutations) {
+			if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+				for (const node of mutation.addedNodes) {
+					if (node.nodeType !== Node.ELEMENT_NODE) continue;
+					for (const tweet of (node as HTMLElement).querySelectorAll(
+						"article[data-testid=tweet]",
+					))
+						injectTweetCallbacks(tweet);
 				}
 			}
-		});
-		tweetObserver.observe(document.body, { childList: true, subtree: true });
+		}
+	});
+	tweetObserver.observe(document.body, { childList: true, subtree: true });
+};
 
-		let found = false;
-		bippy.instrument({
-			onCommitFiberRoot: (id, root) => {
-				bippy.traverseRenderedFibers(root.current, (fiber) => {
-					if (bippy.getDisplayName(fiber) === "Tweet" && !found) {
-						found = true;
-						setTimeout(() => {
-							console.log("hello from content script!");
-							webpack.load();
+const injectFiberObserver = () => {
+	console.log("injecting react fiber observer (bippy)");
 
-							React = webpack.findByProperty("useState")?.module as ReactType;
-							ReactDOM = webpack.findByProperty("createPortal")
-								?.module as ReactDOMType & ReactDOMClientType;
-							console.log(React, ReactDOM);
-							/* try {
+	let found = false;
+	bippy.instrument({
+		onCommitFiberRoot: (id, root) => {
+			bippy.traverseRenderedFibers(root.current, (fiber) => {
+				if (bippy.getDisplayName(fiber) === "Tweet" && !found) {
+					found = true;
+					console.log("found tweet component");
+					/* try {
 								const contexts = bippy
 									.getFiberStack(fiber)
 									.filter(
@@ -117,10 +184,8 @@ export default defineContentScript({
 							} catch (err) {
 								consale.error(err);
 							} */
-						}, 1000);
-					}
-				});
-			},
-		});
-	},
-});
+				}
+			});
+		},
+	});
+};
