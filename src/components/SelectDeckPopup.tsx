@@ -1,7 +1,10 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: <explanation> */
+import { useLiveQuery } from "dexie-react-hooks";
 import { createRoot } from "react-dom/client";
+import { db, Deck } from "../features/storage/definition";
+import { v6 } from "uuid";
 
-function DeckCard(props: { id?: string }) {
+function DeckCard(props: { index: number; deck?: Deck }) {
 	const iconRef = useRef<HTMLImageElement>(null!);
 
 	useEffect(() => {
@@ -12,15 +15,20 @@ function DeckCard(props: { id?: string }) {
 		});
 	}, []);
 
-	const save = () => {};
+	const save = () => {
+		if (!props.deck) {
+		}
+	};
 
 	return (
-		<div
+		<button
+			tabIndex={props.index}
 			onClick={save}
+			type="button"
 			className="hover:shadow-lighten hover:cursor-pointer p-2 rounded-lg h-20 w-sm flex flex-row justify-between items-center gap-4"
 		>
 			<div className="flex flex-row h-full gap-4 justify-center items-center">
-				{props.id ? (
+				{props.deck ? (
 					<img alt="deck icon" className="h-full rounded-lg" ref={iconRef} />
 				) : (
 					<div className="rounded-lg h-full aspect-square border-dashed border-2 flex justify-center items-center">
@@ -34,23 +42,24 @@ function DeckCard(props: { id?: string }) {
 						</svg>
 					</div>
 				)}
-				{props.id ? "meow" : "Create new deck"}
+				{props.deck ? props.deck.name : "Create new deck"}
 			</div>
 
-			{props.id !== undefined && (
+			{props.deck && (
 				<button
 					onClick={save}
 					type="button"
-					className="rounded-full px-8 py-3 bg-red-500"
+					className="rounded-full hover:shadow-darken hover:cursor-pointer px-8 py-3 bg-red-500"
 				>
 					Save
 				</button>
 			)}
-		</div>
+		</button>
 	);
 }
 
 export function SelectDeckPopup() {
+	const decks = useLiveQuery(() => db.decks.toArray());
 	const bg = getComputedStyle(document.body).backgroundColor;
 	return (
 		<div
@@ -61,7 +70,10 @@ export function SelectDeckPopup() {
 					"rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px",
 			}}
 		>
-			<DeckCard />
+			{(decks ?? []).map((d, idx) => (
+				<DeckCard key={d.id} index={idx} deck={d} />
+			))}
+			<DeckCard index={decks?.length ?? 0 + 1} />
 		</div>
 	);
 }

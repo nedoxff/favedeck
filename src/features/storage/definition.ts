@@ -1,13 +1,13 @@
 import { Dexie, type EntityTable } from "dexie";
 
-interface Tweet {
+export interface Tweet {
 	user: number;
 	deck: string;
 	id: number;
 	data: string;
 }
 
-interface Deck {
+export interface Deck {
 	user: number;
 	id: string;
 	name: string;
@@ -15,7 +15,7 @@ interface Deck {
 
 export const db = new Dexie("favedeck") as Dexie & {
 	tweets: EntityTable<Tweet>;
-	decks: EntityTable<Deck>;
+	decks: EntityTable<Deck, "id">;
 };
 
 db.version(1).stores({

@@ -6,4 +6,5 @@
 
 @theme {
     --shadow-lighten: inset 0 0 0 10em rgba(255, 255, 255, 0.15);
+    --shadow-darken: inset 0em 0em 0em 10em rgba(0, 0, 0, 0.15);
 }
