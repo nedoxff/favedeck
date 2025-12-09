@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+:root {
+    font-family: "TwitterChirp", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@theme {
+    --shadow-lighten: inset 0 0 0 10em rgba(255, 255, 255, 0.15);
+}

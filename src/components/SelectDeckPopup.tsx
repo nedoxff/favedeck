@@ -12,14 +12,40 @@ function DeckCard(props: { id?: string }) {
 		});
 	}, []);
 
+	const save = () => {};
+
 	return (
-		<div className="bg-red-400 w-sm flex flex-row justify-between items-center gap-4">
+		<div
+			onClick={save}
+			className="hover:shadow-lighten hover:cursor-pointer p-2 rounded-lg h-20 w-sm flex flex-row justify-between items-center gap-4"
+		>
 			<div className="flex flex-row h-full gap-4 justify-center items-center">
-				<img ref={iconRef} />
-				meow
+				{props.id ? (
+					<img alt="deck icon" className="h-full rounded-lg" ref={iconRef} />
+				) : (
+					<div className="rounded-lg h-full aspect-square border-dashed border-2 flex justify-center items-center">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="24"
+							height="24"
+							viewBox="0 0 24 24"
+						>
+							<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
+						</svg>
+					</div>
+				)}
+				{props.id ? "meow" : "Create new deck"}
 			</div>
 
-			<button>save</button>
+			{props.id !== undefined && (
+				<button
+					onClick={save}
+					type="button"
+					className="rounded-full px-8 py-3 bg-red-500"
+				>
+					Save
+				</button>
+			)}
 		</div>
 	);
 }
@@ -28,7 +54,7 @@ export function SelectDeckPopup() {
 	const bg = getComputedStyle(document.body).backgroundColor;
 	return (
 		<div
-			className="p-4 rounded-xl"
+			className="p-2 rounded-xl"
 			style={{
 				backgroundColor: bg,
 				boxShadow:
@@ -79,10 +105,8 @@ export const SelectDeckPopupRenderer = (() => {
 
 	return {
 		create() {
-			if (container !== undefined) {
-				hide();
-				container.remove();
-			}
+			if (document.querySelector("#favedeck-select-deck"))
+				window.dispatchEvent(new CustomEvent("remove-favedeck-container"));
 
 			const div = document.createElement("div");
 			div.style.zIndex = "1000";
@@ -92,6 +116,10 @@ export const SelectDeckPopupRenderer = (() => {
 			div.id = "favedeck-select-deck";
 			document.body.append(div);
 			container = div;
+			window.addEventListener("remove-favedeck-container", () => {
+				hide();
+				container?.remove();
+			});
 
 			createRoot(div).render(<SelectDeckPopup />);
 		},
