@@ -1,21 +1,21 @@
 import { Dexie, type EntityTable } from "dexie";
 
-export interface Tweet {
-	user: number;
+export interface DatabaseTweet {
+	user: string;
 	deck: string;
-	id: number;
-	data: string;
+	id: string;
+	data: Blob;
 }
 
-export interface Deck {
-	user: number;
+export interface DatabaseDeck {
+	user: string;
 	id: string;
 	name: string;
 }
 
 export const db = new Dexie("favedeck") as Dexie & {
-	tweets: EntityTable<Tweet>;
-	decks: EntityTable<Deck, "id">;
+	tweets: EntityTable<DatabaseTweet>;
+	decks: EntityTable<DatabaseDeck, "id">;
 	kv: EntityTable<{ key: string; value: unknown }, "key">;
 };
 

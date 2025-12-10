@@ -5,6 +5,7 @@ import * as bippy from "bippy";
 
 import "@/assets/root.css";
 import { setBackgroundColor, setPrimaryColor } from "@/src/features/storage/kv";
+import { matchers } from "@/src/helpers/matchers";
 
 type ReactType = typeof import("react");
 type ReactDOMType = typeof import("react-dom");
@@ -88,10 +89,10 @@ const injectTweetObserver = () => {
 	console.log("injecting tweet MutationObserver");
 
 	const injectTweetCallbacks = async (tweet: Element) => {
-		const bookmarkButton = (await waitForSelector(tweet, [
-			"button[data-testid=bookmark]",
-			"button[data-testid=removeBookmark]",
-		])) as HTMLButtonElement;
+		const bookmarkButton = (await waitForSelector(
+			tweet,
+			matchers.bookmarkButton.querySelector,
+		)) as HTMLButtonElement;
 		bookmarkButton.onclick = () => {
 			bookmarkButton.getAttribute("data-testid") === "bookmark"
 				? SelectDeckPopupRenderer.show(bookmarkButton)

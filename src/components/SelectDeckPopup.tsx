@@ -1,10 +1,18 @@
+import {
+	type Fiber,
+	getDisplayName,
+	getFiberFromHostInstance,
+	getFiberStack,
+} from "bippy";
 import { useLiveQuery } from "dexie-react-hooks";
 import { createRoot } from "react-dom/client";
 import { v6 } from "uuid";
-import { type Deck, db } from "../features/storage/definition";
+import { type DatabaseDeck, db } from "../features/storage/definition";
 import { getBackgroundColor, getPrimaryColor } from "../features/storage/kv";
+import { compressObject } from "../helpers/compression";
+import type { RawTweet } from "../types/tweet";
 
-function DeckCard(props: { index: number; deck?: Deck }) {
+function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
 	const iconRef = useRef<HTMLImageElement>(null!);
 	const primaryColor = useLiveQuery(getPrimaryColor);
 
@@ -16,9 +24,27 @@ function DeckCard(props: { index: number; deck?: Deck }) {
 		});
 	}, []);
 
-	const save = () => {
+	const save = async () => {
 		if (!props.deck) {
-			db.decks.add({ id: v6(), name: "furries", user: 1 });
+			db.decks.add({ id: v6(), name: "furries", user: "1" });
+		} else {
+			const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
+			if (!fiber) throw new Error("cannot find the parent twitter fiber");
+			const tweet: RawTweet = fiber.memoizedProps?.tweet;
+			if (!tweet)
+				throw new Error(
+					"the tweet fiber (somehow) doesn't have the tweet in memoizedProps",
+				);
+			//@ts-expect-error
+			const userId = fiber.memoizedProps?.viewerUser?.id_str;
+			if (!userId)
+				throw new Error("the tweet fiber doesn't have the userViewer prop");
+			db.tweets.put({
+				data: await compressObject(tweet),
+				deck: props.deck.id,
+				id: tweet.id_str,
+				user: userId,
+			});
 		}
 	};
 
@@ -138,6 +164,12 @@ export const SelectDeckPopupRenderer = (() => {
 
 			createRoot(div).render(<SelectDeckPopup />);
 		},
+		getParentTweetFiber() {
+			const buttonFiber = getFiberFromHostInstance(bookmarkButton);
+			if (!buttonFiber) return null;
+			const stack = getFiberStack(buttonFiber);
+			return stack.filter((f) => getDisplayName(f) === "Tweet").at(0) ?? null;
+		},
 		show(bb) {
 			bookmarkButton = bb;
 			if (!container || !bookmarkButton) return;
@@ -151,5 +183,6 @@ export const SelectDeckPopupRenderer = (() => {
 		create: () => void;
 		show: (bookmarkButton: HTMLButtonElement) => void;
 		hide: () => void;
+		getParentTweetFiber: () => Fiber | null;
 	};
 })();
