@@ -64,9 +64,10 @@ const initializeWebpack = () => {
 		_themeChangeListeners: ((newTheme: ThemeSample) => void)[];
 	};
 
-	theme._themeChangeListeners.push((th) =>
-		setPrimaryColor(th.colors[th.primaryColorName]),
-	);
+	theme._themeChangeListeners.push((th) => {
+		setPrimaryColor(th.colors[th.primaryColorName]);
+		setBackgroundColor(th.colors.navigationBackground);
+	});
 
 	const primaryColor =
 		theme._activeTheme.colors[theme._activeTheme.primaryColorName];
@@ -75,7 +76,7 @@ const initializeWebpack = () => {
 	);
 	setPrimaryColor(primaryColor);
 
-	const bgColor = getComputedStyle(document.body).backgroundColor;
+	const bgColor = theme._activeTheme.colors.navigationBackground;
 	console.log(`found background color: ${bgColor}`);
 	setBackgroundColor(bgColor);
 };
