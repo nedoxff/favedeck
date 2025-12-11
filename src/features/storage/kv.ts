@@ -1,14 +1,25 @@
 import { db } from "./definition";
 
+const MASK_COLOR_KEY = "mask-color";
 const PRIMARY_COLOR_KEY = "primary-color";
 const BACKGROUND_COLOR_KEY = "bg-color";
 
-export const setBackgroundColor = (color: string) =>
-	db.kv.put({ key: BACKGROUND_COLOR_KEY, value: color });
-export const getBackgroundColor = () =>
-	db.kv.get(BACKGROUND_COLOR_KEY).then((v) => v?.value as string | undefined);
+const kvGet =
+	<T>(key: string) =>
+	async () =>
+		await db.kv.get(key).then((v) => v?.value as T | undefined);
+const kvPut =
+	<T>(key: string) =>
+	async (value: T) =>
+		await db.kv.put({ key, value });
 
-export const setPrimaryColor = (color: string) =>
-	db.kv.put({ key: PRIMARY_COLOR_KEY, value: color });
-export const getPrimaryColor = () =>
-	db.kv.get(PRIMARY_COLOR_KEY).then((v) => v?.value as string | undefined);
+const createColorGettersSetters = (key: string) => ({
+	get: kvGet<string>(key),
+	set: kvPut<string>(key),
+});
+
+export const colors = {
+	background: createColorGettersSetters(BACKGROUND_COLOR_KEY),
+	primary: createColorGettersSetters(PRIMARY_COLOR_KEY),
+	mask: createColorGettersSetters(MASK_COLOR_KEY),
+};

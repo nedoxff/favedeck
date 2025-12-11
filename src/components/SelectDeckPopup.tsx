@@ -6,52 +6,129 @@ import {
 } from "bippy";
 import { useLiveQuery } from "dexie-react-hooks";
 import { createRoot } from "react-dom/client";
+import { ErrorBoundary } from "react-error-boundary";
 import { v6 } from "uuid";
 import { type DatabaseDeck, db } from "../features/storage/definition";
-import { getBackgroundColor, getPrimaryColor } from "../features/storage/kv";
+import { colors } from "../features/storage/kv";
 import { compressObject } from "../helpers/compression";
 import type { RawTweet } from "../types/tweet";
 
+enum DeckCardState {
+	IDLE,
+	SAVING,
+	SAVED,
+	REMOVING,
+	REMOVED,
+}
+
+const getTweetDataFromFiber = (
+	fiber: Fiber,
+): {
+	raw: RawTweet;
+	id: string;
+	userId: string;
+} => {
+	const tweet: RawTweet = fiber.memoizedProps?.tweet as RawTweet;
+	if (!tweet)
+		throw new Error(
+			"the tweet fiber (somehow) doesn't have the tweet in memoizedProps",
+		);
+	//@ts-expect-error
+	const userId = fiber.memoizedProps?.viewerUser?.id_str;
+	if (!userId)
+		throw new Error("the tweet fiber doesn't have the userViewer prop");
+
+	return {
+		raw: tweet,
+		id: tweet.id_str,
+		userId: userId,
+	};
+};
+
 function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
-	const iconRef = useRef<HTMLImageElement>(null!);
-	const primaryColor = useLiveQuery(getPrimaryColor);
+	const [state, setState] = useState<DeckCardState>(DeckCardState.IDLE);
+	const saveButtonRef = useRef<HTMLButtonElement>(null);
+	const iconRef = useRef<HTMLImageElement>(null);
+	const primaryColor = useLiveQuery(colors.primary.get);
 
 	useEffect(() => {
 		fetch("https://dummyimage.com/200").then(async (r) => {
 			const blob = await r.blob();
 			const url = URL.createObjectURL(blob);
-			iconRef.current.src = url;
+			if (iconRef.current) iconRef.current.src = url;
 		});
 	}, []);
 
-	const save = async () => {
+	useEffect(() => {
+		if (!saveButtonRef.current) return;
+
+		const getButtonText = () => {
+			switch (state) {
+				case DeckCardState.IDLE:
+					return "Save";
+				case DeckCardState.SAVING:
+					return "Saving";
+				case DeckCardState.SAVED:
+					return "Saved!";
+				case DeckCardState.REMOVING:
+					return "Removing";
+				case DeckCardState.REMOVED:
+					return "Removed!";
+			}
+		};
+
+		saveButtonRef.current.innerText = getButtonText();
+		saveButtonRef.current.disabled =
+			state === DeckCardState.SAVING || state === DeckCardState.REMOVING;
+
+		if (state === DeckCardState.SAVING) save();
+		else if (state === DeckCardState.REMOVING) remove();
+	}, [state]);
+
+	const save = useCallback(async () => {
+		if (!props.deck) return;
+		const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
+		if (!fiber) throw new Error("cannot find the parent twitter fiber");
+		const data = getTweetDataFromFiber(fiber);
+		db.tweets.put({
+			data: await compressObject(data.raw),
+			deck: props.deck.id,
+			id: data.id,
+			user: data.userId,
+		});
+		setState(DeckCardState.SAVED);
+	}, [setState]);
+
+	const remove = useCallback(async () => {
+		if (!props.deck) return;
+		const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
+		if (!fiber) throw new Error("cannot find the parent twitter fiber");
+		const data = getTweetDataFromFiber(fiber);
+		db.tweets
+			.where({
+				id: data.id,
+				user: data.userId,
+				deck: props.deck.id,
+			})
+			.delete();
+		setState(DeckCardState.REMOVED);
+	}, [setState]);
+
+	const saveButtonClicked = async () => {
 		if (!props.deck) {
 			db.decks.add({ id: v6(), name: "furries", user: "1" });
-		} else {
-			const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
-			if (!fiber) throw new Error("cannot find the parent twitter fiber");
-			const tweet: RawTweet = fiber.memoizedProps?.tweet as RawTweet;
-			if (!tweet)
-				throw new Error(
-					"the tweet fiber (somehow) doesn't have the tweet in memoizedProps",
-				);
-			//@ts-expect-error
-			const userId = fiber.memoizedProps?.viewerUser?.id_str;
-			if (!userId)
-				throw new Error("the tweet fiber doesn't have the userViewer prop");
-			db.tweets.put({
-				data: await compressObject(tweet),
-				deck: props.deck.id,
-				id: tweet.id_str,
-				user: userId,
-			});
+			return;
 		}
+
+		if (state === DeckCardState.IDLE || state === DeckCardState.REMOVED)
+			setState(DeckCardState.SAVING);
+		else if (state === DeckCardState.SAVED) setState(DeckCardState.REMOVING);
 	};
 
 	return (
 		<div
 			tabIndex={props.index}
-			onClick={save}
+			onClick={saveButtonClicked}
 			role="button"
 			className="hover:shadow-lighten! focus:shadow-lighten! hover:cursor-pointer p-2 rounded-lg h-20 w-sm flex flex-row justify-between items-center gap-4"
 		>
@@ -70,14 +147,20 @@ function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
 						</svg>
 					</div>
 				)}
-				{props.deck ? props.deck.name : "Create a new deck"}
+				<div className="flex flex-col">
+					<p>{props.deck ? props.deck.name : "Create a new deck"}</p>
+					{state === DeckCardState.SAVED && (
+						<p className="opacity-50 text-sm -mt-1">Click again to remove</p>
+					)}
+				</div>
 			</div>
 
 			{props.deck && (
 				<button
-					onClick={save}
+					ref={saveButtonRef}
+					onClick={saveButtonClicked}
 					type="button"
-					className="rounded-full hover:shadow-darken hover:cursor-pointer px-4 py-2 font-bold bg-red-500"
+					className="rounded-full hover:shadow-darken! hover:cursor-pointer disabled:shadow-darken! px-4 py-2 font-bold bg-red-500"
 					style={{ backgroundColor: primaryColor ?? "" }}
 				>
 					Save
@@ -89,21 +172,28 @@ function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
 
 export function SelectDeckPopup() {
 	const decks = useLiveQuery(() => db.decks.toArray());
-	const bg = useLiveQuery(getBackgroundColor);
+	const bg = useLiveQuery(colors.background.get);
 	return (
-		<div
-			className="p-2 rounded-xl gap-1 flex flex-col"
-			style={{
-				backgroundColor: bg,
-				boxShadow:
-					"rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px",
+		<ErrorBoundary
+			fallbackRender={(props) => {
+				alert(props.error);
+				return <div>{props.error}</div>;
 			}}
 		>
-			{(decks ?? []).map((d, idx) => (
-				<DeckCard key={d.id} index={idx} deck={d} />
-			))}
-			<DeckCard index={decks?.length ?? 0 + 1} />
-		</div>
+			<div
+				className="p-2 rounded-xl gap-1 flex flex-col"
+				style={{
+					backgroundColor: bg,
+					boxShadow:
+						"rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px",
+				}}
+			>
+				{(decks ?? []).map((d, idx) => (
+					<DeckCard key={d.id} index={idx} deck={d} />
+				))}
+				<DeckCard index={decks?.length ?? 0 + 1} />
+			</div>
+		</ErrorBoundary>
 	);
 }
 
@@ -111,13 +201,28 @@ export const SelectDeckPopupRenderer = (() => {
 	let bookmarkButton: HTMLButtonElement | undefined;
 	let container: HTMLDivElement | undefined;
 
-	const hide = () => {
+	const hide = (remove = false) => {
+		if (remove) {
+			const fiber = getParentTweetFiber();
+			if (!fiber) return;
+			const data = getTweetDataFromFiber(fiber);
+			db.tweets
+				.where({
+					id: data.id,
+					user: data.userId,
+				})
+				.delete();
+		}
+
 		document.removeEventListener("resize", layoutCallback);
 		document.removeEventListener("scroll", layoutCallback);
 		document.removeEventListener("click", clickCallback);
 		if (!container) return;
 		container.style.left = "0";
 		container.style.top = "0";
+		container.style.zIndex = "-1000";
+		container.style.opacity = "0";
+		container.style.pointerEvents = "none";
 		bookmarkButton = undefined;
 	};
 
@@ -131,6 +236,13 @@ export const SelectDeckPopupRenderer = (() => {
 
 		container.style.top = `${top}px`;
 		container.style.left = `${left}px`;
+	};
+
+	const getParentTweetFiber = () => {
+		const buttonFiber = getFiberFromHostInstance(bookmarkButton);
+		if (!buttonFiber) return null;
+		const stack = getFiberStack(buttonFiber);
+		return stack.filter((f) => getDisplayName(f) === "Tweet").at(0) ?? null;
 	};
 
 	const clickCallback = (ev: PointerEvent) => {
@@ -150,39 +262,42 @@ export const SelectDeckPopupRenderer = (() => {
 				window.dispatchEvent(new CustomEvent("remove-favedeck-container"));
 
 			const div = document.createElement("div");
-			div.style.zIndex = "1000";
+			div.style.zIndex = "-1000";
+			div.style.pointerEvents = "none";
+			div.style.opacity = "0";
 			div.style.position = "absolute";
 			div.style.left = "0";
 			div.style.top = "0";
 			div.id = "favedeck-select-deck";
 			document.body.append(div);
 			container = div;
+
 			window.addEventListener("remove-favedeck-container", () => {
 				hide();
 				container?.remove();
 			});
-
 			createRoot(div).render(<SelectDeckPopup />);
 		},
-		getParentTweetFiber() {
-			const buttonFiber = getFiberFromHostInstance(bookmarkButton);
-			if (!buttonFiber) return null;
-			const stack = getFiberStack(buttonFiber);
-			return stack.filter((f) => getDisplayName(f) === "Tweet").at(0) ?? null;
-		},
-		show(bb) {
-			bookmarkButton = bb;
+		getParentTweetFiber,
+		show() {
 			if (!container || !bookmarkButton) return;
+			container.style.zIndex = "1000";
+			container.style.pointerEvents = "auto";
+			container.style.opacity = "1";
 			document.addEventListener("resize", layoutCallback);
 			document.addEventListener("scroll", layoutCallback);
 			document.addEventListener("click", clickCallback);
 			layoutCallback();
 		},
 		hide,
+		setBookmarkButton(bb) {
+			bookmarkButton = bb;
+		},
 	} satisfies {
 		create: () => void;
-		show: (bookmarkButton: HTMLButtonElement) => void;
-		hide: () => void;
+		setBookmarkButton: (bookmarkButton: HTMLButtonElement) => void;
+		show: () => void;
+		hide: (remove: boolean) => void;
 		getParentTweetFiber: () => Fiber | null;
 	};
 })();

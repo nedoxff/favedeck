@@ -24,6 +24,7 @@
     "dexie-react-hooks": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.1.1",
+    "react-error-boundary": "^6.0.0",
     "tailwindcss": "^4.1.17",
     "uuid": "^13.0.0"
   },

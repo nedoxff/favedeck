@@ -4,7 +4,7 @@ import { webpack } from "@/src/helpers/webpack";
 import * as bippy from "bippy";
 
 import "@/assets/root.css";
-import { setBackgroundColor, setPrimaryColor } from "@/src/features/storage/kv";
+import { colors } from "@/src/features/storage/kv";
 import { matchers } from "@/src/helpers/matchers";
 
 type ReactType = typeof import("react");
@@ -65,20 +65,25 @@ const initializeWebpack = () => {
 	};
 
 	theme._themeChangeListeners.push((th) => {
-		setPrimaryColor(th.colors[th.primaryColorName]);
-		setBackgroundColor(th.colors.navigationBackground);
+		colors.primary.set(th.colors[th.primaryColorName]);
+		colors.background.set(th.colors.navigationBackground);
+		colors.mask.set(th.colors.maskColor);
 	});
 
 	const primaryColor =
 		theme._activeTheme.colors[theme._activeTheme.primaryColorName];
-	console.log(
-		`found primary color: ${theme._activeTheme.primaryColorName} (${primaryColor})`,
-	);
-	setPrimaryColor(primaryColor);
-
 	const bgColor = theme._activeTheme.colors.navigationBackground;
-	console.log(`found background color: ${bgColor}`);
-	setBackgroundColor(bgColor);
+	const maskColor = theme._activeTheme.colors.maskColor;
+
+	colors.primary.set(primaryColor);
+	colors.background.set(bgColor);
+	colors.mask.set(maskColor);
+
+	console.log(
+		`primary color: ${primaryColor} (${theme._activeTheme.primaryColorName})`,
+	);
+	console.log(`bg color: ${bgColor}`);
+	console.log(`mask (modal) color: ${maskColor}`);
 };
 
 const injectRenderers = () => {
@@ -95,9 +100,10 @@ const injectTweetObserver = () => {
 			matchers.bookmarkButton.querySelector,
 		)) as HTMLButtonElement;
 		bookmarkButton.onclick = () => {
+			SelectDeckPopupRenderer.setBookmarkButton(bookmarkButton);
 			bookmarkButton.getAttribute("data-testid") === "bookmark"
-				? SelectDeckPopupRenderer.show(bookmarkButton)
-				: SelectDeckPopupRenderer.hide();
+				? SelectDeckPopupRenderer.show()
+				: SelectDeckPopupRenderer.hide(true);
 		};
 		//bookmarkButton.addEventListener("click", () => console.log("meow"));
 	};
