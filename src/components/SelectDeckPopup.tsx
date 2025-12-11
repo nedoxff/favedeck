@@ -30,7 +30,7 @@ function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
 		} else {
 			const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
 			if (!fiber) throw new Error("cannot find the parent twitter fiber");
-			const tweet: RawTweet = fiber.memoizedProps?.tweet;
+			const tweet: RawTweet = fiber.memoizedProps?.tweet as RawTweet;
 			if (!tweet)
 				throw new Error(
 					"the tweet fiber (somehow) doesn't have the tweet in memoizedProps",
@@ -53,13 +53,13 @@ function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
 			tabIndex={props.index}
 			onClick={save}
 			role="button"
-			className="hover:shadow-lighten focus:shadow-lighten hover:cursor-pointer p-2 rounded-lg h-20 w-sm flex flex-row justify-between items-center gap-4"
+			className="hover:shadow-lighten! focus:shadow-lighten! hover:cursor-pointer p-2 rounded-lg h-20 w-sm flex flex-row justify-between items-center gap-4"
 		>
 			<div className="flex flex-row h-full gap-4 justify-center items-center">
 				{props.deck ? (
 					<img alt="deck icon" className="h-full rounded-lg" ref={iconRef} />
 				) : (
-					<div className="rounded-lg h-full aspect-square border-dashed border-2 flex justify-center items-center">
+					<div className="rounded-lg h-full aspect-square border-dashed border-2 border-white! flex justify-center items-center">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							width="24"
