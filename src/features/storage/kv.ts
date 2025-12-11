@@ -1,9 +1,5 @@
 import { db } from "./definition";
 
-const MASK_COLOR_KEY = "mask-color";
-const PRIMARY_COLOR_KEY = "primary-color";
-const BACKGROUND_COLOR_KEY = "bg-color";
-
 const kvGet =
 	<T>(key: string) =>
 	async () =>
@@ -13,13 +9,17 @@ const kvPut =
 	async (value: T) =>
 		await db.kv.put({ key, value });
 
-const createColorGettersSetters = (key: string) => ({
-	get: kvGet<string>(key),
-	set: kvPut<string>(key),
+const createGettersSetters = <T>(key: string) => ({
+	get: kvGet<T>(key),
+	set: kvPut<T>(key),
 });
 
 export const colors = {
-	background: createColorGettersSetters(BACKGROUND_COLOR_KEY),
-	primary: createColorGettersSetters(PRIMARY_COLOR_KEY),
-	mask: createColorGettersSetters(MASK_COLOR_KEY),
+	background: createGettersSetters<string>("bg-color"),
+	primary: createGettersSetters<string>("primary-color"),
+	mask: createGettersSetters<string>("mask-color"),
 };
+
+export const tweets = {
+	currentTweet: createGettersSetters<string>("current-tweet")
+}

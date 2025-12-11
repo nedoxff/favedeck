@@ -9,7 +9,7 @@ import { createRoot } from "react-dom/client";
 import { ErrorBoundary } from "react-error-boundary";
 import { v6 } from "uuid";
 import { type DatabaseDeck, db } from "../features/storage/definition";
-import { colors } from "../features/storage/kv";
+import { colors, tweets } from "../features/storage/kv";
 import { compressObject } from "../helpers/compression";
 import type { RawTweet } from "../types/tweet";
 
@@ -150,7 +150,10 @@ function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
 				<div className="flex flex-col">
 					<p>{props.deck ? props.deck.name : "Create a new deck"}</p>
 					{state === DeckCardState.SAVED && (
-						<p className="opacity-50 text-sm -mt-1">Click again to remove</p>
+						<p className="pointer-events-none opacity-50 text-sm -mt-1">Click again to remove</p>
+					)}
+					{state === DeckCardState.REMOVED && (
+						<p className="pointer-events-none opacity-50 text-sm -mt-1">Click again to save</p>
 					)}
 				</div>
 			</div>
@@ -173,6 +176,8 @@ function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
 export function SelectDeckPopup() {
 	const decks = useLiveQuery(() => db.decks.toArray());
 	const bg = useLiveQuery(colors.background.get);
+	const currentTweet = useLiveQuery(tweets.currentTweet.get);
+
 	return (
 		<ErrorBoundary
 			fallbackRender={(props) => {
@@ -181,6 +186,7 @@ export function SelectDeckPopup() {
 			}}
 		>
 			<div
+				key={currentTweet}
 				className="p-2 rounded-xl gap-1 flex flex-col"
 				style={{
 					backgroundColor: bg,
@@ -231,8 +237,9 @@ export const SelectDeckPopupRenderer = (() => {
 		const rect = bookmarkButton.getBoundingClientRect();
 		const popupRect = container.getBoundingClientRect();
 		const top = rect.top + rect.height + window.scrollY + 15;
-		const left =
-			rect.left + window.scrollX - popupRect.width / 2 + rect.width / 2;
+		/* const left =
+			rect.left + window.scrollX - popupRect.width / 2 + rect.width / 2; */
+		const left = rect.left + rect.width - popupRect.width;
 
 		container.style.top = `${top}px`;
 		container.style.left = `${left}px`;
@@ -292,6 +299,16 @@ export const SelectDeckPopupRenderer = (() => {
 		hide,
 		setBookmarkButton(bb) {
 			bookmarkButton = bb;
+
+			// set currentTweet if possible
+			try {
+				const fiber = getParentTweetFiber();
+				if (!fiber) return;
+				const data = getTweetDataFromFiber(fiber);
+				tweets.currentTweet.set(data.id);
+			} catch (ex) {
+				console.error(`failed to get current tweet: ${ex}`);
+			}
 		},
 	} satisfies {
 		create: () => void;
