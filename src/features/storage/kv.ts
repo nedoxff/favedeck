@@ -6,8 +6,10 @@ const kvGet =
 		await db.kv.get(key).then((v) => v?.value as T | undefined);
 const kvPut =
 	<T>(key: string) =>
-	async (value: T) =>
-		await db.kv.put({ key, value });
+	async (value: T | undefined) =>
+		value === undefined
+			? await db.kv.delete(key)
+			: await db.kv.put({ key, value });
 
 const createGettersSetters = <T>(key: string) => ({
 	get: kvGet<T>(key),
@@ -21,5 +23,6 @@ export const colors = {
 };
 
 export const tweets = {
-	currentTweet: createGettersSetters<string>("current-tweet")
-}
+	currentTweet: createGettersSetters<string>("current-tweet"),
+	currentCreatedDeck: createGettersSetters<string>("current-created-deck"),
+};

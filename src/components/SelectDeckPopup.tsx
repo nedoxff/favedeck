@@ -1,3 +1,7 @@
+/** biome-ignore-all lint/a11y/useFocusableInteractive: TODO */
+/** biome-ignore-all lint/a11y/useSemanticElements: TODO */
+/** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
+
 import {
 	type Fiber,
 	getDisplayName,
@@ -5,14 +9,15 @@ import {
 	getFiberStack,
 } from "bippy";
 import { useLiveQuery } from "dexie-react-hooks";
+import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { ErrorBoundary } from "react-error-boundary";
 import { v6 } from "uuid";
 import { type DatabaseDeck, db } from "../features/storage/definition";
 import { tweets } from "../features/storage/kv";
 import { compressObject } from "../helpers/compression";
+import { getUserId } from "../helpers/foolproof";
 import type { RawTweet } from "../types/tweet";
-import { createPortal } from "react-dom";
 
 enum DeckCardState {
 	IDLE,
@@ -27,7 +32,7 @@ const getTweetDataFromFiber = (
 ): {
 	raw: RawTweet;
 	id: string;
-	userId: string;
+	userId: string | undefined;
 } => {
 	const tweet: RawTweet = fiber.memoizedProps?.tweet as RawTweet;
 	if (!tweet)
@@ -36,9 +41,6 @@ const getTweetDataFromFiber = (
 		);
 	//@ts-expect-error
 	const userId = fiber.memoizedProps?.viewerUser?.id_str;
-	if (!userId)
-		throw new Error("the tweet fiber doesn't have the userViewer prop");
-
 	return {
 		raw: tweet,
 		id: tweet.id_str,
@@ -80,6 +82,7 @@ function NewDeckCard() {
 			{showModal &&
 				createPortal(
 					<div
+						role="button"
 						className="fixed top-0 bg-fd-mask left-0 w-screen h-screen pointer-events-auto flex flex-col justify-center items-center z-2000"
 						onClick={(ev) => {
 							ev.stopPropagation();
@@ -94,7 +97,7 @@ function NewDeckCard() {
 							className="p-8 flex flex-col gap-2 rounded-xl bg-fd-bg"
 							ref={contentRef}
 						>
-							<p className="font-bold text-2xl">New deck</p>
+							<p className="font-bold text-xl">New deck</p>
 							<p className="opacity-75">Enter the name for your new deck:</p>
 							<input
 								className={`caret-fd-primary! py-2 px-4 placeholder:opacity-50! rounded-full w-full border-2 hover:border-fd-primary!`}
@@ -105,13 +108,15 @@ function NewDeckCard() {
 								}
 							/>
 							<button
-								onClick={() => {
-									db.decks.put({
-										name: deckName,
-										user: "1",
-										id: v6(),
-									});
+								onClick={async () => {
 									setShowModal(false);
+									const id = v6();
+									await db.decks.put({
+										name: deckName,
+										user: (await getUserId()) ?? "",
+										id,
+									});
+									await tweets.currentCreatedDeck.set(id);
 								}}
 								disabled={deckName.length === 0}
 								type="button"
@@ -136,6 +141,7 @@ function NewDeckCard() {
 
 function DeckCard(props: { deck: DatabaseDeck }) {
 	const [state, setState] = useState<DeckCardState>(DeckCardState.IDLE);
+	const currentNewDeck = useLiveQuery(tweets.currentCreatedDeck.get);
 	const saveButtonRef = useRef<HTMLButtonElement>(null);
 	const iconRef = useRef<HTMLImageElement>(null);
 
@@ -146,6 +152,12 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 			if (iconRef.current) iconRef.current.src = url;
 		});
 	}, []);
+
+	useEffect(() => {
+		if (!saveButtonRef.current || currentNewDeck !== props.deck.id) return;
+		setState(DeckCardState.SAVING);
+		tweets.currentCreatedDeck.set(undefined);
+	}, [currentNewDeck, saveButtonRef]);
 
 	useEffect(() => {
 		if (!saveButtonRef.current) return;
@@ -181,7 +193,7 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 			data: await compressObject(data.raw),
 			deck: props.deck.id,
 			id: data.id,
-			user: data.userId,
+			user: data.userId ?? (await getUserId()) ?? "",
 		});
 		setState(DeckCardState.SAVED);
 	}, [setState]);
@@ -193,7 +205,7 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 		db.tweets
 			.where({
 				id: data.id,
-				user: data.userId,
+				user: data.userId ?? (await getUserId()),
 				deck: props.deck.id,
 			})
 			.delete();
@@ -275,15 +287,17 @@ export const SelectDeckPopupRenderer = (() => {
 
 	const hide = (remove = false) => {
 		if (remove) {
-			const fiber = getParentTweetFiber();
-			if (!fiber) return;
-			const data = getTweetDataFromFiber(fiber);
-			db.tweets
-				.where({
-					id: data.id,
-					user: data.userId,
-				})
-				.delete();
+			(async () => {
+				const fiber = getParentTweetFiber();
+				if (!fiber) return;
+				const data = getTweetDataFromFiber(fiber);
+				db.tweets
+					.where({
+						id: data.id,
+						user: data.userId ?? (await getUserId()),
+					})
+					.delete();
+			})();
 		}
 
 		document.removeEventListener("resize", layoutCallback);
@@ -332,7 +346,7 @@ export const SelectDeckPopupRenderer = (() => {
 	return {
 		create() {
 			if (document.querySelector("#favedeck-select-deck"))
-				window.dispatchEvent(new CustomEvent("remove-favedeck-container"));
+				window.dispatchEvent(new CustomEvent("remove-fd-select-deck"));
 
 			const div = document.createElement("div");
 			div.style.zIndex = "-1000";
@@ -345,11 +359,9 @@ export const SelectDeckPopupRenderer = (() => {
 			document.body.append(div);
 			container = div;
 
-			window.addEventListener("remove-favedeck-container", () => {
-				hide();
-				container?.remove();
-			});
-			createRoot(div).render(<SelectDeckPopup />);
+			const root = createRoot(div);
+			window.addEventListener("fd-reset", root.unmount);
+			root.render(<SelectDeckPopup />);
 		},
 		getParentTweetFiber,
 		show() {

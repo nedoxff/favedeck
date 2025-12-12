@@ -4,8 +4,10 @@ import { webpack } from "@/src/helpers/webpack";
 import * as bippy from "bippy";
 
 import "@/assets/root.css";
+import { DeckViewer } from "@/src/components/deck-viewer/DeckViewer";
 import { colors } from "@/src/features/storage/kv";
 import { matchers } from "@/src/helpers/matchers";
+import { observeUrl } from "@/src/helpers/patch-history";
 
 type ReactType = typeof import("react");
 type ReactDOMType = typeof import("react-dom");
@@ -18,9 +20,11 @@ export default defineContentScript({
 	world: "MAIN",
 	main() {
 		console.log("hello from content script!");
+		window.dispatchEvent(new CustomEvent("fd-reset"));
 
 		const inject = () => {
 			initializeWebpack();
+			injectUrlObserver();
 			injectFiberObserver();
 			injectTweetObserver();
 			injectRenderers();
@@ -33,6 +37,22 @@ export default defineContentScript({
 			});
 	},
 });
+
+const injectUrlObserver = () => {
+	console.log("injecting url observer");
+	observeUrl();
+
+	const listener = () => {
+		if (window.location.href.endsWith("bookmarks"))
+			queueMicrotask(DeckViewer.create);
+		else DeckViewer.hide();
+	};
+	if (window.location.href.endsWith("bookmarks")) DeckViewer.create();
+	window.addEventListener("locationchange", listener);
+	window.addEventListener("fd-reset", () =>
+		window.removeEventListener("locationchange", listener),
+	);
+};
 
 const initializeWebpack = () => {
 	console.log("loading webpack");
@@ -115,13 +135,21 @@ const injectTweetObserver = () => {
 			tweet,
 			matchers.bookmarkButton.querySelector,
 		)) as HTMLButtonElement;
+
+		// this could be an a11y nightmare...
+		bookmarkButton.oncontextmenu = (ev) => {
+			if (bookmarkButton.getAttribute("data-testid") === "removeBookmark") {
+				ev.preventDefault();
+				SelectDeckPopupRenderer.setBookmarkButton(bookmarkButton);
+				SelectDeckPopupRenderer.show();
+			}
+		};
 		bookmarkButton.onclick = () => {
 			SelectDeckPopupRenderer.setBookmarkButton(bookmarkButton);
 			bookmarkButton.getAttribute("data-testid") === "bookmark"
 				? SelectDeckPopupRenderer.show()
 				: SelectDeckPopupRenderer.hide(true);
 		};
-		//bookmarkButton.addEventListener("click", () => console.log("meow"));
 	};
 
 	const tweetObserver = new MutationObserver((mutations) => {

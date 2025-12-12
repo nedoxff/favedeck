@@ -10,4 +10,9 @@ export const matchers = {
 			el.getAttribute("data-testid") === "bookmark" ||
 			el.getAttribute("data-testid") === "removeBookmark",
 	},
+	primaryColumn: {
+		querySelector: "div[data-testid=primaryColumn]",
+		matcher: (el: HTMLElement) =>
+			el.getAttribute("data-testid") === "primaryColumn",
+	},
 };
