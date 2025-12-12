@@ -9,9 +9,10 @@ import { createRoot } from "react-dom/client";
 import { ErrorBoundary } from "react-error-boundary";
 import { v6 } from "uuid";
 import { type DatabaseDeck, db } from "../features/storage/definition";
-import { colors, tweets } from "../features/storage/kv";
+import { tweets } from "../features/storage/kv";
 import { compressObject } from "../helpers/compression";
 import type { RawTweet } from "../types/tweet";
+import { createPortal } from "react-dom";
 
 enum DeckCardState {
 	IDLE,
@@ -45,11 +46,98 @@ const getTweetDataFromFiber = (
 	};
 };
 
-function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
+function NewDeckCard() {
+	const [showModal, setShowModal] = useState(false);
+	const contentRef = useRef<HTMLDivElement>(null);
+	const [deckName, setDeckName] = useState("");
+
+	useEffect(() => {
+		if (showModal) setDeckName("");
+	}, [showModal]);
+
+	return (
+		<div
+			onClick={() => {
+				if (!showModal) setShowModal(true);
+			}}
+			role="button"
+			className="hover:shadow-lighten! focus:shadow-lighten! hover:cursor-pointer p-2 rounded-lg h-20 w-sm flex flex-row justify-between items-center gap-4"
+		>
+			<div className="flex flex-row h-full gap-4 justify-center items-center">
+				<div className="rounded-lg h-full aspect-square border-dashed border-2 border-white! flex justify-center items-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="24"
+						height="24"
+						viewBox="0 0 24 24"
+					>
+						<title>plus icon</title>
+						<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
+					</svg>
+				</div>
+				<p>Create a new deck</p>
+			</div>
+			{showModal &&
+				createPortal(
+					<div
+						className="fixed top-0 bg-fd-mask left-0 w-screen h-screen pointer-events-auto flex flex-col justify-center items-center z-2000"
+						onClick={(ev) => {
+							ev.stopPropagation();
+							if (
+								ev.target instanceof Node &&
+								!contentRef.current?.contains(ev.target)
+							)
+								setShowModal(false);
+						}}
+					>
+						<div
+							className="p-8 flex flex-col gap-2 rounded-xl bg-fd-bg"
+							ref={contentRef}
+						>
+							<p className="font-bold text-2xl">New deck</p>
+							<p className="opacity-75">Enter the name for your new deck:</p>
+							<input
+								className={`caret-fd-primary! py-2 px-4 placeholder:opacity-50! rounded-full w-full border-2 hover:border-fd-primary!`}
+								placeholder="Enter deck name..."
+								type="text"
+								onInput={(ev) =>
+									setDeckName((ev.target as HTMLInputElement).value)
+								}
+							/>
+							<button
+								onClick={() => {
+									db.decks.put({
+										name: deckName,
+										user: "1",
+										id: v6(),
+									});
+									setShowModal(false);
+								}}
+								disabled={deckName.length === 0}
+								type="button"
+								className="rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center"
+							>
+								Create
+							</button>
+							<button
+								onClick={() => setShowModal(false)}
+								type="button"
+								className="rounded-full w-full text-white font-bold bg-fd-bg-lighter! hover:shadow-lighten! py-2 px-4 text-center"
+							>
+								Cancel
+							</button>
+						</div>
+					</div>,
+					document.body,
+				)}
+		</div>
+	);
+}
+
+function DeckCard(props: { deck: DatabaseDeck }) {
 	const [state, setState] = useState<DeckCardState>(DeckCardState.IDLE);
 	const saveButtonRef = useRef<HTMLButtonElement>(null);
 	const iconRef = useRef<HTMLImageElement>(null);
-	const primaryColor = useLiveQuery(colors.primary.get);
 
 	useEffect(() => {
 		fetch("https://dummyimage.com/200").then(async (r) => {
@@ -86,7 +174,6 @@ function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
 	}, [state]);
 
 	const save = useCallback(async () => {
-		if (!props.deck) return;
 		const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
 		if (!fiber) throw new Error("cannot find the parent twitter fiber");
 		const data = getTweetDataFromFiber(fiber);
@@ -100,7 +187,6 @@ function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
 	}, [setState]);
 
 	const remove = useCallback(async () => {
-		if (!props.deck) return;
 		const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
 		if (!fiber) throw new Error("cannot find the parent twitter fiber");
 		const data = getTweetDataFromFiber(fiber);
@@ -115,11 +201,6 @@ function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
 	}, [setState]);
 
 	const saveButtonClicked = async () => {
-		if (!props.deck) {
-			db.decks.add({ id: v6(), name: "furries", user: "1" });
-			return;
-		}
-
 		if (state === DeckCardState.IDLE || state === DeckCardState.REMOVED)
 			setState(DeckCardState.SAVING);
 		else if (state === DeckCardState.SAVED) setState(DeckCardState.REMOVING);
@@ -127,55 +208,41 @@ function DeckCard(props: { index: number; deck?: DatabaseDeck }) {
 
 	return (
 		<div
-			tabIndex={props.index}
 			onClick={saveButtonClicked}
 			role="button"
 			className="hover:shadow-lighten! focus:shadow-lighten! hover:cursor-pointer p-2 rounded-lg h-20 w-sm flex flex-row justify-between items-center gap-4"
 		>
 			<div className="flex flex-row h-full gap-4 justify-center items-center">
-				{props.deck ? (
-					<img alt="deck icon" className="h-full rounded-lg" ref={iconRef} />
-				) : (
-					<div className="rounded-lg h-full aspect-square border-dashed border-2 border-white! flex justify-center items-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-						>
-							<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
-						</svg>
-					</div>
-				)}
+				<img alt="deck icon" className="h-full rounded-lg" ref={iconRef} />
 				<div className="flex flex-col">
-					<p>{props.deck ? props.deck.name : "Create a new deck"}</p>
+					<p>{props.deck.name}</p>
 					{state === DeckCardState.SAVED && (
-						<p className="pointer-events-none opacity-50 text-sm -mt-1">Click again to remove</p>
+						<p className="pointer-events-none opacity-50 text-sm -mt-1">
+							Click again to remove
+						</p>
 					)}
 					{state === DeckCardState.REMOVED && (
-						<p className="pointer-events-none opacity-50 text-sm -mt-1">Click again to save</p>
+						<p className="pointer-events-none opacity-50 text-sm -mt-1">
+							Click again to save
+						</p>
 					)}
 				</div>
 			</div>
 
-			{props.deck && (
-				<button
-					ref={saveButtonRef}
-					onClick={saveButtonClicked}
-					type="button"
-					className="rounded-full hover:shadow-darken! hover:cursor-pointer disabled:shadow-darken! px-4 py-2 font-bold bg-red-500"
-					style={{ backgroundColor: primaryColor ?? "" }}
-				>
-					Save
-				</button>
-			)}
+			<button
+				ref={saveButtonRef}
+				onClick={saveButtonClicked}
+				type="button"
+				className="bg-fd-primary! rounded-full hover:shadow-darken! hover:cursor-pointer disabled:shadow-darken! px-4 py-2 font-bold"
+			>
+				Save
+			</button>
 		</div>
 	);
 }
 
 export function SelectDeckPopup() {
 	const decks = useLiveQuery(() => db.decks.toArray());
-	const bg = useLiveQuery(colors.background.get);
 	const currentTweet = useLiveQuery(tweets.currentTweet.get);
 
 	return (
@@ -187,17 +254,16 @@ export function SelectDeckPopup() {
 		>
 			<div
 				key={currentTweet}
-				className="p-2 rounded-xl gap-1 flex flex-col"
+				className="bg-fd-bg p-2 rounded-xl gap-1 flex flex-col"
 				style={{
-					backgroundColor: bg,
 					boxShadow:
 						"rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px",
 				}}
 			>
 				{(decks ?? []).map((d, idx) => (
-					<DeckCard key={d.id} index={idx} deck={d} />
+					<DeckCard key={d.id} deck={d} />
 				))}
-				<DeckCard index={decks?.length ?? 0 + 1} />
+				<NewDeckCard />
 			</div>
 		</ErrorBoundary>
 	);

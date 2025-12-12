@@ -9,3 +9,11 @@
     --shadow-lighten: inset 0 0 0 10em rgba(255, 255, 255, 0.15);
     --shadow-darken: inset 0 0 0 10em rgba(0, 0, 0, 0.15);
 }
+
+@theme inline {
+    --color-fd-primary: var(--fd-primary);
+    --color-fd-mask: var(--fd-mask);
+    --color-fd-bg: var(--fd-bg);
+
+    --color-fd-bg-lighter: color-mix(in srgb, var(--fd-bg), white 15%);
+}

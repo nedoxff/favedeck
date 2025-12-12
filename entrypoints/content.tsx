@@ -68,6 +68,18 @@ const initializeWebpack = () => {
 		colors.primary.set(th.colors[th.primaryColorName]);
 		colors.background.set(th.colors.navigationBackground);
 		colors.mask.set(th.colors.maskColor);
+		document.documentElement.style.setProperty(
+			"--fd-primary",
+			th.colors[th.primaryColorName],
+		);
+		document.documentElement.style.setProperty(
+			"--fd-bg",
+			th.colors.navigationBackground,
+		);
+		document.documentElement.style.setProperty(
+			"--fd-mask",
+			th.colors.maskColor,
+		);
 	});
 
 	const primaryColor =
@@ -78,6 +90,10 @@ const initializeWebpack = () => {
 	colors.primary.set(primaryColor);
 	colors.background.set(bgColor);
 	colors.mask.set(maskColor);
+
+	document.documentElement.style.setProperty("--fd-primary", primaryColor);
+	document.documentElement.style.setProperty("--fd-bg", bgColor);
+	document.documentElement.style.setProperty("--fd-mask", maskColor);
 
 	console.log(
 		`primary color: ${primaryColor} (${theme._activeTheme.primaryColorName})`,
