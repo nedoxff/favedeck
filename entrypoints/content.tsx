@@ -7,13 +7,6 @@ import "@/assets/root.css";
 import { DeckViewer } from "@/src/components/deck-viewer/DeckViewer";
 import { colors } from "@/src/features/storage/kv";
 import { matchers } from "@/src/helpers/matchers";
-import { observeUrl } from "@/src/helpers/patch-history";
-
-type ReactType = typeof import("react");
-type ReactDOMType = typeof import("react-dom");
-type ReactDOMClientType = typeof import("react-dom/client");
-let React: ReactType;
-let ReactDOM: ReactDOMType & ReactDOMClientType;
 
 export default defineContentScript({
 	matches: ["*://*.x.com/*"],
@@ -35,44 +28,35 @@ export default defineContentScript({
 			document.addEventListener("readystatechange", () => {
 				if (document.readyState === "complete") inject();
 			});
+
+		window.addEventListener("fd-reset", () => {
+			console.log("reloading");
+			window.location.reload();
+		});
 	},
 });
 
 const injectUrlObserver = () => {
 	console.log("injecting url observer");
-	observeUrl();
-
-	const listener = () => {
-		if (window.location.href.endsWith("bookmarks"))
+	webpack.common.history.listen((location) => {
+		if (location.pathname.endsWith("bookmarks"))
 			queueMicrotask(DeckViewer.create);
-		else DeckViewer.hide();
-	};
-	if (window.location.href.endsWith("bookmarks")) DeckViewer.create();
-	window.addEventListener("locationchange", listener);
-	window.addEventListener("fd-reset", () =>
-		window.removeEventListener("locationchange", listener),
-	);
+		else queueMicrotask(DeckViewer.hide);
+	});
+	if (webpack.common.history._history.location.pathname.endsWith("bookmarks"))
+		queueMicrotask(DeckViewer.create);
 };
 
 const initializeWebpack = () => {
 	console.log("loading webpack");
 	webpack.load();
 
-	const reactModule = webpack.findByProperty("useState");
-	if (reactModule === undefined) throw new Error("failed to find React");
-	React = reactModule.module as ReactType;
-	console.log("webpack: found react");
-
-	const reactDOMModule = webpack.findByProperty("createPortal");
-	if (reactDOMModule === undefined) throw new Error("failed to find ReactDOM");
-	ReactDOM = reactDOMModule.module as ReactDOMType & ReactDOMClientType;
-	console.log("webpack: found reactDOM");
-
 	const themeModule = webpack.findByProperty("_activeTheme", {
 		maxDepth: 1,
 	});
 	if (themeModule === undefined)
 		throw new Error("failed to find the theme module (_activeTheme)");
+	console.log("webpack: found the theme module");
 
 	type ThemeSample = {
 		colors: Record<string, string>;
@@ -175,6 +159,25 @@ const injectFiberObserver = () => {
 	bippy.instrument({
 		onCommitFiberRoot: (id, root) => {
 			bippy.traverseRenderedFibers(root.current, (fiber) => {
+				if (
+					typeof fiber.memoizedProps === "object" &&
+					fiber.memoizedProps !== null &&
+					"data-testid" in fiber.memoizedProps &&
+					fiber.memoizedProps["data-testid"] === "primaryColumn"
+				) {
+					if (
+						webpack.common.history._history.location.pathname.endsWith(
+							"bookmarks",
+						) &&
+						fiber.stateNode instanceof HTMLElement &&
+						document.querySelector("#favedeck-viewer") === null
+					) {
+						const div = document.createElement("div");
+						div.id = "favedeck-viewer";
+						fiber.stateNode.replaceChildren(div);
+					}
+				}
+
 				if (bippy.getDisplayName(fiber) === "Tweet" && !found) {
 					found = true;
 					console.log("found tweet component");

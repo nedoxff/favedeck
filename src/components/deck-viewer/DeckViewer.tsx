@@ -1,11 +1,45 @@
 // oh boy
 
-import { matchers } from "@/src/helpers/matchers";
+import {
+	getDeckSize,
+	getUserDecksAutomatically,
+} from "@/src/features/storage/decks";
+import type { DatabaseDeck } from "@/src/features/storage/definition";
+import { decks } from "@/src/features/storage/kv";
 import { waitForSelector } from "@/src/helpers/observer";
 import { webpack } from "@/src/helpers/webpack";
+import { useLiveQuery } from "dexie-react-hooks";
 import { createRoot, type Root } from "react-dom/client";
 
+function DeckBoardItem(props: { deck: DatabaseDeck }) {
+	const size = useLiveQuery(() => getDeckSize(props.deck.id));
+
+	return (
+		<a
+			href={`#fd-${props.deck.id}`}
+			onClick={(ev) => {
+				ev.preventDefault();
+				decks.currentDeck.set(props.deck);
+			}}
+			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60"
+		>
+			<div className="hover:cursor-pointer group/fd-image w-full h-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl">
+				<div className="grow bg-amber-800 rounded-xl relative" />
+				<div className="pointer-events-none">
+					<p className="font-bold text-xl">{props.deck.name}</p>
+					<p className="opacity-50">
+						{size} {size === 1 ? "tweet" : "tweets"}
+					</p>
+				</div>
+			</div>
+		</a>
+	);
+}
+
 function DeckBoard() {
+	const userDecks = useLiveQuery(getUserDecksAutomatically);
+	const currentDeck = useLiveQuery(decks.currentDeck.get);
+
 	return (
 		<div className="flex flex-col">
 			<div className="h-14 px-4 gap-6 flex flex-row items-center">
@@ -13,10 +47,8 @@ function DeckBoard() {
 					href="/home"
 					onClick={(ev) => {
 						ev.preventDefault();
-						const module = webpack.findByProperty("goBack", { maxDepth: 1 });
-						// @ts-expect-error
-						const history = module?.module.ZP;
-						history.push("/home");
+						if (currentDeck === undefined) webpack.common.history.push("/home");
+						else decks.currentDeck.set(undefined);
 					}}
 				>
 					<div className="rounded-full hover:shadow-lighten! p-2">
@@ -30,17 +62,28 @@ function DeckBoard() {
 							<path
 								fill="none"
 								stroke="currentColor"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="48"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth="48"
 								d="M244 400L100 256l144-144M120 256h292"
 							/>
 						</svg>
 					</div>
 				</a>
-				<p className="font-bold text-xl">Decks</p>
+				<p className="font-bold text-2xl">
+					{currentDeck ? currentDeck.name : "Decks"}
+				</p>
 			</div>
 			<hr className="border-t-2" />
+			{currentDeck === undefined ? (
+				<div className="p-4 gap-2 flex flex-row flex-wrap">
+					{(userDecks ?? []).map((d) => (
+						<DeckBoardItem key={d.id} deck={d} />
+					))}
+				</div>
+			) : (
+				<div>{currentDeck.id}</div>
+			)}
 		</div>
 	);
 }
@@ -52,21 +95,15 @@ export const DeckViewer = (() => {
 		async create() {
 			const container = await waitForSelector(
 				document.body,
-				matchers.primaryColumn.querySelector,
-				5000,
+				"#favedeck-viewer",
 			);
 			if (!container) {
-				console.error("couldn't find primary column");
+				console.error("couldn't find favedeck container");
 				return;
 			}
 
-			root = createRoot(container);
-			window.addEventListener("fd-reset", () => {
-				console.log("unmounting DeckViewer");
-				root.unmount();
-			});
-
 			console.log("mounting new DeckViewer");
+			root = createRoot(container);
 			root.render(<DeckBoard />);
 		},
 		hide() {

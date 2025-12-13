@@ -14,7 +14,7 @@ import { createRoot } from "react-dom/client";
 import { ErrorBoundary } from "react-error-boundary";
 import { v6 } from "uuid";
 import { type DatabaseDeck, db } from "../features/storage/definition";
-import { tweets } from "../features/storage/kv";
+import { decks, tweets } from "../features/storage/kv";
 import { compressObject } from "../helpers/compression";
 import { getUserId } from "../helpers/foolproof";
 import type { RawTweet } from "../types/tweet";
@@ -116,7 +116,7 @@ function NewDeckCard() {
 										user: (await getUserId()) ?? "",
 										id,
 									});
-									await tweets.currentCreatedDeck.set(id);
+									await decks.newDeck.set(id);
 								}}
 								disabled={deckName.length === 0}
 								type="button"
@@ -141,7 +141,7 @@ function NewDeckCard() {
 
 function DeckCard(props: { deck: DatabaseDeck }) {
 	const [state, setState] = useState<DeckCardState>(DeckCardState.IDLE);
-	const currentNewDeck = useLiveQuery(tweets.currentCreatedDeck.get);
+	const currentNewDeck = useLiveQuery(decks.newDeck.get);
 	const saveButtonRef = useRef<HTMLButtonElement>(null);
 	const iconRef = useRef<HTMLImageElement>(null);
 
@@ -156,7 +156,7 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 	useEffect(() => {
 		if (!saveButtonRef.current || currentNewDeck !== props.deck.id) return;
 		setState(DeckCardState.SAVING);
-		tweets.currentCreatedDeck.set(undefined);
+		decks.newDeck.set(undefined);
 	}, [currentNewDeck, saveButtonRef]);
 
 	useEffect(() => {
@@ -359,9 +359,7 @@ export const SelectDeckPopupRenderer = (() => {
 			document.body.append(div);
 			container = div;
 
-			const root = createRoot(div);
-			window.addEventListener("fd-reset", root.unmount);
-			root.render(<SelectDeckPopup />);
+			createRoot(div).render(<SelectDeckPopup />);
 		},
 		getParentTweetFiber,
 		show() {

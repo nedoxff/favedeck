@@ -1,3 +1,30 @@
+type ReactType = typeof import("react");
+type ReactDOMType = typeof import("react-dom");
+type ReactDOMClientType = typeof import("react-dom/client");
+
+// i have no idea if this is some custom history
+// thing by twitter based on its name (RichHistory)
+type HistoryLocation = {
+	hash: string;
+	key: string;
+	pathname: string;
+	query: Record<string, string>;
+	search: string;
+};
+type HistoryType = {
+	_history: {
+		location: HistoryLocation;
+	};
+
+	go: (path: string) => void;
+	goBack: (path: string) => void;
+	push: (path: string) => void;
+	replace: (path: string) => void;
+	listen: (
+		listener: (location: HistoryLocation, action: string) => void,
+	) => () => void;
+};
+
 // @ts-expect-error
 const WEBPACK_SOURCE: unknown[] = window.webpackChunk_twitter_responsive_web;
 
@@ -25,6 +52,14 @@ export type WebpackHelper = {
 		},
 	) => WebpackSearchResult;
 	findByCode: (code: string) => WebpackSearchResult;
+
+	common: {
+		react: {
+			React: ReactType;
+			ReactDOM: ReactDOMType & ReactDOMClientType;
+		};
+		history: HistoryType;
+	};
 };
 
 export const webpack: WebpackHelper = {
@@ -39,6 +74,32 @@ export const webpack: WebpackHelper = {
 		} = WEBPACK_SOURCE.push([[Symbol()], {}, (re: unknown) => re]);
 		this.rawModules = require.m;
 		this.cache = require.c;
+
+		const findOrThrowByProperty = <T>(
+			key: string,
+			name: string,
+			maxDepth = 0,
+		) => {
+			const result = this.findByProperty(key, { maxDepth });
+			if (!result) throw new Error(`webpack: failed to find ${name}`);
+			console.log(`webpack: found ${name}`);
+			return result.module as T;
+		};
+
+		this.common = {
+			react: {
+				React: findOrThrowByProperty<ReactType>("useState", "React"),
+				ReactDOM: findOrThrowByProperty<ReactDOMType & ReactDOMClientType>(
+					"createPortal",
+					"ReactDOM",
+				),
+			},
+			history: findOrThrowByProperty<{ ZP: HistoryType }>(
+				"goBack",
+				"the history (router?) module",
+				1,
+			).ZP,
+		};
 	},
 
 	findByProperty(key, opts) {
@@ -65,4 +126,7 @@ export const webpack: WebpackHelper = {
 			? { id: entry[0], module: this.cache[entry[0]].exports }
 			: undefined;
 	},
+
+	// biome-ignore lint/style/noNonNullAssertion: i don't care!!!
+	common: null!,
 };

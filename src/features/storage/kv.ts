@@ -1,4 +1,4 @@
-import { db } from "./definition";
+import { type DatabaseDeck, db } from "./definition";
 
 const kvGet =
 	<T>(key: string) =>
@@ -24,5 +24,9 @@ export const colors = {
 
 export const tweets = {
 	currentTweet: createGettersSetters<string>("current-tweet"),
-	currentCreatedDeck: createGettersSetters<string>("current-created-deck"),
+};
+
+export const decks = {
+	newDeck: createGettersSetters<string>("new-deck"),
+	currentDeck: createGettersSetters<DatabaseDeck>("current-deck"),
 };
