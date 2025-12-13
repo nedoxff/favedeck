@@ -5,13 +5,31 @@ import {
 	getDeckTweets,
 	getUserDecksAutomatically,
 } from "@/src/features/storage/decks";
-import type { DatabaseDeck } from "@/src/features/storage/definition";
+import type {
+	DatabaseDeck,
+	DatabaseTweet,
+} from "@/src/features/storage/definition";
 import { decks } from "@/src/features/storage/kv";
 import { waitForSelector } from "@/src/helpers/observer";
 import { webpack } from "@/src/helpers/webpack";
 import { useLiveQuery } from "dexie-react-hooks";
 import { createRoot, type Root } from "react-dom/client";
 import { tweetComponents } from "../Tweet";
+
+const patchTweetProps = (
+	tweet: DatabaseTweet,
+	props: Record<string, unknown>,
+) => {
+	// @ts-expect-error
+	props.item.id = `tweet-${tweet.id}`;
+	// @ts-expect-error
+	props.item.data.entryId = `tweet-${tweet.id}`;
+	// @ts-expect-error
+	//props.item.data.itemMetadata.clientEventInfo = undefined;
+	// @ts-expect-error
+	props.item.data.content.id = tweet.id;
+	return props;
+};
 
 function DeckTweetList(props: { deck: DatabaseDeck }) {
 	const tweets = useLiveQuery(() => getDeckTweets(props.deck.id));
@@ -27,7 +45,7 @@ function DeckTweetList(props: { deck: DatabaseDeck }) {
 		const tweetsContainer = TwitterReact.createElement("div", {
 			children: tweets.map((t) =>
 				TwitterReact.createElement(tweetComponents.Tweet, {
-					...tweetComponents.meta.defaultTweetProps,
+					...patchTweetProps(t, tweetComponents.meta.defaultTweetProps),
 				}),
 			),
 		});
@@ -125,6 +143,7 @@ export const DeckViewer = (() => {
 
 	return {
 		async create() {
+			await decks.currentDeck.set(undefined);
 			const container = await waitForSelector(
 				document.body,
 				"#favedeck-viewer",

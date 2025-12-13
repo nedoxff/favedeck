@@ -56,6 +56,7 @@ export const getTweetComponentsFromFiber = (fiber: Fiber) => {
 
 	tweetComponents.meta.defaultTweetProps = fiber.memoizedProps;
 	tweetComponents.meta.available = true;
+	console.log(tweetComponents);
 };
 
 /* try {

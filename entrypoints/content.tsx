@@ -12,14 +12,15 @@ import { matchers } from "@/src/helpers/matchers";
 export default defineContentScript({
 	matches: ["*://*.x.com/*"],
 	world: "MAIN",
+	runAt: "document_start",
 	main() {
 		console.log("hello from content script!");
+		injectFiberObserver();
 		window.dispatchEvent(new CustomEvent("fd-reset"));
 
 		const inject = () => {
 			initializeWebpack();
 			injectUrlObserver();
-			injectFiberObserver();
 			injectTweetObserver();
 			injectRenderers();
 		};
@@ -51,6 +52,8 @@ const injectUrlObserver = () => {
 const initializeWebpack = () => {
 	console.log("loading webpack");
 	webpack.load();
+
+	console.log(webpack.findByCode("@@redux/INIT"));
 
 	const themeModule = webpack.findByProperty("_activeTheme", {
 		maxDepth: 1,
@@ -163,6 +166,18 @@ const injectFiberObserver = () => {
 				if (
 					typeof fiber.memoizedProps === "object" &&
 					fiber.memoizedProps !== null &&
+					"store" in fiber.memoizedProps &&
+					"jotaiStore" in fiber.memoizedProps
+				) {
+					setTimeout(
+						() => console.log(fiber.memoizedProps.store.getState()),
+						10000,
+					);
+				}
+
+				if (
+					typeof fiber.memoizedProps === "object" &&
+					fiber.memoizedProps !== null &&
 					"data-testid" in fiber.memoizedProps &&
 					fiber.memoizedProps["data-testid"] === "primaryColumn"
 				) {
@@ -173,13 +188,20 @@ const injectFiberObserver = () => {
 						fiber.stateNode instanceof HTMLElement &&
 						document.querySelector("#favedeck-viewer") === null
 					) {
+						fiber.stateNode.style.position = "relative";
+						const container = fiber.stateNode.childNodes[0] as HTMLElement;
+						container.style.position = "absolute";
+						container.style.pointerEvents = "none";
+						container.style.opacity = "0";
+						container.style.zIndex = "-1000";
+
 						const div = document.createElement("div");
 						div.id = "favedeck-viewer";
-						fiber.stateNode.replaceChildren(div);
+						fiber.stateNode.prepend(div);
 					}
 				}
 
-				if (bippy.getDisplayName(fiber) === "Tweet" && !found) {
+				if (fiber.key?.startsWith("tweet") && !found) {
 					found = true;
 					console.log("found the tweet component");
 					getTweetComponentsFromFiber(fiber);
