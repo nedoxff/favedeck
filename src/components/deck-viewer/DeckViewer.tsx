@@ -2,6 +2,7 @@
 
 import {
 	getDeckSize,
+	getDeckTweets,
 	getUserDecksAutomatically,
 } from "@/src/features/storage/decks";
 import type { DatabaseDeck } from "@/src/features/storage/definition";
@@ -10,6 +11,37 @@ import { waitForSelector } from "@/src/helpers/observer";
 import { webpack } from "@/src/helpers/webpack";
 import { useLiveQuery } from "dexie-react-hooks";
 import { createRoot, type Root } from "react-dom/client";
+import { tweetComponents } from "../Tweet";
+
+function DeckTweetList(props: { deck: DatabaseDeck }) {
+	const tweets = useLiveQuery(() => getDeckTweets(props.deck.id));
+	const ref = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		if (!ref.current || !tweets || tweets.length === 0) return;
+
+		const TwitterReact = webpack.common.react.React;
+		const TwitterReactDOM = webpack.common.react.ReactDOM;
+		const root = TwitterReactDOM.createRoot(ref.current);
+		console.log(root);
+
+		const tweetsContainer = TwitterReact.createElement("div", {
+			children: tweets.map((t) =>
+				TwitterReact.createElement(tweetComponents.Tweet, {
+					...tweetComponents.meta.defaultTweetProps,
+				}),
+			),
+		});
+		console.log(tweetsContainer);
+
+		const bridge = TwitterReact.createElement(tweetComponents.ContextBridge, {
+			children: tweetsContainer,
+		});
+		console.log(bridge);
+		root.render(TwitterReact.createElement(() => bridge));
+	}, [ref.current, tweets]);
+
+	return <div ref={ref}></div>;
+}
 
 function DeckBoardItem(props: { deck: DatabaseDeck }) {
 	const size = useLiveQuery(() => getDeckSize(props.deck.id));
@@ -82,7 +114,7 @@ function DeckBoard() {
 					))}
 				</div>
 			) : (
-				<div>{currentDeck.id}</div>
+				<DeckTweetList deck={currentDeck} />
 			)}
 		</div>
 	);

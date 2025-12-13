@@ -5,6 +5,7 @@ import * as bippy from "bippy";
 
 import "@/assets/root.css";
 import { DeckViewer } from "@/src/components/deck-viewer/DeckViewer";
+import { getTweetComponentsFromFiber } from "@/src/components/Tweet";
 import { colors } from "@/src/features/storage/kv";
 import { matchers } from "@/src/helpers/matchers";
 
@@ -180,65 +181,8 @@ const injectFiberObserver = () => {
 
 				if (bippy.getDisplayName(fiber) === "Tweet" && !found) {
 					found = true;
-					console.log("found tweet component");
-					/* try {
-								const contexts = bippy
-									.getFiberStack(fiber)
-									.filter(
-										(f) =>
-											typeof f.type === "object" &&
-											f.type !== null &&
-											"value" in f.memoizedProps &&
-											f.type._context,
-									)
-									.map((f) => ({
-										context: f.type._context,
-										value: f.memoizedProps.value,
-									}));
-
-								const type = bippy.getType(fiber);
-								const props = fiber.memoizedProps;
-
-								const ContextBridge = contexts.reduceRight<React.ReactNode>(
-									(acc, cur) => {
-										return React.createElement(
-											cur.context.Provider,
-											{ value: cur.value },
-											acc,
-										);
-									},
-									React.createElement(type, { ...props }),
-								);
-
-								const App = () => ContextBridge;
-
-								consale.log("rendering");
-								ReactDOM.createRoot(
-									document.querySelector("#testtweet"),
-								).render(React.createElement(App));
-								consale.log("success");
-
-								 consale.log(ContextBridge);
-							const portal = react.createPortal(
-								React.createElement("input"),
-								document.querySelector("#testtweet"),
-							);
-							console.log(portal);
-								/* console.log(
-								"eb",
-								React.createElement(ErrorBoundary, {}, ContextBridge),
-							);
-							flushSync(() => {
-								react
-									.createRoot(document.querySelector("#testtweet"))
-									.render(<ContextBridge></ContextBridge>);
-							});
-
-							consale.log("render success?");
-								//consale.log(type, "success??");
-							} catch (err) {
-								consale.error(err);
-							} */
+					console.log("found the tweet component");
+					getTweetComponentsFromFiber(fiber);
 				}
 			});
 		},
