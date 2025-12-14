@@ -6,7 +6,7 @@ import * as bippy from "bippy";
 import "@/assets/root.css";
 import { DeckViewer } from "@/src/components/deck-viewer/DeckViewer";
 import { getTweetComponentsFromFiber } from "@/src/components/Tweet";
-import { colors } from "@/src/features/storage/kv";
+import { colors, decks } from "@/src/features/storage/kv";
 import { matchers } from "@/src/internals/matchers";
 import { setReduxStoreFromFiber } from "@/src/internals/redux";
 
@@ -40,20 +40,18 @@ export default defineContentScript({
 
 const injectUrlObserver = () => {
 	console.log("injecting url observer");
-	webpack.common.history.listen((location) => {
-		if (location.pathname.endsWith("bookmarks"))
+	webpack.common.history.listen((location, action) => {
+		if (location.pathname.endsWith("bookmarks") && action === "PUSH")
 			queueMicrotask(DeckViewer.create);
-		else queueMicrotask(DeckViewer.hide);
 	});
 	if (webpack.common.history._history.location.pathname.endsWith("bookmarks"))
 		queueMicrotask(DeckViewer.create);
+	else decks.currentDeck.set(undefined);
 };
 
 const initializeWebpack = () => {
 	console.log("loading webpack");
 	webpack.load();
-
-	console.log(webpack.findByCode("@@redux/INIT"));
 
 	const themeModule = webpack.findByProperty("_activeTheme", {
 		maxDepth: 1,
@@ -128,8 +126,16 @@ const injectTweetObserver = () => {
 		bookmarkButton.oncontextmenu = (ev) => {
 			if (bookmarkButton.getAttribute("data-testid") === "removeBookmark") {
 				ev.preventDefault();
-				SelectDeckPopupRenderer.setBookmarkButton(bookmarkButton);
-				SelectDeckPopupRenderer.show();
+
+				if (
+					SelectDeckPopupRenderer.getBookmarkButton() === bookmarkButton &&
+					SelectDeckPopupRenderer.getVisible()
+				)
+					SelectDeckPopupRenderer.hide();
+				else {
+					SelectDeckPopupRenderer.setBookmarkButton(bookmarkButton);
+					SelectDeckPopupRenderer.show();
+				}
 			}
 		};
 		bookmarkButton.onclick = () => {
@@ -209,7 +215,6 @@ const injectFiberObserver = () => {
 				if (fiber.key?.startsWith("tweet") && !found) {
 					found = true;
 					console.log("found the tweet component");
-					console.log(fiber);
 					getTweetComponentsFromFiber(fiber);
 				}
 			});

@@ -13,11 +13,14 @@ import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { ErrorBoundary } from "react-error-boundary";
 import { v6 } from "uuid";
+import {
+	addTweetToDeck,
+	getDeckThumbnails,
+	isTweetInDeck,
+} from "../features/storage/decks";
 import { type DatabaseDeck, db } from "../features/storage/definition";
 import { decks, tweets } from "../features/storage/kv";
-import { compressObject } from "../helpers/compression";
 import { getUserId } from "../internals/foolproof";
-import { getTweetEntity, getUserEntity } from "../internals/redux";
 import type { RawTweet } from "../types/tweet";
 
 enum DeckCardState {
@@ -104,6 +107,7 @@ function NewDeckCard() {
 										name: deckName,
 										user: (await getUserId()) ?? "",
 										id,
+										secret: false,
 									});
 									await decks.newDeck.set(id);
 								}}
@@ -130,23 +134,23 @@ function NewDeckCard() {
 
 function DeckCard(props: { deck: DatabaseDeck }) {
 	const [state, setState] = useState<DeckCardState>(DeckCardState.IDLE);
+	const thumbnails = useLiveQuery(() => getDeckThumbnails(props.deck.id, 1));
+	const currentTweet = useLiveQuery(tweets.currentTweet.get);
 	const currentNewDeck = useLiveQuery(decks.newDeck.get);
 	const saveButtonRef = useRef<HTMLButtonElement>(null);
-	const iconRef = useRef<HTMLImageElement>(null);
-
-	useEffect(() => {
-		fetch("https://dummyimage.com/200").then(async (r) => {
-			const blob = await r.blob();
-			const url = URL.createObjectURL(blob);
-			if (iconRef.current) iconRef.current.src = url;
-		});
-	}, []);
 
 	useEffect(() => {
 		if (!saveButtonRef.current || currentNewDeck !== props.deck.id) return;
 		setState(DeckCardState.SAVING);
 		decks.newDeck.set(undefined);
 	}, [currentNewDeck, saveButtonRef]);
+
+	useEffect(() => {
+		if (!currentTweet) return;
+		isTweetInDeck(currentTweet).then((v) => {
+			if (v) setState(DeckCardState.SAVED);
+		});
+	}, [currentTweet]);
 
 	useEffect(() => {
 		if (!saveButtonRef.current) return;
@@ -174,18 +178,14 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 		else if (state === DeckCardState.REMOVING) remove();
 	}, [state]);
 
-	const save = useCallback(async () => {
+	const getTweetId = () => {
 		const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
 		if (!fiber) throw new Error("cannot find the parent twitter fiber");
-		const id = getTweetIdFromFiber(fiber);
-		const tweet = getTweetEntity(id);
-		const user = getUserEntity(tweet.user);
-		db.tweets.put({
-			data: await compressObject({ tweet, user }),
-			deck: props.deck.id,
-			id: id,
-			user: (await getUserId(fiber)) ?? "",
-		});
+		return getTweetIdFromFiber(fiber);
+	};
+
+	const save = useCallback(async () => {
+		await addTweetToDeck(props.deck.id, getTweetId());
 		setState(DeckCardState.SAVED);
 	}, [setState]);
 
@@ -200,6 +200,10 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 				deck: props.deck.id,
 			})
 			.delete();
+
+		// if we're currently viewing this deck
+		if ((await decks.currentDeck.get())?.id === props.deck.id)
+			SelectDeckPopupRenderer.hide();
 		setState(DeckCardState.REMOVED);
 	}, [setState]);
 
@@ -216,7 +220,15 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 			className="hover:shadow-lighten! focus:shadow-lighten! hover:cursor-pointer p-2 rounded-lg h-20 w-sm flex flex-row justify-between items-center gap-4"
 		>
 			<div className="flex flex-row h-full gap-4 justify-center items-center">
-				<img alt="deck icon" className="h-full rounded-lg" ref={iconRef} />
+				{(thumbnails ?? []).length === 0 ? (
+					<div className="h-full rounded-lg bg-fd-bg-lighter! aspect-square" />
+				) : (
+					<img
+						src={thumbnails?.[0]}
+						alt="deck icon"
+						className="h-full rounded-lg aspect-square object-cover"
+					/>
+				)}
 				<div className="flex flex-col">
 					<p>{props.deck.name}</p>
 					{state === DeckCardState.SAVED && (
@@ -275,6 +287,7 @@ export function SelectDeckPopup() {
 export const SelectDeckPopupRenderer = (() => {
 	let bookmarkButton: HTMLButtonElement | undefined;
 	let container: HTMLDivElement | undefined;
+	let visible: boolean = false;
 
 	const hide = (remove = false) => {
 		if (remove) {
@@ -300,6 +313,7 @@ export const SelectDeckPopupRenderer = (() => {
 		container.style.opacity = "0";
 		container.style.pointerEvents = "none";
 		bookmarkButton = undefined;
+		visible = false;
 	};
 
 	const layoutCallback = () => {
@@ -361,6 +375,7 @@ export const SelectDeckPopupRenderer = (() => {
 			document.addEventListener("scroll", layoutCallback);
 			document.addEventListener("click", clickCallback);
 			layoutCallback();
+			visible = true;
 		},
 		hide,
 		setBookmarkButton(bb) {
@@ -375,11 +390,15 @@ export const SelectDeckPopupRenderer = (() => {
 				console.error(`failed to get current tweet: ${ex}`);
 			}
 		},
+		getVisible: () => visible,
+		getBookmarkButton: () => bookmarkButton,
 	} satisfies {
 		create: () => void;
 		setBookmarkButton: (bookmarkButton: HTMLButtonElement) => void;
+		getBookmarkButton: () => HTMLButtonElement | undefined;
 		show: () => void;
 		hide: (remove: boolean) => void;
 		getParentTweetFiber: () => Fiber | null;
+		getVisible: () => boolean;
 	};
 })();

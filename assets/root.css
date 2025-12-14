@@ -16,4 +16,5 @@
     --color-fd-bg: var(--fd-bg);
 
     --color-fd-bg-lighter: color-mix(in srgb, var(--fd-bg), white 15%);
+    --color-fd-bg-even-lighter: color-mix(in srgb, var(--fd-bg), white 20%);
 }

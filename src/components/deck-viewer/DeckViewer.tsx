@@ -2,19 +2,19 @@
 
 import {
 	getDeckSize,
+	getDeckThumbnails,
 	getDeckTweets,
 	getUserDecksAutomatically,
 } from "@/src/features/storage/decks";
-import type {
-	DatabaseDeck,
-	DatabaseTweet,
+import {
+	type DatabaseDeck,
+	type DatabaseTweet,
+	db,
 } from "@/src/features/storage/definition";
 import { decks } from "@/src/features/storage/kv";
-import { decompressObject } from "@/src/helpers/compression";
 import { waitForSelector } from "@/src/helpers/observer";
-import { addEntities } from "@/src/internals/redux";
+import { addEntitiesFromDatabaseTweets } from "@/src/internals/redux";
 import { webpack } from "@/src/internals/webpack";
-import type { RawTweet, RawTweetUser } from "@/src/types/tweet";
 import { deepCopy } from "deep-copy-ts";
 import { useLiveQuery } from "dexie-react-hooks";
 import React from "react";
@@ -40,22 +40,27 @@ const patchTweetProps = (
 };
 
 function DeckTweetList(props: { deck: DatabaseDeck }) {
+	const [tweetComponentsAvailable, setTweetComponentsAvailable] = useState(
+		tweetComponents.meta.available,
+	);
 	const tweets = useLiveQuery(() => getDeckTweets(props.deck.id));
 	const ref = useRef<HTMLDivElement>(null);
 	useEffect(() => {
+		if (!tweetComponentsAvailable) {
+			tweetComponents.meta = new Proxy(tweetComponents.meta, {
+				set(target, p, newValue, _receiver) {
+					if (p === "available") setTweetComponentsAvailable(newValue);
+					// @ts-expect-error
+					target[p] = newValue;
+					return true;
+				},
+			});
+			return;
+		}
 		if (!ref.current || !tweets || tweets.length === 0) return;
 
 		(async () => {
-			for (const tweet of tweets) {
-				const obj = (await decompressObject(tweet.data)) as {
-					tweet: RawTweet;
-					user: RawTweetUser;
-				};
-				addEntities({
-					tweets: { [obj.tweet.id_str]: obj.tweet },
-					users: { [obj.user.id_str]: obj.user },
-				});
-			}
+			await addEntitiesFromDatabaseTweets(tweets ?? []);
 
 			queueMicrotask(() => {
 				const TwitterReact = webpack.common.react.React;
@@ -63,16 +68,11 @@ function DeckTweetList(props: { deck: DatabaseDeck }) {
 				const root = TwitterReactDOM.createRoot(ref.current);
 
 				const tweetsContainer = TwitterReact.createElement(React.Fragment, {
-					children: tweets.map((t) => {
-						console.log(
-							t,
-							tweetComponents.meta.defaultTweetProps,
-							patchTweetProps(t, tweetComponents.meta.defaultTweetProps),
-						);
-						return TwitterReact.createElement(tweetComponents.Tweet, {
+					children: tweets.map((t) =>
+						TwitterReact.createElement(tweetComponents.Tweet, {
 							...patchTweetProps(t, tweetComponents.meta.defaultTweetProps),
-						});
-					}),
+						}),
+					),
 				});
 
 				const bridge = TwitterReact.createElement(
@@ -84,12 +84,13 @@ function DeckTweetList(props: { deck: DatabaseDeck }) {
 				root.render(TwitterReact.createElement(() => bridge));
 			});
 		})();
-	}, [ref.current, tweets]);
+	}, [tweetComponentsAvailable, ref.current, tweets]);
 
 	return <div ref={ref} className="*:static!" />;
 }
 
 function DeckBoardItem(props: { deck: DatabaseDeck }) {
+	const thumbnails = useLiveQuery(() => getDeckThumbnails(props.deck.id, 3));
 	const size = useLiveQuery(() => getDeckSize(props.deck.id));
 
 	return (
@@ -98,11 +99,40 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 			onClick={(ev) => {
 				ev.preventDefault();
 				decks.currentDeck.set(props.deck);
+				window.history.pushState("from-deck-view", "", `#fd-${props.deck.id}`);
 			}}
 			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60"
 		>
 			<div className="hover:cursor-pointer group/fd-image w-full h-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl">
-				<div className="grow bg-amber-800 rounded-xl relative" />
+				<div className="grow rounded-xl overflow-hidden relative grid grid-cols-4 grid-rows-2 gap-1">
+					<div className="col-span-2 row-span-2 bg-fd-bg-even-lighter relative">
+						{(thumbnails ?? []).length > 0 && (
+							<img
+								src={thumbnails?.[0]}
+								className="absolute w-full h-full object-cover"
+								alt="preview 1"
+							/>
+						)}
+					</div>
+					<div className="col-span-2 col-start-3! bg-fd-bg-even-lighter relative">
+						{(thumbnails ?? []).length > 1 && (
+							<img
+								src={thumbnails?.[1]}
+								className="absolute w-full h-full object-cover"
+								alt="preview 2"
+							/>
+						)}
+					</div>
+					<div className="col-span-2 col-start-3! row-start-2 bg-fd-bg-even-lighter relative">
+						{(thumbnails ?? []).length > 2 && (
+							<img
+								src={thumbnails?.[2]}
+								className="absolute w-full h-full object-cover"
+								alt="preview 3"
+							/>
+						)}
+					</div>
+				</div>
 				<div className="pointer-events-none">
 					<p className="font-bold text-xl">{props.deck.name}</p>
 					<p className="opacity-50">
@@ -126,7 +156,12 @@ function DeckBoard() {
 					onClick={(ev) => {
 						ev.preventDefault();
 						if (currentDeck === undefined) webpack.common.history.push("/home");
-						else decks.currentDeck.set(undefined);
+						else {
+							decks.currentDeck.set(undefined);
+							if (window.history.state === "from-deck-view")
+								window.history.back();
+							else window.history.pushState(null, "", "/i/bookmarks");
+						}
 					}}
 				>
 					<div className="rounded-full hover:shadow-lighten! p-2">
@@ -172,6 +207,11 @@ export const DeckViewer = (() => {
 	return {
 		async create() {
 			await decks.currentDeck.set(undefined);
+			if (root) {
+				console.log("unmounting old DeckViewer");
+				root.unmount();
+			}
+
 			const container = await waitForSelector(
 				document.body,
 				"#favedeck-viewer",
@@ -184,6 +224,12 @@ export const DeckViewer = (() => {
 			console.log("mounting new DeckViewer");
 			root = createRoot(container);
 			root.render(<DeckBoard />);
+
+			if (window.location.hash.includes("fd")) {
+				await decks.currentDeck.set(
+					await db.decks.get(window.location.hash.substring(4)),
+				);
+			}
 		},
 		hide() {
 			console.log("unmounting DeckViewer");

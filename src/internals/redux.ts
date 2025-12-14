@@ -1,5 +1,13 @@
 import type { Fiber } from "bippy";
+import { mergician } from "mergician";
+import type { DatabaseTweet } from "../features/storage/definition";
+import { decompressObject } from "../helpers/compression";
 import type { RawTweet, RawTweetUser } from "../types/tweet";
+
+type AddEntitiesPayload = {
+	tweets?: Record<string, RawTweet>;
+	users?: Record<string, RawTweetUser>;
+};
 
 let reduxStore:
 	| {
@@ -15,19 +23,26 @@ export const setReduxStoreFromFiber = (fiber: Fiber) => {
 	reduxStore = fiber.memoizedProps.store;
 };
 
-export const addEntities = (payload: {
-	tweets?: Record<string, RawTweet>;
-	users?: Record<string, RawTweetUser>;
-}) => {
+export const addEntities = (payload: AddEntitiesPayload) => {
 	if (!reduxStore) {
 		console.error("redux store is undefined, cannot add entities");
 		return;
 	}
-	console.log(payload);
 	reduxStore.dispatch({
 		payload,
 		type: "rweb/entities/ADD_ENTITIES",
 	});
+};
+
+export const addEntitiesFromDatabaseTweets = async (
+	tweets: DatabaseTweet[],
+) => {
+	let payload: AddEntitiesPayload = {};
+	for (const tweet of tweets) {
+		const decompressed = await decompressObject(tweet.data);
+		payload = mergician(payload, decompressed);
+	}
+	addEntities(payload);
 };
 
 export const getTweetEntity = (id: string): RawTweet => {

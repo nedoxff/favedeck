@@ -5,12 +5,15 @@ export interface DatabaseTweet {
 	deck: string;
 	id: string;
 	data: Blob;
+	added: Date;
+	thumbnail?: string;
 }
 
 export interface DatabaseDeck {
 	user: string;
 	id: string;
 	name: string;
+	secret: boolean;
 }
 
 export const db = new Dexie("favedeck") as Dexie & {
@@ -20,7 +23,7 @@ export const db = new Dexie("favedeck") as Dexie & {
 };
 
 db.version(1).stores({
-	tweets: "++, id, user, deck",
-	decks: "&id, user, name",
+	tweets: "++, id, user, deck, added, thumbnail",
+	decks: "&id, user, name, secret",
 	kv: "&key, value",
 });
