@@ -1,10 +1,9 @@
-
-
 // a lot of this information isn't actually needed, but it's nice to have around
 export type RawTweet = {
 	bookmark_count: number;
 	bookmarked: boolean;
 	conversation_id_str: string;
+	created_at: string;
 	display_text_range: [number, number];
 	entities: RawTweetEntities;
 	favorite_count: number;
@@ -29,22 +28,21 @@ export type RawTweet = {
 	has_super_follower: boolean;
 	source: string;
 	grok_analysis_button?: boolean;
-	user: RawTweetUser;
+	text: string;
+	user: string;
 	views: {
-		count: number;
+		count?: number;
 		state: string;
 	};
-	extended_entities?: {
-		media: RawTweetMedia[];
-	};
-	text: string;
-	created_at: string;
 	source_name?: string;
 	source_url?: string;
 	permalink?: string;
 };
 
 export type RawTweetUser = {
+	can_dm: boolean;
+	can_media_tag: boolean;
+	created_at: string;
 	default_profile: boolean;
 	default_profile_image: boolean;
 	description: string;
@@ -79,12 +77,9 @@ export type RawTweetUser = {
 	verified: boolean;
 	protected: boolean;
 	profile_image_url_https: string;
-	can_dm: boolean;
-	can_media_tag: boolean;
 	follow_request_sent: boolean;
 	following: boolean;
 	has_graduated_access: boolean;
-	created_at: string;
 	parody_commentary_fan_label: string;
 };
 

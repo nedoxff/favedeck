@@ -1,4 +1,4 @@
-import { getUserId } from "@/src/helpers/foolproof";
+import { getUserId } from "@/src/internals/foolproof";
 import { db } from "./definition";
 
 export const getUserDecks = (userId: string) =>

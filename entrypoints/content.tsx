@@ -1,25 +1,25 @@
 import { SelectDeckPopupRenderer } from "@/src/components/SelectDeckPopup";
 import { waitForSelector } from "@/src/helpers/observer";
-import { webpack } from "@/src/helpers/webpack";
+import { webpack } from "@/src/internals/webpack";
 import * as bippy from "bippy";
 
 import "@/assets/root.css";
 import { DeckViewer } from "@/src/components/deck-viewer/DeckViewer";
 import { getTweetComponentsFromFiber } from "@/src/components/Tweet";
 import { colors } from "@/src/features/storage/kv";
-import { matchers } from "@/src/helpers/matchers";
+import { matchers } from "@/src/internals/matchers";
+import { setReduxStoreFromFiber } from "@/src/internals/redux";
 
 export default defineContentScript({
 	matches: ["*://*.x.com/*"],
 	world: "MAIN",
-	runAt: "document_start",
 	main() {
 		console.log("hello from content script!");
-		injectFiberObserver();
 		window.dispatchEvent(new CustomEvent("fd-reset"));
 
 		const inject = () => {
 			initializeWebpack();
+			injectFiberObserver();
 			injectUrlObserver();
 			injectTweetObserver();
 			injectRenderers();
@@ -160,19 +160,22 @@ const injectFiberObserver = () => {
 	console.log("injecting react fiber observer (bippy)");
 
 	let found = false;
+	let reduxFiber: bippy.Fiber | null;
 	bippy.instrument({
 		onCommitFiberRoot: (id, root) => {
 			bippy.traverseRenderedFibers(root.current, (fiber) => {
-				if (
-					typeof fiber.memoizedProps === "object" &&
-					fiber.memoizedProps !== null &&
-					"store" in fiber.memoizedProps &&
-					"jotaiStore" in fiber.memoizedProps
-				) {
-					setTimeout(
-						() => console.log(fiber.memoizedProps.store.getState()),
-						10000,
+				if (!reduxFiber) {
+					reduxFiber = bippy.traverseFiber(
+						fiber,
+						(f) =>
+							Object.hasOwn(f.memoizedProps ?? {}, "store") &&
+							Object.hasOwn(f.memoizedProps ?? {}, "jotaiStore"),
+						true,
 					);
+					if (reduxFiber) {
+						console.log("found fiber with the redux store");
+						setReduxStoreFromFiber(reduxFiber);
+					}
 				}
 
 				if (
@@ -194,6 +197,8 @@ const injectFiberObserver = () => {
 						container.style.pointerEvents = "none";
 						container.style.opacity = "0";
 						container.style.zIndex = "-1000";
+						container.style.maxHeight = "100vh";
+						container.style.overflowY = "hidden";
 
 						const div = document.createElement("div");
 						div.id = "favedeck-viewer";
@@ -204,6 +209,7 @@ const injectFiberObserver = () => {
 				if (fiber.key?.startsWith("tweet") && !found) {
 					found = true;
 					console.log("found the tweet component");
+					console.log(fiber);
 					getTweetComponentsFromFiber(fiber);
 				}
 			});

@@ -10,9 +10,14 @@ import type {
 	DatabaseTweet,
 } from "@/src/features/storage/definition";
 import { decks } from "@/src/features/storage/kv";
+import { decompressObject } from "@/src/helpers/compression";
 import { waitForSelector } from "@/src/helpers/observer";
-import { webpack } from "@/src/helpers/webpack";
+import { addEntities } from "@/src/internals/redux";
+import { webpack } from "@/src/internals/webpack";
+import type { RawTweet, RawTweetUser } from "@/src/types/tweet";
+import { deepCopy } from "deep-copy-ts";
 import { useLiveQuery } from "dexie-react-hooks";
+import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { tweetComponents } from "../Tweet";
 
@@ -20,15 +25,18 @@ const patchTweetProps = (
 	tweet: DatabaseTweet,
 	props: Record<string, unknown>,
 ) => {
+	const copy = deepCopy(props);
 	// @ts-expect-error
-	props.item.id = `tweet-${tweet.id}`;
+	copy.item.id = `tweet-${tweet.id}`;
 	// @ts-expect-error
-	props.item.data.entryId = `tweet-${tweet.id}`;
+	copy.item.data.entryId = `tweet-${tweet.id}`;
 	// @ts-expect-error
-	//props.item.data.itemMetadata.clientEventInfo = undefined;
+	copy.item.data.content.id = tweet.id;
 	// @ts-expect-error
-	props.item.data.content.id = tweet.id;
-	return props;
+	copy.item.render = () => copy.item._renderer(copy.item.data, undefined);
+	copy.visible = true;
+	copy.shouldAnimate = false;
+	return copy;
 };
 
 function DeckTweetList(props: { deck: DatabaseDeck }) {
@@ -37,28 +45,48 @@ function DeckTweetList(props: { deck: DatabaseDeck }) {
 	useEffect(() => {
 		if (!ref.current || !tweets || tweets.length === 0) return;
 
-		const TwitterReact = webpack.common.react.React;
-		const TwitterReactDOM = webpack.common.react.ReactDOM;
-		const root = TwitterReactDOM.createRoot(ref.current);
-		console.log(root);
+		(async () => {
+			for (const tweet of tweets) {
+				const obj = (await decompressObject(tweet.data)) as {
+					tweet: RawTweet;
+					user: RawTweetUser;
+				};
+				addEntities({
+					tweets: { [obj.tweet.id_str]: obj.tweet },
+					users: { [obj.user.id_str]: obj.user },
+				});
+			}
 
-		const tweetsContainer = TwitterReact.createElement("div", {
-			children: tweets.map((t) =>
-				TwitterReact.createElement(tweetComponents.Tweet, {
-					...patchTweetProps(t, tweetComponents.meta.defaultTweetProps),
-				}),
-			),
-		});
-		console.log(tweetsContainer);
+			queueMicrotask(() => {
+				const TwitterReact = webpack.common.react.React;
+				const TwitterReactDOM = webpack.common.react.ReactDOM;
+				const root = TwitterReactDOM.createRoot(ref.current);
 
-		const bridge = TwitterReact.createElement(tweetComponents.ContextBridge, {
-			children: tweetsContainer,
-		});
-		console.log(bridge);
-		root.render(TwitterReact.createElement(() => bridge));
+				const tweetsContainer = TwitterReact.createElement(React.Fragment, {
+					children: tweets.map((t) => {
+						console.log(
+							t,
+							tweetComponents.meta.defaultTweetProps,
+							patchTweetProps(t, tweetComponents.meta.defaultTweetProps),
+						);
+						return TwitterReact.createElement(tweetComponents.Tweet, {
+							...patchTweetProps(t, tweetComponents.meta.defaultTweetProps),
+						});
+					}),
+				});
+
+				const bridge = TwitterReact.createElement(
+					tweetComponents.ContextBridge,
+					{
+						children: tweetsContainer,
+					},
+				);
+				root.render(TwitterReact.createElement(() => bridge));
+			});
+		})();
 	}, [ref.current, tweets]);
 
-	return <div ref={ref}></div>;
+	return <div ref={ref} className="*:static!" />;
 }
 
 function DeckBoardItem(props: { deck: DatabaseDeck }) {

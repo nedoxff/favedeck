@@ -16,7 +16,8 @@ import { v6 } from "uuid";
 import { type DatabaseDeck, db } from "../features/storage/definition";
 import { decks, tweets } from "../features/storage/kv";
 import { compressObject } from "../helpers/compression";
-import { getUserId } from "../helpers/foolproof";
+import { getUserId } from "../internals/foolproof";
+import { getTweetEntity, getUserEntity } from "../internals/redux";
 import type { RawTweet } from "../types/tweet";
 
 enum DeckCardState {
@@ -27,25 +28,13 @@ enum DeckCardState {
 	REMOVED,
 }
 
-const getTweetDataFromFiber = (
-	fiber: Fiber,
-): {
-	raw: RawTweet;
-	id: string;
-	userId: string | undefined;
-} => {
+const getTweetIdFromFiber = (fiber: Fiber): string => {
 	const tweet: RawTweet = fiber.memoizedProps?.tweet as RawTweet;
 	if (!tweet)
 		throw new Error(
 			"the tweet fiber (somehow) doesn't have the tweet in memoizedProps",
 		);
-	//@ts-expect-error
-	const userId = fiber.memoizedProps?.viewerUser?.id_str;
-	return {
-		raw: tweet,
-		id: tweet.id_str,
-		userId: userId,
-	};
+	return tweet.id_str;
 };
 
 function NewDeckCard() {
@@ -188,12 +177,14 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 	const save = useCallback(async () => {
 		const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
 		if (!fiber) throw new Error("cannot find the parent twitter fiber");
-		const data = getTweetDataFromFiber(fiber);
+		const id = getTweetIdFromFiber(fiber);
+		const tweet = getTweetEntity(id);
+		const user = getUserEntity(tweet.user);
 		db.tweets.put({
-			data: await compressObject(data.raw),
+			data: await compressObject({ tweet, user }),
 			deck: props.deck.id,
-			id: data.id,
-			user: data.userId ?? (await getUserId()) ?? "",
+			id: id,
+			user: (await getUserId(fiber)) ?? "",
 		});
 		setState(DeckCardState.SAVED);
 	}, [setState]);
@@ -201,11 +192,11 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 	const remove = useCallback(async () => {
 		const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
 		if (!fiber) throw new Error("cannot find the parent twitter fiber");
-		const data = getTweetDataFromFiber(fiber);
+		const id = getTweetIdFromFiber(fiber);
 		db.tweets
 			.where({
-				id: data.id,
-				user: data.userId ?? (await getUserId()),
+				id: id,
+				user: await getUserId(fiber),
 				deck: props.deck.id,
 			})
 			.delete();
@@ -290,11 +281,10 @@ export const SelectDeckPopupRenderer = (() => {
 			(async () => {
 				const fiber = getParentTweetFiber();
 				if (!fiber) return;
-				const data = getTweetDataFromFiber(fiber);
 				db.tweets
 					.where({
-						id: data.id,
-						user: data.userId ?? (await getUserId()),
+						id: getTweetIdFromFiber(fiber),
+						user: await getUserId(fiber),
 					})
 					.delete();
 			})();
@@ -380,8 +370,7 @@ export const SelectDeckPopupRenderer = (() => {
 			try {
 				const fiber = getParentTweetFiber();
 				if (!fiber) return;
-				const data = getTweetDataFromFiber(fiber);
-				tweets.currentTweet.set(data.id);
+				tweets.currentTweet.set(getTweetIdFromFiber(fiber));
 			} catch (ex) {
 				console.error(`failed to get current tweet: ${ex}`);
 			}
