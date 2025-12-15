@@ -1,6 +1,6 @@
 import { SelectDeckPopupRenderer } from "@/src/components/SelectDeckPopup";
 import { waitForSelector } from "@/src/helpers/observer";
-import { HistoryLocation, webpack } from "@/src/internals/webpack";
+import { webpack } from "@/src/internals/webpack";
 import * as bippy from "bippy";
 
 import "@/assets/root.css";

@@ -20,6 +20,7 @@ import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { tweetComponents } from "../Tweet";
 import { mergician } from "mergician";
+import clsx from "clsx";
 
 const patchTweetProps = (
 	tweet: DatabaseTweet,
@@ -96,6 +97,42 @@ function DeckTweetList(props: { deck: DatabaseDeck }) {
 	return <div ref={ref} className="*:static!" />;
 }
 
+function DeckBoardItemPreview(props: {
+	className: string;
+	thumbnail?: string;
+	deck: DatabaseDeck;
+}) {
+	return (
+		<div
+			className={clsx(
+				props.className,
+				"bg-fd-bg-even-lighter relative flex justify-center items-center",
+			)}
+		>
+			{props.deck.secret ? (
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="24"
+					height="24"
+					viewBox="0 0 24 24"
+				>
+					<path
+						fill="currentColor"
+						d="M6 22q-.825 0-1.412-.587T4 20V10q0-.825.588-1.412T6 8h1V6q0-2.075 1.463-3.537T12 1t3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.587 1.413T18 22zm0-2h12V10H6zm6-3q.825 0 1.413-.587T14 15t-.587-1.412T12 13t-1.412.588T10 15t.588 1.413T12 17M9 8h6V6q0-1.25-.875-2.125T12 3t-2.125.875T9 6zM6 20V10z"
+					/>
+					<title>lock icon</title>
+				</svg>
+			) : props.thumbnail ? (
+				<img
+					src={props.thumbnail}
+					className="absolute w-full h-full object-cover"
+					alt="deck preview"
+				/>
+			) : undefined}
+		</div>
+	);
+}
+
 function DeckBoardItem(props: { deck: DatabaseDeck }) {
 	const thumbnails = useLiveQuery(() => getDeckThumbnails(props.deck.id, 3));
 	const size = useLiveQuery(() => getDeckSize(props.deck.id));
@@ -110,41 +147,48 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 			}}
 			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60"
 		>
-			<div className="hover:cursor-pointer group/fd-image w-full h-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl">
+			<div className="hover:cursor-pointer group w-full h-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl">
 				<div className="grow rounded-xl overflow-hidden relative grid grid-cols-4 grid-rows-2 gap-1">
-					<div className="col-span-2 row-span-2 bg-fd-bg-even-lighter relative">
-						{(thumbnails ?? []).length > 0 && (
-							<img
-								src={thumbnails?.[0]}
-								className="absolute w-full h-full object-cover"
-								alt="preview 1"
-							/>
-						)}
-					</div>
-					<div className="col-span-2 col-start-3! bg-fd-bg-even-lighter relative">
-						{(thumbnails ?? []).length > 1 && (
-							<img
-								src={thumbnails?.[1]}
-								className="absolute w-full h-full object-cover"
-								alt="preview 2"
-							/>
-						)}
-					</div>
-					<div className="col-span-2 col-start-3! row-start-2 bg-fd-bg-even-lighter relative">
-						{(thumbnails ?? []).length > 2 && (
-							<img
-								src={thumbnails?.[2]}
-								className="absolute w-full h-full object-cover"
-								alt="preview 3"
-							/>
-						)}
-					</div>
+					<DeckBoardItemPreview
+						className="col-span-2 row-span-2"
+						deck={props.deck}
+						thumbnail={(thumbnails ?? []).at(0)}
+					/>
+					<DeckBoardItemPreview
+						className="col-span-2 col-start-3!"
+						deck={props.deck}
+						thumbnail={(thumbnails ?? []).at(1)}
+					/>
+					<DeckBoardItemPreview
+						className="col-span-2 col-start-3! row-start-2"
+						deck={props.deck}
+						thumbnail={(thumbnails ?? []).at(2)}
+					/>
 				</div>
-				<div className="pointer-events-none">
-					<p className="font-bold text-xl">{props.deck.name}</p>
-					<p className="opacity-50">
-						{size} {size === 1 ? "tweet" : "tweets"}
-					</p>
+				<div className="flex flex-row justify-between items-center">
+					<div className="pointer-events-none">
+						<p className="font-bold text-xl">{props.deck.name}</p>
+						<p className="opacity-50">
+							{size} {size === 1 ? "tweet" : "tweets"}
+						</p>
+					</div>
+					<button
+						type="button"
+						className="rounded-full aspect-square justify-center items-center p-2 h-fit hidden group-hover:flex! hover:shadow-lighten!"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="24"
+							height="24"
+							viewBox="0 0 24 24"
+						>
+							<path
+								fill="currentColor"
+								d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83l3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75z"
+							/>
+							<title>edit icon</title>
+						</svg>
+					</button>
 				</div>
 			</div>
 		</a>
