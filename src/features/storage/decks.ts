@@ -2,8 +2,15 @@ import { compressObject } from "@/src/helpers/compression";
 import { getUserId } from "@/src/internals/foolproof";
 import { getThumbnailUrl } from "@/src/internals/goodies";
 import { getTweetEntity, getUserEntity } from "@/src/internals/redux";
-import { db } from "./definition";
 import { mergician } from "mergician";
+import { type DatabaseDeck, db } from "./definition";
+
+export const UNGROUPED_DECK: DatabaseDeck = {
+	id: "ungrouped",
+	name: "Ungrouped",
+	secret: false,
+	user: "",
+};
 
 export const getUserDecks = (userId: string) =>
 	db.decks.where("user").equals(userId).toArray();
@@ -20,6 +27,8 @@ export const getDeckTweets = async (deckId: string, skip = 0, count = -1) => {
 };
 export const isTweetInDeck = async (id: string) =>
 	(await db.tweets.where("id").equals(id).count()) !== 0;
+export const isTweetInSpecificDeck = async (id: string, deck: string) =>
+	(await db.tweets.where({ id, deck }).count()) !== 0;
 
 export const getDeckThumbnails = async (id: string, limit = 1) =>
 	(

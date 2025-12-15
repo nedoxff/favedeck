@@ -17,11 +17,17 @@ import {
 	addTweetToDeck,
 	getDeckThumbnails,
 	isTweetInDeck,
+	isTweetInSpecificDeck,
 } from "../features/storage/decks";
 import { type DatabaseDeck, db } from "../features/storage/definition";
 import { decks, tweets } from "../features/storage/kv";
 import { getUserId } from "../internals/foolproof";
-import type { RawTweet } from "../types/tweet";
+import {
+	getTweetIdFromFiber,
+	getTweetInfoFromElement,
+} from "../internals/goodies";
+import { findParentNode, matchers } from "../internals/matchers";
+import { TwitterModal } from "./TwitterModal";
 
 enum DeckCardState {
 	IDLE,
@@ -31,18 +37,8 @@ enum DeckCardState {
 	REMOVED,
 }
 
-const getTweetIdFromFiber = (fiber: Fiber): string => {
-	const tweet: RawTweet = fiber.memoizedProps?.tweet as RawTweet;
-	if (!tweet)
-		throw new Error(
-			"the tweet fiber (somehow) doesn't have the tweet in memoizedProps",
-		);
-	return tweet.id_str;
-};
-
 function NewDeckCard() {
 	const [showModal, setShowModal] = useState(false);
-	const contentRef = useRef<HTMLDivElement>(null);
 	const [deckName, setDeckName] = useState("");
 	const [deckSecret, setDeckSecret] = useState(false);
 
@@ -74,74 +70,58 @@ function NewDeckCard() {
 			</div>
 			{showModal &&
 				createPortal(
-					<div
-						role="button"
-						className="fixed top-0 bg-fd-mask left-0 w-screen h-screen pointer-events-auto flex flex-col justify-center items-center z-2000"
-						onClick={(ev) => {
-							ev.stopPropagation();
-							if (
-								ev.target instanceof Node &&
-								!contentRef.current?.contains(ev.target)
-							)
-								setShowModal(false);
-						}}
-					>
-						<div
-							className="p-8 flex flex-col gap-2 rounded-xl bg-fd-bg"
-							ref={contentRef}
-						>
-							<p className="font-bold text-xl">New deck</p>
-							<p className="opacity-75">Enter the name for your new deck:</p>
+					<TwitterModal onClose={() => setShowModal(false)}>
+						<p className="font-bold text-2xl">New deck</p>
+						<p className="opacity-75">Enter the name for your new deck:</p>
+						<input
+							className={`caret-fd-primary! py-2 px-4 placeholder:opacity-50! rounded-full w-full border-2 hover:border-fd-primary!`}
+							placeholder="Enter deck name..."
+							type="text"
+							onInput={(ev) =>
+								setDeckName((ev.target as HTMLInputElement).value)
+							}
+						/>
+						<div>
 							<input
-								className={`caret-fd-primary! py-2 px-4 placeholder:opacity-50! rounded-full w-full border-2 hover:border-fd-primary!`}
-								placeholder="Enter deck name..."
-								type="text"
-								onInput={(ev) =>
-									setDeckName((ev.target as HTMLInputElement).value)
-								}
+								id="favedeck-select-deck-popup-secret"
+								className="accent-fd-primary"
+								type="checkbox"
+								checked={deckSecret}
+								onChange={(ev) => setDeckSecret(ev.target.checked)}
 							/>
-							<div>
-								<input
-									id="favedeck-select-deck-popup-secret"
-									className="accent-fd-primary"
-									type="checkbox"
-									checked={deckSecret}
-									onChange={(ev) => setDeckSecret(ev.target.checked)}
-								/>
-								<label
-									className="ml-2"
-									htmlFor="favedeck-select-deck-popup-secret"
-								>
-									Secret (hide thumbnails)
-								</label>
-							</div>
-							<button
-								onClick={async () => {
-									setShowModal(false);
-									const id = v6();
-									await db.decks.put({
-										name: deckName,
-										user: (await getUserId()) ?? "",
-										id,
-										secret: deckSecret,
-									});
-									await decks.newDeck.set(id);
-								}}
-								disabled={deckName.length === 0}
-								type="button"
-								className="rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center"
+							<label
+								className="ml-2"
+								htmlFor="favedeck-select-deck-popup-secret"
 							>
-								Create
-							</button>
-							<button
-								onClick={() => setShowModal(false)}
-								type="button"
-								className="rounded-full w-full text-white font-bold bg-fd-bg-lighter! hover:shadow-lighten! py-2 px-4 text-center"
-							>
-								Cancel
-							</button>
+								Secret (hide thumbnails)
+							</label>
 						</div>
-					</div>,
+						<button
+							onClick={async () => {
+								setShowModal(false);
+								const id = v6();
+								await db.decks.put({
+									name: deckName,
+									user: (await getUserId()) ?? "",
+									id,
+									secret: deckSecret,
+								});
+								await decks.newDeck.set(id);
+							}}
+							disabled={deckName.length === 0}
+							type="button"
+							className="rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center"
+						>
+							Create
+						</button>
+						<button
+							onClick={() => setShowModal(false)}
+							type="button"
+							className="rounded-full w-full text-white font-bold bg-fd-bg-lighter! hover:shadow-lighten! py-2 px-4 text-center"
+						>
+							Cancel
+						</button>
+					</TwitterModal>,
 					document.body,
 				)}
 		</div>
@@ -163,7 +143,7 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 
 	useEffect(() => {
 		if (!currentTweet) return;
-		isTweetInDeck(currentTweet).then((v) => {
+		isTweetInSpecificDeck(currentTweet, props.deck.id).then((v) => {
 			if (v) setState(DeckCardState.SAVED);
 		});
 	}, [currentTweet]);
@@ -202,6 +182,20 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 
 	const save = useCallback(async () => {
 		await addTweetToDeck(props.deck.id, getTweetId());
+
+		// if we saved a tweet from the ungrouped "deck",
+		// hide the tweet
+		if ((await decks.currentDeck.get())?.id === "ungrouped") {
+			const tweetNode = findParentNode(
+				// biome-ignore lint/style/noNonNullAssertion: guaranteed(?) to be present
+				SelectDeckPopupRenderer.getBookmarkButton()!,
+				matchers.tweetRoot.matcher,
+			);
+			if (!tweetNode) return;
+			tweetNode.style.display = "none";
+			SelectDeckPopupRenderer.hide();
+		}
+
 		setState(DeckCardState.SAVED);
 	}, [setState]);
 
@@ -209,18 +203,33 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 		const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
 		if (!fiber) throw new Error("cannot find the parent twitter fiber");
 		const id = getTweetIdFromFiber(fiber);
-		db.tweets
+		await db.tweets
 			.where({
 				id: id,
 				user: await getUserId(fiber),
 				deck: props.deck.id,
 			})
 			.delete();
+		setState(DeckCardState.REMOVED);
 
 		// if we're currently viewing this deck
 		if ((await decks.currentDeck.get())?.id === props.deck.id)
 			SelectDeckPopupRenderer.hide();
-		setState(DeckCardState.REMOVED);
+
+		if (await isTweetInDeck(id)) return;
+
+		// if it was previously in the ungrouped "deck", it's supposed to be brought back.
+		// although, it needs to be found in the original list, not the DeckTweetList...
+		// TODO: move this into a helper function?
+		const tweets = Array.from(
+			document.querySelectorAll(matchers.tweet.querySelector),
+		).map((n) => n as HTMLElement);
+		for (const tweet of tweets) {
+			const info = getTweetInfoFromElement(tweet);
+			if (!info || info.id !== id) continue;
+			console.log("showing tweet", id, "again since it became ungrouped");
+			info.rootNode.style.display = "flex";
+		}
 	}, [setState]);
 
 	const saveButtonClicked = async () => {

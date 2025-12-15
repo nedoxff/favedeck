@@ -3,7 +3,7 @@
 import type { Fiber } from "bippy";
 import * as bippy from "bippy";
 import type { ComponentType, FunctionComponent, ReactNode } from "react";
-import { webpack } from "../internals/webpack";
+import { webpack } from "../../internals/webpack";
 
 export const tweetComponents: {
 	Tweet: ComponentType;

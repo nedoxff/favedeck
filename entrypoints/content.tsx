@@ -5,8 +5,9 @@ import * as bippy from "bippy";
 
 import "@/assets/root.css";
 import { DeckViewer } from "@/src/components/deck-viewer/DeckViewer";
-import { getTweetComponentsFromFiber } from "@/src/components/Tweet";
-import { colors, decks } from "@/src/features/storage/kv";
+import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
+import { decks } from "@/src/features/storage/kv";
+import { getTweetInfoFromElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
 import { setReduxStoreFromFiber } from "@/src/internals/redux";
 
@@ -74,9 +75,6 @@ const initializeWebpack = () => {
 	};
 
 	theme._themeChangeListeners.push((th) => {
-		colors.primary.set(th.colors[th.primaryColorName]);
-		colors.background.set(th.colors.navigationBackground);
-		colors.mask.set(th.colors.maskColor);
 		document.documentElement.style.setProperty(
 			"--fd-primary",
 			th.colors[th.primaryColorName],
@@ -89,26 +87,26 @@ const initializeWebpack = () => {
 			"--fd-mask",
 			th.colors.maskColor,
 		);
+		document.documentElement.style.setProperty("--fd-danger", th.colors.red500);
 	});
 
 	const primaryColor =
 		theme._activeTheme.colors[theme._activeTheme.primaryColorName];
 	const bgColor = theme._activeTheme.colors.navigationBackground;
 	const maskColor = theme._activeTheme.colors.maskColor;
-
-	colors.primary.set(primaryColor);
-	colors.background.set(bgColor);
-	colors.mask.set(maskColor);
+	const dangerColor = theme._activeTheme.colors.red500;
 
 	document.documentElement.style.setProperty("--fd-primary", primaryColor);
 	document.documentElement.style.setProperty("--fd-bg", bgColor);
 	document.documentElement.style.setProperty("--fd-mask", maskColor);
+	document.documentElement.style.setProperty("--fd-danger", dangerColor);
 
 	console.log(
 		`primary color: ${primaryColor} (${theme._activeTheme.primaryColorName})`,
 	);
 	console.log(`bg color: ${bgColor}`);
 	console.log(`mask (modal) color: ${maskColor}`);
+	console.log(`danger color: ${dangerColor}`);
 };
 
 const injectRenderers = () => {
@@ -153,16 +151,36 @@ const injectTweetObserver = () => {
 		for (const mutation of mutations) {
 			if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
 				for (const node of mutation.addedNodes) {
-					if (node.nodeType !== Node.ELEMENT_NODE) continue;
-					for (const tweet of (node as HTMLElement).querySelectorAll(
+					if (!(node instanceof HTMLElement)) continue;
+					for (const tweetNode of (node as HTMLElement).querySelectorAll(
 						"article[data-testid=tweet]",
-					))
+					)) {
+						const tweet = tweetNode as HTMLElement;
 						injectTweetCallbacks(tweet);
+
+						if (DeckViewer.isMounted()) {
+							const info = getTweetInfoFromElement(tweet);
+							if (!info) continue;
+							DeckViewer.checkUngroupedTweet(info.rootNode, info.id);
+						}
+					}
 				}
+			} else {
+				const tweetNode = (mutation.target as HTMLElement).querySelector(
+					matchers.tweet.querySelector,
+				);
+				if (!tweetNode) continue;
+				const computedDisplay = getComputedStyle(tweetNode).display;
+				if (computedDisplay === "flex") injectTweetCallbacks(tweetNode);
 			}
 		}
 	});
-	tweetObserver.observe(document.body, { childList: true, subtree: true });
+	tweetObserver.observe(document.body, {
+		childList: true,
+		subtree: true,
+		attributes: true,
+		attributeFilter: ["style"],
+	});
 };
 
 const injectFiberObserver = () => {
@@ -202,12 +220,7 @@ const injectFiberObserver = () => {
 					) {
 						fiber.stateNode.style.position = "relative";
 						const container = fiber.stateNode.childNodes[0] as HTMLElement;
-						container.style.position = "absolute";
-						container.style.pointerEvents = "none";
-						container.style.opacity = "0";
-						container.style.zIndex = "-1000";
-						container.style.maxHeight = "100vh";
-						container.style.overflowY = "hidden";
+						DeckViewer.originalContainer.set(container);
 
 						const div = document.createElement("div");
 						div.id = "favedeck-viewer";

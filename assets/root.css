@@ -1,4 +1,5 @@
 @custom-variant hover (&:hover);
+@source inline("*:transform-none!,*:static!");
 @import "tailwindcss";
 
 :root {
@@ -14,6 +15,7 @@
     --color-fd-primary: var(--fd-primary);
     --color-fd-mask: var(--fd-mask);
     --color-fd-bg: var(--fd-bg);
+    --color-fd-danger: var(--fd-danger);
 
     --color-fd-bg-lighter: color-mix(in srgb, var(--fd-bg), white 15%);
     --color-fd-bg-even-lighter: color-mix(in srgb, var(--fd-bg), white 20%);

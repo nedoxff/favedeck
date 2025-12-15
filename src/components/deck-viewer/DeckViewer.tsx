@@ -1,10 +1,15 @@
 // oh boy
+/** biome-ignore-all lint/a11y/useSemanticElements: TODO */
+/** biome-ignore-all lint/a11y/useFocusableInteractive: TODO */
+/** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
 
 import {
 	getDeckSize,
 	getDeckThumbnails,
 	getDeckTweets,
 	getUserDecksAutomatically,
+	isTweetInDeck,
+	UNGROUPED_DECK,
 } from "@/src/features/storage/decks";
 import {
 	type DatabaseDeck,
@@ -15,12 +20,15 @@ import { decks } from "@/src/features/storage/kv";
 import { waitForSelector } from "@/src/helpers/observer";
 import { addEntitiesFromDatabaseTweets } from "@/src/internals/redux";
 import { webpack } from "@/src/internals/webpack";
-import { useLiveQuery } from "dexie-react-hooks";
-import React from "react";
-import { createRoot, type Root } from "react-dom/client";
-import { tweetComponents } from "../Tweet";
-import { mergician } from "mergician";
 import clsx from "clsx";
+import Dexie from "dexie";
+import { useLiveQuery } from "dexie-react-hooks";
+import { mergician } from "mergician";
+import React from "react";
+import { createPortal } from "react-dom";
+import { createRoot, type Root } from "react-dom/client";
+import { tweetComponents } from "../external/Tweet";
+import { TwitterModal } from "../TwitterModal";
 
 const patchTweetProps = (
 	tweet: DatabaseTweet,
@@ -28,7 +36,8 @@ const patchTweetProps = (
 ) => {
 	const copy = mergician({}, props);
 	// @ts-expect-error
-	copy.item.id = `tweet-${tweet.id}`;
+	// NOTE: THE "-modified" HERE IS REALLY IMPORTANT
+	copy.item.id = `tweet-${tweet.id}-modified`;
 	// @ts-expect-error
 	copy.item.data.entryId = `tweet-${tweet.id}`;
 	// @ts-expect-error
@@ -133,21 +142,127 @@ function DeckBoardItemPreview(props: {
 	);
 }
 
+function EditDeckModal(props: { deck: DatabaseDeck; onClose: () => void }) {
+	const [deckName, setDeckName] = useState(props.deck.name);
+	const [deckSecret, setDeckSecret] = useState(props.deck.secret);
+	const [deleteClicked, setDeleteClicked] = useState(false);
+
+	return (
+		<TwitterModal onClose={props.onClose}>
+			<p className="font-bold text-2xl">Edit deck</p>
+			<p className="opacity-75">Name:</p>
+			<input
+				className={`caret-fd-primary! py-2 px-4 placeholder:opacity-50! rounded-full w-full border-2 hover:border-fd-primary!`}
+				placeholder="Enter deck name..."
+				type="text"
+				value={deckName}
+				onInput={(ev) => setDeckName((ev.target as HTMLInputElement).value)}
+			/>
+			<div>
+				<input
+					id="favedeck-edit-deck-popup-secret"
+					className="accent-fd-primary"
+					type="checkbox"
+					checked={deckSecret}
+					onChange={(ev) => setDeckSecret(ev.target.checked)}
+				/>
+				<label className="ml-2" htmlFor="favedeck-edit-deck-popup-secret">
+					Secret (hide thumbnails)
+				</label>
+			</div>
+			<button
+				onClick={async () => {
+					await db.decks.update(props.deck.id, {
+						name: deckName,
+						secret: deckSecret,
+					});
+					props.onClose();
+				}}
+				disabled={deckName.length === 0}
+				type="button"
+				className="rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center"
+			>
+				Save
+			</button>
+			<button
+				onClick={async () => {
+					if (!deleteClicked) {
+						setDeleteClicked(true);
+						return;
+					}
+					await db.decks.delete(props.deck.id);
+					props.onClose();
+				}}
+				type="button"
+				className="rounded-full w-full text-white font-bold bg-fd-danger! hover:shadow-lighten! py-2 px-4 text-center"
+			>
+				{deleteClicked ? "Are you sure?" : "Delete"}
+			</button>
+			<button
+				onClick={props.onClose}
+				type="button"
+				className="rounded-full w-full text-white font-bold bg-fd-bg-lighter! hover:shadow-lighten! py-2 px-4 text-center"
+			>
+				Cancel
+			</button>
+		</TwitterModal>
+	);
+}
+
+function UngroupedDeckBoardItem() {
+	return (
+		<div
+			role="button"
+			onClick={(ev) => {
+				ev.preventDefault();
+				decks.currentDeck.set(UNGROUPED_DECK);
+				window.history.pushState("from-deck-view", "", `#fd-ungrouped`);
+			}}
+			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
+		>
+			<div className="grow rounded-xl overflow-hidden relative border-dashed border-2 border-white! flex justify-center items-center opacity-50">
+				<svg
+					className="scale-200!"
+					xmlns="http://www.w3.org/2000/svg"
+					width="24"
+					height="24"
+					viewBox="0 0 24 24"
+				>
+					<path
+						fill="currentColor"
+						d="M6 14q-.825 0-1.412-.587T4 12t.588-1.412T6 10t1.413.588T8 12t-.587 1.413T6 14m6 0q-.825 0-1.412-.587T10 12t.588-1.412T12 10t1.413.588T14 12t-.587 1.413T12 14m6 0q-.825 0-1.412-.587T16 12t.588-1.412T18 10t1.413.588T20 12t-.587 1.413T18 14"
+					/>
+					<title>more icon</title>
+				</svg>
+			</div>
+			<div className="pointer-events-none">
+				<p className="font-bold text-xl">Ungrouped</p>
+				<p className="opacity-50">? tweets</p>
+			</div>
+		</div>
+	);
+}
+
 function DeckBoardItem(props: { deck: DatabaseDeck }) {
 	const thumbnails = useLiveQuery(() => getDeckThumbnails(props.deck.id, 3));
 	const size = useLiveQuery(() => getDeckSize(props.deck.id));
+	const [showEditModal, setShowEditModal] = useState(false);
 
 	return (
-		<a
-			href={`#fd-${props.deck.id}`}
-			onClick={(ev) => {
-				ev.preventDefault();
-				decks.currentDeck.set(props.deck);
-				window.history.pushState("from-deck-view", "", `#fd-${props.deck.id}`);
-			}}
-			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60"
-		>
-			<div className="hover:cursor-pointer group w-full h-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl">
+		<>
+			<div
+				role="button"
+				onClick={(ev) => {
+					ev.preventDefault();
+					decks.currentDeck.set(props.deck);
+					window.history.pushState(
+						"from-deck-view",
+						"",
+						`#fd-${props.deck.id}`,
+					);
+				}}
+				className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
+			>
 				<div className="grow rounded-xl overflow-hidden relative grid grid-cols-4 grid-rows-2 gap-1">
 					<DeckBoardItemPreview
 						className="col-span-2 row-span-2"
@@ -175,6 +290,10 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 					<button
 						type="button"
 						className="rounded-full aspect-square justify-center items-center p-2 h-fit hidden group-hover:flex! hover:shadow-lighten!"
+						onClick={(ev) => {
+							ev.stopPropagation();
+							setShowEditModal(true);
+						}}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -191,7 +310,16 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 					</button>
 				</div>
 			</div>
-		</a>
+
+			{showEditModal &&
+				createPortal(
+					<EditDeckModal
+						deck={props.deck}
+						onClose={() => setShowEditModal(false)}
+					/>,
+					document.body,
+				)}
+		</>
 	);
 }
 
@@ -199,9 +327,14 @@ function DeckBoard() {
 	const userDecks = useLiveQuery(getUserDecksAutomatically);
 	const currentDeck = useLiveQuery(decks.currentDeck.get);
 
+	useEffect(() => {
+		if (currentDeck?.id === "ungrouped") DeckViewer.originalContainer.show();
+		else DeckViewer.originalContainer.hide();
+	}, [currentDeck]);
+
 	return (
 		<div className="flex flex-col">
-			<div className="h-14 px-4 gap-6 flex flex-row items-center">
+			<div className="h-14 px-4 gap-6 flex flex-row items-center w-full sticky top-0 z-10 bg-fd-bg/75 backdrop-blur-xl">
 				<a
 					href="/home"
 					onClick={(ev) => {
@@ -244,16 +377,26 @@ function DeckBoard() {
 					{(userDecks ?? []).map((d) => (
 						<DeckBoardItem key={d.id} deck={d} />
 					))}
+					<UngroupedDeckBoardItem />
 				</div>
-			) : (
+			) : currentDeck.id !== "ungrouped" ? (
 				<DeckTweetList deck={currentDeck} />
-			)}
+			) : undefined}
 		</div>
 	);
 }
 
 export const DeckViewer = (() => {
-	let root: Root;
+	let root: Root | undefined;
+	let originalContainer: HTMLElement | undefined;
+	let currentDeck: DatabaseDeck | undefined;
+
+	Dexie.liveQuery(decks.currentDeck.get).subscribe({
+		next: (v) => {
+			currentDeck = v;
+		},
+		error: console.error,
+	});
 
 	return {
 		async create() {
@@ -261,6 +404,7 @@ export const DeckViewer = (() => {
 			if (root) {
 				console.log("unmounting old DeckViewer");
 				root.unmount();
+				root = undefined;
 			}
 
 			const container = await waitForSelector(
@@ -277,17 +421,64 @@ export const DeckViewer = (() => {
 			root.render(<DeckBoard />);
 
 			if (window.location.hash.includes("fd")) {
+				const id = window.location.hash.substring(4);
 				await decks.currentDeck.set(
-					await db.decks.get(window.location.hash.substring(4)),
+					id === "ungrouped" ? UNGROUPED_DECK : await db.decks.get(id),
 				);
 			}
 		},
 		hide() {
 			console.log("unmounting DeckViewer");
-			root.unmount();
+			root?.unmount();
+			root = undefined;
+		},
+		isMounted() {
+			return root !== undefined;
+		},
+		async checkUngroupedTweet(node, id) {
+			if (currentDeck !== undefined && currentDeck.id !== "ungrouped") return;
+			if (await isTweetInDeck(id)) {
+				console.log("removing tweet", id, "since it's present in a deck");
+				node.style.display = "none";
+			}
+		},
+		originalContainer: {
+			show() {
+				if (!originalContainer) return;
+				originalContainer.style.position = "";
+				originalContainer.style.pointerEvents = "auto";
+				originalContainer.style.zIndex = "0";
+				originalContainer.style.maxHeight = "";
+				originalContainer.style.overflowY = "";
+				queueMicrotask(() => {
+					if (originalContainer) originalContainer.style.opacity = "1";
+				});
+			},
+			hide() {
+				if (!originalContainer) return;
+				originalContainer.style.position = "absolute";
+				originalContainer.style.width = "100%";
+				(originalContainer.childNodes[0] as HTMLElement).style.display = "none";
+				originalContainer.style.pointerEvents = "none";
+				originalContainer.style.opacity = "0";
+				originalContainer.style.zIndex = "-1000";
+				originalContainer.style.maxHeight = "100vh";
+				originalContainer.style.overflowY = "hidden";
+			},
+			set(container) {
+				originalContainer = container;
+				this.hide();
+			},
 		},
 	} satisfies {
 		create: () => void;
 		hide: () => void;
+		isMounted: () => void;
+		checkUngroupedTweet: (node: HTMLElement, id: string) => void;
+		originalContainer: {
+			set: (container: HTMLElement) => void;
+			show: () => void;
+			hide: () => void;
+		};
 	};
 })();

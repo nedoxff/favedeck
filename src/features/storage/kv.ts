@@ -16,12 +16,6 @@ const createGettersSetters = <T>(key: string) => ({
 	set: kvPut<T>(key),
 });
 
-export const colors = {
-	background: createGettersSetters<string>("bg-color"),
-	primary: createGettersSetters<string>("primary-color"),
-	mask: createGettersSetters<string>("mask-color"),
-};
-
 export const tweets = {
 	currentTweet: createGettersSetters<string>("current-tweet"),
 };
