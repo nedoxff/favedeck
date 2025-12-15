@@ -14,6 +14,7 @@ export type RawTweet = {
 	possibly_sensitive: boolean;
 	possibly_sensitive_editable: boolean;
 	quote_count: number;
+	quoted_status?: string;
 	reply_count: number;
 	retweet_count: number;
 	retweeted: boolean;

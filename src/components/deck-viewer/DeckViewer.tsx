@@ -15,17 +15,17 @@ import { decks } from "@/src/features/storage/kv";
 import { waitForSelector } from "@/src/helpers/observer";
 import { addEntitiesFromDatabaseTweets } from "@/src/internals/redux";
 import { webpack } from "@/src/internals/webpack";
-import { deepCopy } from "deep-copy-ts";
 import { useLiveQuery } from "dexie-react-hooks";
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { tweetComponents } from "../Tweet";
+import { mergician } from "mergician";
 
 const patchTweetProps = (
 	tweet: DatabaseTweet,
 	props: Record<string, unknown>,
 ) => {
-	const copy = deepCopy(props);
+	const copy = mergician({}, props);
 	// @ts-expect-error
 	copy.item.id = `tweet-${tweet.id}`;
 	// @ts-expect-error
@@ -34,7 +34,13 @@ const patchTweetProps = (
 	copy.item.data.content.id = tweet.id;
 	// @ts-expect-error
 	copy.item.render = () => copy.item._renderer(copy.item.data, undefined);
+	// @ts-expect-error
+	copy.item.data.content.displayType = "Tweet";
+	// @ts-expect-error
+	copy.item.data.conversationPosition = undefined;
+	// @ts-expect-error
 	copy.visible = true;
+	// @ts-expect-error
 	copy.shouldAnimate = false;
 	return copy;
 };
@@ -63,6 +69,7 @@ function DeckTweetList(props: { deck: DatabaseDeck }) {
 			await addEntitiesFromDatabaseTweets(tweets ?? []);
 
 			queueMicrotask(() => {
+				if (!ref.current) return;
 				const TwitterReact = webpack.common.react.React;
 				const TwitterReactDOM = webpack.common.react.ReactDOM;
 				const root = TwitterReactDOM.createRoot(ref.current);

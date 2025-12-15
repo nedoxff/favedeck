@@ -3,6 +3,7 @@ import { getUserId } from "@/src/internals/foolproof";
 import { getThumbnailUrl } from "@/src/internals/goodies";
 import { getTweetEntity, getUserEntity } from "@/src/internals/redux";
 import { db } from "./definition";
+import { mergician } from "mergician";
 
 export const getUserDecks = (userId: string) =>
 	db.decks.where("user").equals(userId).toArray();
@@ -35,17 +36,26 @@ export const getDeckThumbnails = async (id: string, limit = 1) =>
 
 export const addTweetToDeck = async (deck: string, tweet: string) => {
 	const tweetEntity = getTweetEntity(tweet);
+	const quotedTweetEntity = tweetEntity.quoted_status
+		? getTweetEntity(tweetEntity.quoted_status)
+		: undefined;
 	const userEntity = getUserEntity(tweetEntity.user);
 
 	await db.tweets.put({
 		data: await compressObject({
-			tweets: { [tweet]: tweetEntity },
+			tweets: mergician(
+				{ [tweet]: tweetEntity },
+				quotedTweetEntity
+					? { [quotedTweetEntity.id_str]: quotedTweetEntity }
+					: {},
+			),
 			users: { [userEntity.id_str]: userEntity },
 		}),
 		added: new Date(),
 		deck,
 		id: tweet,
 		user: (await getUserId()) ?? "",
-		thumbnail: getThumbnailUrl(tweetEntity),
+		thumbnail:
+			getThumbnailUrl(tweetEntity) ?? getThumbnailUrl(quotedTweetEntity),
 	});
 };

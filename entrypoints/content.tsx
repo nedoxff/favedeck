@@ -1,6 +1,6 @@
 import { SelectDeckPopupRenderer } from "@/src/components/SelectDeckPopup";
 import { waitForSelector } from "@/src/helpers/observer";
-import { webpack } from "@/src/internals/webpack";
+import { HistoryLocation, webpack } from "@/src/internals/webpack";
 import * as bippy from "bippy";
 
 import "@/assets/root.css";
@@ -41,8 +41,11 @@ export default defineContentScript({
 const injectUrlObserver = () => {
 	console.log("injecting url observer");
 	webpack.common.history.listen((location, action) => {
-		if (location.pathname.endsWith("bookmarks") && action === "PUSH")
-			queueMicrotask(DeckViewer.create);
+		const shouldCreateViewer =
+			location.pathname.endsWith("bookmarks") &&
+			!(webpack.common.history._locationsHistory.at(-1)?.isModalRoute ?? false);
+		console.log("should create DeckViewer:", shouldCreateViewer);
+		if (shouldCreateViewer) queueMicrotask(DeckViewer.create);
 	});
 	if (webpack.common.history._history.location.pathname.endsWith("bookmarks"))
 		queueMicrotask(DeckViewer.create);

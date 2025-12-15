@@ -1,7 +1,7 @@
 import type { RawTweet } from "../types/tweet";
 
-export const getThumbnailUrl = (tweet: RawTweet): string | undefined => {
-	if (!tweet.entities.media) return undefined;
+export const getThumbnailUrl = (tweet?: RawTweet): string | undefined => {
+	if (!tweet || !tweet.entities.media) return undefined;
 	const eligibleEntities = tweet.entities.media.filter(
 		(m) => m.type === "photo" || m.type === "video",
 	);

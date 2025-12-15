@@ -44,6 +44,7 @@ function NewDeckCard() {
 	const [showModal, setShowModal] = useState(false);
 	const contentRef = useRef<HTMLDivElement>(null);
 	const [deckName, setDeckName] = useState("");
+	const [deckSecret, setDeckSecret] = useState(false);
 
 	useEffect(() => {
 		if (showModal) setDeckName("");
@@ -99,6 +100,21 @@ function NewDeckCard() {
 									setDeckName((ev.target as HTMLInputElement).value)
 								}
 							/>
+							<div>
+								<input
+									id="favedeck-select-deck-popup-secret"
+									className="accent-fd-primary"
+									type="checkbox"
+									checked={deckSecret}
+									onChange={(ev) => setDeckSecret(ev.target.checked)}
+								/>
+								<label
+									className="ml-2"
+									htmlFor="favedeck-select-deck-popup-secret"
+								>
+									Secret (hide thumbnails)
+								</label>
+							</div>
 							<button
 								onClick={async () => {
 									setShowModal(false);
@@ -107,7 +123,7 @@ function NewDeckCard() {
 										name: deckName,
 										user: (await getUserId()) ?? "",
 										id,
-										secret: false,
+										secret: deckSecret,
 									});
 									await decks.newDeck.set(id);
 								}}

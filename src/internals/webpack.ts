@@ -4,17 +4,22 @@ type ReactDOMClientType = typeof import("react-dom/client");
 
 // i have no idea if this is some custom history
 // thing by twitter based on its name (RichHistory)
-type HistoryLocation = {
+export type HistoryLocation = {
 	hash: string;
 	key: string;
 	pathname: string;
 	query: Record<string, string>;
 	search: string;
 };
-type HistoryType = {
+export type HistoryType = {
 	_history: {
 		location: HistoryLocation;
 	};
+	_locationsHistory: {
+		locationKey: string;
+		locationPathname: string;
+		isModalRoute: boolean;
+	}[];
 
 	go: (path: string) => void;
 	goBack: (path: string) => void;

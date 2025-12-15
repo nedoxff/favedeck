@@ -21,7 +21,6 @@
     "brotli-wasm": "^3.0.1",
     "buffer": "^6.0.3",
     "clsx": "^2.1.1",
-    "deep-copy-ts": "^0.5.4",
     "deep-object-diff": "^1.1.9",
     "dexie": "^4.2.1",
     "dexie-react-hooks": "^4.2.0",
