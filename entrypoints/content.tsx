@@ -41,7 +41,7 @@ export default defineContentScript({
 
 const injectUrlObserver = () => {
 	console.log("injecting url observer");
-	webpack.common.history.listen((location, action) => {
+	webpack.common.history.listen((location, _action) => {
 		console.log(location, webpack.common.history);
 		const shouldCreateViewer =
 			location.pathname.endsWith("bookmarks") &&
@@ -190,7 +190,7 @@ const injectFiberObserver = () => {
 	let found = false;
 	let reduxFiber: bippy.Fiber | null;
 	bippy.instrument({
-		onCommitFiberRoot: (id, root) => {
+		onCommitFiberRoot: (_id, root) => {
 			bippy.traverseRenderedFibers(root.current, (fiber) => {
 				if (!reduxFiber) {
 					reduxFiber = bippy.traverseFiber(

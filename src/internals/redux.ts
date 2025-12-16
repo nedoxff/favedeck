@@ -1,6 +1,6 @@
 import type { Fiber } from "bippy";
 import { mergician } from "mergician";
-import { type DatabaseTweet } from "../features/storage/definition";
+import type { DatabaseTweet } from "../features/storage/definition";
 import { getTweetEntityPayload } from "../features/storage/entities";
 import type { RawTweet, RawTweetUser } from "../types/tweet";
 
