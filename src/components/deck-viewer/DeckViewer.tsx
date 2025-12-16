@@ -16,7 +16,7 @@ import {
 	type DatabaseTweet,
 	db,
 } from "@/src/features/storage/definition";
-import { decks } from "@/src/features/storage/kv";
+import { kv } from "@/src/features/storage/kv";
 import { waitForSelector } from "@/src/helpers/observer";
 import { addEntitiesFromDatabaseTweets } from "@/src/internals/redux";
 import { webpack } from "@/src/internals/webpack";
@@ -28,7 +28,8 @@ import React from "react";
 import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { tweetComponents } from "../external/Tweet";
-import { TwitterModal } from "../TwitterModal";
+import CreateDeckModal from "../modals/CreateDeckModal";
+import EditDeckModal from "../modals/EditDeckModal";
 
 const patchTweetProps = (
 	tweet: DatabaseTweet,
@@ -142,70 +143,46 @@ function DeckBoardItemPreview(props: {
 	);
 }
 
-function EditDeckModal(props: { deck: DatabaseDeck; onClose: () => void }) {
-	const [deckName, setDeckName] = useState(props.deck.name);
-	const [deckSecret, setDeckSecret] = useState(props.deck.secret);
-	const [deleteClicked, setDeleteClicked] = useState(false);
+function NewDeckBoardItem() {
+	const [showModal, setShowModal] = useState(false);
+	const decksCount = useLiveQuery(() => db.decks.count());
 
 	return (
-		<TwitterModal onClose={props.onClose}>
-			<p className="font-bold text-2xl">Edit deck</p>
-			<p className="opacity-75">Name:</p>
-			<input
-				className={`caret-fd-primary! py-2 px-4 placeholder:opacity-50! rounded-full w-full border-2 hover:border-fd-primary!`}
-				placeholder="Enter deck name..."
-				type="text"
-				value={deckName}
-				onInput={(ev) => setDeckName((ev.target as HTMLInputElement).value)}
-			/>
-			<div>
-				<input
-					id="favedeck-edit-deck-popup-secret"
-					className="accent-fd-primary"
-					type="checkbox"
-					checked={deckSecret}
-					onChange={(ev) => setDeckSecret(ev.target.checked)}
-				/>
-				<label className="ml-2" htmlFor="favedeck-edit-deck-popup-secret">
-					Secret (hide thumbnails)
-				</label>
+		<>
+			<div
+				role="button"
+				onClick={() => setShowModal(true)}
+				className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
+			>
+				<div className="grow rounded-xl overflow-hidden relative border-dashed border-2 border-white! flex justify-center items-center opacity-50">
+					<svg
+						className="scale-200!"
+						xmlns="http://www.w3.org/2000/svg"
+						width="24"
+						height="24"
+						viewBox="0 0 24 24"
+					>
+						<title>plus icon</title>
+						<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
+					</svg>
+				</div>
+				<div className="pointer-events-none">
+					<p className="font-bold text-xl">New deck</p>
+					{decksCount !== undefined && (
+						<p className="opacity-50">
+							{decksCount === 0
+								? "we all start somewhere..."
+								: `${decksCount} is never enough!`}
+						</p>
+					)}
+				</div>
 			</div>
-			<button
-				onClick={async () => {
-					await db.decks.update(props.deck.id, {
-						name: deckName,
-						secret: deckSecret,
-					});
-					props.onClose();
-				}}
-				disabled={deckName.length === 0}
-				type="button"
-				className="rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center"
-			>
-				Save
-			</button>
-			<button
-				onClick={async () => {
-					if (!deleteClicked) {
-						setDeleteClicked(true);
-						return;
-					}
-					await db.decks.delete(props.deck.id);
-					props.onClose();
-				}}
-				type="button"
-				className="rounded-full w-full text-white font-bold bg-fd-danger! hover:shadow-lighten! py-2 px-4 text-center"
-			>
-				{deleteClicked ? "Are you sure?" : "Delete"}
-			</button>
-			<button
-				onClick={props.onClose}
-				type="button"
-				className="rounded-full w-full text-white font-bold bg-fd-bg-lighter! hover:shadow-lighten! py-2 px-4 text-center"
-			>
-				Cancel
-			</button>
-		</TwitterModal>
+			{showModal &&
+				createPortal(
+					<CreateDeckModal onClose={() => setShowModal(false)} />,
+					document.body,
+				)}
+		</>
 	);
 }
 
@@ -215,7 +192,7 @@ function UngroupedDeckBoardItem() {
 			role="button"
 			onClick={(ev) => {
 				ev.preventDefault();
-				decks.currentDeck.set(UNGROUPED_DECK);
+				kv.decks.currentDeck.set(UNGROUPED_DECK);
 				window.history.pushState("from-deck-view", "", `#fd-ungrouped`);
 			}}
 			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
@@ -237,7 +214,7 @@ function UngroupedDeckBoardItem() {
 			</div>
 			<div className="pointer-events-none">
 				<p className="font-bold text-xl">Ungrouped</p>
-				<p className="opacity-50">? tweets</p>
+				<p className="opacity-50">the rest of your bookmarks</p>
 			</div>
 		</div>
 	);
@@ -254,7 +231,7 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 				role="button"
 				onClick={(ev) => {
 					ev.preventDefault();
-					decks.currentDeck.set(props.deck);
+					kv.decks.currentDeck.set(props.deck);
 					window.history.pushState(
 						"from-deck-view",
 						"",
@@ -325,7 +302,7 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 
 function DeckBoard() {
 	const userDecks = useLiveQuery(getUserDecksAutomatically);
-	const currentDeck = useLiveQuery(decks.currentDeck.get);
+	const currentDeck = useLiveQuery(kv.decks.currentDeck.get);
 
 	useEffect(() => {
 		if (currentDeck?.id === "ungrouped") DeckViewer.originalContainer.show();
@@ -341,7 +318,7 @@ function DeckBoard() {
 						ev.preventDefault();
 						if (currentDeck === undefined) webpack.common.history.push("/home");
 						else {
-							decks.currentDeck.set(undefined);
+							kv.decks.currentDeck.set(undefined);
 							if (window.history.state === "from-deck-view")
 								window.history.back();
 							else window.history.pushState(null, "", "/i/bookmarks");
@@ -378,6 +355,7 @@ function DeckBoard() {
 						<DeckBoardItem key={d.id} deck={d} />
 					))}
 					<UngroupedDeckBoardItem />
+					<NewDeckBoardItem />
 				</div>
 			) : currentDeck.id !== "ungrouped" ? (
 				<DeckTweetList deck={currentDeck} />
@@ -391,7 +369,7 @@ export const DeckViewer = (() => {
 	let originalContainer: HTMLElement | undefined;
 	let currentDeck: DatabaseDeck | undefined;
 
-	Dexie.liveQuery(decks.currentDeck.get).subscribe({
+	Dexie.liveQuery(kv.decks.currentDeck.get).subscribe({
 		next: (v) => {
 			currentDeck = v;
 		},
@@ -400,7 +378,7 @@ export const DeckViewer = (() => {
 
 	return {
 		async create() {
-			await decks.currentDeck.set(undefined);
+			await kv.decks.currentDeck.set(undefined);
 			if (root) {
 				console.log("unmounting old DeckViewer");
 				root.unmount();
@@ -422,7 +400,7 @@ export const DeckViewer = (() => {
 
 			if (window.location.hash.includes("fd")) {
 				const id = window.location.hash.substring(4);
-				await decks.currentDeck.set(
+				await kv.decks.currentDeck.set(
 					id === "ungrouped" ? UNGROUPED_DECK : await db.decks.get(id),
 				);
 			}

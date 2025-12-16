@@ -11,23 +11,22 @@ import {
 import { useLiveQuery } from "dexie-react-hooks";
 import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
-import { ErrorBoundary } from "react-error-boundary";
-import { v6 } from "uuid";
 import {
 	addTweetToDeck,
 	getDeckThumbnails,
+	getUserDecksAutomatically,
 	isTweetInDeck,
-	isTweetInSpecificDeck,
+	isTweetInSpecificDeck
 } from "../features/storage/decks";
 import { type DatabaseDeck, db } from "../features/storage/definition";
-import { decks, tweets } from "../features/storage/kv";
+import { kv } from "../features/storage/kv";
 import { getUserId } from "../internals/foolproof";
 import {
 	getTweetIdFromFiber,
 	getTweetInfoFromElement,
 } from "../internals/goodies";
 import { findParentNode, matchers } from "../internals/matchers";
-import { TwitterModal } from "./TwitterModal";
+import CreateDeckModal from "./modals/CreateDeckModal";
 
 enum DeckCardState {
 	IDLE,
@@ -39,12 +38,6 @@ enum DeckCardState {
 
 function NewDeckCard() {
 	const [showModal, setShowModal] = useState(false);
-	const [deckName, setDeckName] = useState("");
-	const [deckSecret, setDeckSecret] = useState(false);
-
-	useEffect(() => {
-		if (showModal) setDeckName("");
-	}, [showModal]);
 
 	return (
 		<div
@@ -70,58 +63,7 @@ function NewDeckCard() {
 			</div>
 			{showModal &&
 				createPortal(
-					<TwitterModal onClose={() => setShowModal(false)}>
-						<p className="font-bold text-2xl">New deck</p>
-						<p className="opacity-75">Enter the name for your new deck:</p>
-						<input
-							className={`caret-fd-primary! py-2 px-4 placeholder:opacity-50! rounded-full w-full border-2 hover:border-fd-primary!`}
-							placeholder="Enter deck name..."
-							type="text"
-							onInput={(ev) =>
-								setDeckName((ev.target as HTMLInputElement).value)
-							}
-						/>
-						<div>
-							<input
-								id="favedeck-select-deck-popup-secret"
-								className="accent-fd-primary"
-								type="checkbox"
-								checked={deckSecret}
-								onChange={(ev) => setDeckSecret(ev.target.checked)}
-							/>
-							<label
-								className="ml-2"
-								htmlFor="favedeck-select-deck-popup-secret"
-							>
-								Secret (hide thumbnails)
-							</label>
-						</div>
-						<button
-							onClick={async () => {
-								setShowModal(false);
-								const id = v6();
-								await db.decks.put({
-									name: deckName,
-									user: (await getUserId()) ?? "",
-									id,
-									secret: deckSecret,
-								});
-								await decks.newDeck.set(id);
-							}}
-							disabled={deckName.length === 0}
-							type="button"
-							className="rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center"
-						>
-							Create
-						</button>
-						<button
-							onClick={() => setShowModal(false)}
-							type="button"
-							className="rounded-full w-full text-white font-bold bg-fd-bg-lighter! hover:shadow-lighten! py-2 px-4 text-center"
-						>
-							Cancel
-						</button>
-					</TwitterModal>,
+					<CreateDeckModal onClose={() => setShowModal(false)} />,
 					document.body,
 				)}
 		</div>
@@ -131,14 +73,14 @@ function NewDeckCard() {
 function DeckCard(props: { deck: DatabaseDeck }) {
 	const [state, setState] = useState<DeckCardState>(DeckCardState.IDLE);
 	const thumbnails = useLiveQuery(() => getDeckThumbnails(props.deck.id, 1));
-	const currentTweet = useLiveQuery(tweets.currentTweet.get);
-	const currentNewDeck = useLiveQuery(decks.newDeck.get);
+	const currentTweet = useLiveQuery(kv.tweets.currentTweet.get);
+	const currentNewDeck = useLiveQuery(kv.decks.newDeck.get);
 	const saveButtonRef = useRef<HTMLButtonElement>(null);
 
 	useEffect(() => {
 		if (!saveButtonRef.current || currentNewDeck !== props.deck.id) return;
 		setState(DeckCardState.SAVING);
-		decks.newDeck.set(undefined);
+		kv.decks.newDeck.set(undefined);
 	}, [currentNewDeck, saveButtonRef]);
 
 	useEffect(() => {
@@ -183,9 +125,8 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 	const save = useCallback(async () => {
 		await addTweetToDeck(props.deck.id, getTweetId());
 
-		// if we saved a tweet from the ungrouped "deck",
-		// hide the tweet
-		if ((await decks.currentDeck.get())?.id === "ungrouped") {
+		// if we saved a tweet from the ungrouped "deck", hide the tweet
+		if ((await kv.decks.currentDeck.get())?.id === "ungrouped") {
 			const tweetNode = findParentNode(
 				// biome-ignore lint/style/noNonNullAssertion: guaranteed(?) to be present
 				SelectDeckPopupRenderer.getBookmarkButton()!,
@@ -213,7 +154,7 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 		setState(DeckCardState.REMOVED);
 
 		// if we're currently viewing this deck
-		if ((await decks.currentDeck.get())?.id === props.deck.id)
+		if ((await kv.decks.currentDeck.get())?.id === props.deck.id)
 			SelectDeckPopupRenderer.hide();
 
 		if (await isTweetInDeck(id)) return;
@@ -296,30 +237,23 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 }
 
 export function SelectDeckPopup() {
-	const decks = useLiveQuery(() => db.decks.toArray());
-	const currentTweet = useLiveQuery(tweets.currentTweet.get);
+	const decks = useLiveQuery(getUserDecksAutomatically);
+	const currentTweet = useLiveQuery(kv.tweets.currentTweet.get);
 
 	return (
-		<ErrorBoundary
-			fallbackRender={(props) => {
-				alert(props.error);
-				return <div>{props.error}</div>;
+		<div
+			key={currentTweet}
+			className="bg-fd-bg p-2 rounded-xl gap-1 flex flex-col"
+			style={{
+				boxShadow:
+					"rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px",
 			}}
 		>
-			<div
-				key={currentTweet}
-				className="bg-fd-bg p-2 rounded-xl gap-1 flex flex-col"
-				style={{
-					boxShadow:
-						"rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px",
-				}}
-			>
-				{(decks ?? []).map((d, idx) => (
-					<DeckCard key={d.id} deck={d} />
-				))}
-				<NewDeckCard />
-			</div>
-		</ErrorBoundary>
+			{(decks ?? []).map((d) => (
+				<DeckCard key={d.id} deck={d} />
+			))}
+			<NewDeckCard />
+		</div>
 	);
 }
 
@@ -424,7 +358,7 @@ export const SelectDeckPopupRenderer = (() => {
 			try {
 				const fiber = getParentTweetFiber();
 				if (!fiber) return;
-				tweets.currentTweet.set(getTweetIdFromFiber(fiber));
+				kv.tweets.currentTweet.set(getTweetIdFromFiber(fiber));
 			} catch (ex) {
 				console.error(`failed to get current tweet: ${ex}`);
 			}

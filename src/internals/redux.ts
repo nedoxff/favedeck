@@ -1,10 +1,10 @@
 import type { Fiber } from "bippy";
 import { mergician } from "mergician";
-import type { DatabaseTweet } from "../features/storage/definition";
-import { decompressObject } from "../helpers/compression";
+import { type DatabaseTweet } from "../features/storage/definition";
+import { getTweetEntityPayload } from "../features/storage/entities";
 import type { RawTweet, RawTweetUser } from "../types/tweet";
 
-type AddEntitiesPayload = {
+export type AddEntitiesPayload = {
 	tweets?: Record<string, RawTweet>;
 	users?: Record<string, RawTweetUser>;
 };
@@ -38,10 +38,8 @@ export const addEntitiesFromDatabaseTweets = async (
 	tweets: DatabaseTweet[],
 ) => {
 	let payload: AddEntitiesPayload = {};
-	for (const tweet of tweets) {
-		const decompressed = await decompressObject(tweet.data);
-		payload = mergician(payload, decompressed);
-	}
+	for (const tweet of tweets)
+		payload = mergician(payload, await getTweetEntityPayload(tweet.id));
 	addEntities(payload);
 };
 

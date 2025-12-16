@@ -4,8 +4,8 @@ export interface DatabaseTweet {
 	user: string;
 	deck: string;
 	id: string;
-	data: Blob;
-	added: Date;
+	author: string;
+	dateAdded: Date;
 	thumbnail?: string;
 }
 
@@ -14,16 +14,25 @@ export interface DatabaseDeck {
 	id: string;
 	name: string;
 	secret: boolean;
+	dateModified: Date;
+}
+
+export interface DatabaseCompressedEntity {
+	key: string;
+	type: string;
+	data: Blob;
 }
 
 export const db = new Dexie("favedeck") as Dexie & {
 	tweets: EntityTable<DatabaseTweet>;
 	decks: EntityTable<DatabaseDeck, "id">;
 	kv: EntityTable<{ key: string; value: unknown }, "key">;
+	entities: EntityTable<DatabaseCompressedEntity, "key">;
 };
 
 db.version(1).stores({
-	tweets: "++, id, user, deck, added, thumbnail",
-	decks: "&id, user, name, secret",
+	tweets: "++, id, user, author, deck, dateAdded, thumbnail",
+	decks: "&id, user, name, secret, dateModified",
 	kv: "&key, value",
+	entities: "&key, type",
 });

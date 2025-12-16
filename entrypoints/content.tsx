@@ -6,7 +6,7 @@ import * as bippy from "bippy";
 import "@/assets/root.css";
 import { DeckViewer } from "@/src/components/deck-viewer/DeckViewer";
 import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
-import { decks } from "@/src/features/storage/kv";
+import { kv } from "@/src/features/storage/kv";
 import { getTweetInfoFromElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
 import { setReduxStoreFromFiber } from "@/src/internals/redux";
@@ -42,15 +42,16 @@ export default defineContentScript({
 const injectUrlObserver = () => {
 	console.log("injecting url observer");
 	webpack.common.history.listen((location, action) => {
+		console.log(location, webpack.common.history);
 		const shouldCreateViewer =
 			location.pathname.endsWith("bookmarks") &&
 			!(webpack.common.history._locationsHistory.at(-1)?.isModalRoute ?? false);
 		console.log("should create DeckViewer:", shouldCreateViewer);
-		if (shouldCreateViewer) queueMicrotask(DeckViewer.create);
+		if (shouldCreateViewer) DeckViewer.create();
 	});
 	if (webpack.common.history._history.location.pathname.endsWith("bookmarks"))
 		queueMicrotask(DeckViewer.create);
-	else decks.currentDeck.set(undefined);
+	else kv.decks.currentDeck.set(undefined);
 };
 
 const initializeWebpack = () => {

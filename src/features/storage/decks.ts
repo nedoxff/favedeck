@@ -1,15 +1,28 @@
-import { compressObject } from "@/src/helpers/compression";
 import { getUserId } from "@/src/internals/foolproof";
 import { getThumbnailUrl } from "@/src/internals/goodies";
-import { getTweetEntity, getUserEntity } from "@/src/internals/redux";
-import { mergician } from "mergician";
+import { getTweetEntity } from "@/src/internals/redux";
+import { v6 } from "uuid";
 import { type DatabaseDeck, db } from "./definition";
+import { putTweetEntity } from "./entities";
 
 export const UNGROUPED_DECK: DatabaseDeck = {
 	id: "ungrouped",
 	name: "Ungrouped",
 	secret: false,
 	user: "",
+	dateModified: new Date(),
+};
+
+export const createDeck = async (name: string, secret: boolean) => {
+	const id = v6();
+	await db.decks.put({
+		id,
+		name,
+		secret,
+		user: (await getUserId()) ?? "",
+		dateModified: new Date(),
+	});
+	return id;
 };
 
 export const getUserDecks = (userId: string) =>
@@ -48,22 +61,15 @@ export const addTweetToDeck = async (deck: string, tweet: string) => {
 	const quotedTweetEntity = tweetEntity.quoted_status
 		? getTweetEntity(tweetEntity.quoted_status)
 		: undefined;
-	const userEntity = getUserEntity(tweetEntity.user);
 
+	await putTweetEntity(tweetEntity);
+	await putTweetEntity(quotedTweetEntity);
 	await db.tweets.put({
-		data: await compressObject({
-			tweets: mergician(
-				{ [tweet]: tweetEntity },
-				quotedTweetEntity
-					? { [quotedTweetEntity.id_str]: quotedTweetEntity }
-					: {},
-			),
-			users: { [userEntity.id_str]: userEntity },
-		}),
-		added: new Date(),
+		dateAdded: new Date(),
 		deck,
 		id: tweet,
 		user: (await getUserId()) ?? "",
+		author: tweetEntity.user,
 		thumbnail:
 			getThumbnailUrl(tweetEntity) ?? getThumbnailUrl(quotedTweetEntity),
 	});

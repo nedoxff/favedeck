@@ -16,11 +16,12 @@ const createGettersSetters = <T>(key: string) => ({
 	set: kvPut<T>(key),
 });
 
-export const tweets = {
-	currentTweet: createGettersSetters<string>("current-tweet"),
-};
-
-export const decks = {
-	newDeck: createGettersSetters<string>("new-deck"),
-	currentDeck: createGettersSetters<DatabaseDeck>("current-deck"),
+export const kv = {
+	tweets: {
+		currentTweet: createGettersSetters<string>("current-tweet"),
+	},
+	decks: {
+		newDeck: createGettersSetters<string>("new-deck"),
+		currentDeck: createGettersSetters<DatabaseDeck>("current-deck"),
+	},
 };
