@@ -24,6 +24,7 @@ export default defineContentScript({
 			injectUrlObserver();
 			injectTweetObserver();
 			injectRenderers();
+			window.postMessage({ meow: "bark" }, "*");
 		};
 
 		if (document.readyState === "complete") inject();
@@ -42,7 +43,6 @@ export default defineContentScript({
 const injectUrlObserver = () => {
 	console.log("injecting url observer");
 	webpack.common.history.listen((location, _action) => {
-		console.log(location, webpack.common.history);
 		const shouldCreateViewer =
 			location.pathname.endsWith("bookmarks") &&
 			!(webpack.common.history._locationsHistory.at(-1)?.isModalRoute ?? false);
