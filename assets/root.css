@@ -1,6 +1,6 @@
+@import "tailwindcss";
 @custom-variant hover (&:hover);
 @source inline("*:transform-none!,*:static!");
-@import "tailwindcss";
 
 :root {
     font-family: "TwitterChirp", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;

@@ -7,6 +7,11 @@ import "@/assets/root.css";
 import { DeckViewer } from "@/src/components/deck-viewer/DeckViewer";
 import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
 import { kv } from "@/src/features/storage/kv";
+import {
+	type ForwarderMessagePayload,
+	isFromPostMessage,
+	sendContentToForwarder,
+} from "@/src/helpers/messaging";
 import { getTweetInfoFromElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
 import { setReduxStoreFromFiber } from "@/src/internals/redux";
@@ -24,7 +29,7 @@ export default defineContentScript({
 			injectUrlObserver();
 			injectTweetObserver();
 			injectRenderers();
-			window.postMessage({ meow: "bark" }, "*");
+			initializeMessageListener();
 		};
 
 		if (document.readyState === "complete") inject();
@@ -39,6 +44,23 @@ export default defineContentScript({
 		});
 	},
 });
+
+const initializeMessageListener = () => {
+	window.addEventListener("message", (ev) => {
+		if (!isFromPostMessage(ev.data)) return;
+		const payload = ev.data as ForwarderMessagePayload;
+		switch (payload.type) {
+			case "hello-acknowledge":
+				break;
+			case "request-state":
+				break;
+		}
+	});
+	sendContentToForwarder({
+		source: "favedeck",
+		type: "hello",
+	});
+};
 
 const injectUrlObserver = () => {
 	console.log("injecting url observer");
