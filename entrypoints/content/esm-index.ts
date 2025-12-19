@@ -1,49 +1,18 @@
-import { SelectDeckPopupRenderer } from "@/src/components/SelectDeckPopup";
-import { waitForSelector } from "@/src/helpers/observer";
-import { webpack } from "@/src/internals/webpack";
-import * as bippy from "bippy";
-
-import "@/assets/root.css";
 import { DeckViewer } from "@/src/components/deck-viewer/DeckViewer";
 import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
+import { SelectDeckPopupRenderer } from "@/src/components/SelectDeckPopup";
 import { kv } from "@/src/features/storage/kv";
 import {
-	type ForwarderMessagePayload,
-	isFromPostMessage,
-	sendContentToForwarder,
+    type ForwarderMessagePayload,
+    isFromPostMessage,
+    sendContentToForwarder,
 } from "@/src/helpers/messaging";
+import { waitForSelector } from "@/src/helpers/observer";
 import { getTweetInfoFromElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
 import { setReduxStoreFromFiber } from "@/src/internals/redux";
-
-export default defineContentScript({
-	matches: ["*://*.x.com/*"],
-	world: "MAIN",
-	main() {
-		console.log("hello from content script!");
-		window.dispatchEvent(new CustomEvent("fd-reset"));
-
-		const inject = () => {
-			initializeWebpack();
-			injectFiberObserver();
-			injectUrlObserver();
-			injectTweetObserver();
-			injectRenderers();
-			initializeMessageListener();
-		};
-
-		if (document.readyState === "complete") inject();
-		else
-			document.addEventListener("readystatechange", () => {
-				if (document.readyState === "complete") inject();
-			});
-
-		window.addEventListener("fd-reset", () => {
-			console.log("reloading");
-			window.location.reload();
-		});
-	},
-});
+import { webpack } from "@/src/internals/webpack";
+import * as bippy from "bippy";
 
 const initializeMessageListener = () => {
 	window.addEventListener("message", (ev) => {
@@ -208,6 +177,7 @@ const injectTweetObserver = () => {
 
 const injectFiberObserver = () => {
 	console.log("injecting react fiber observer (bippy)");
+	kv.tweets.tweetComponentsAvailable.set("false");
 
 	let found = false;
 	let reduxFiber: bippy.Fiber | null;
@@ -255,8 +225,31 @@ const injectFiberObserver = () => {
 					found = true;
 					console.log("found the tweet component");
 					getTweetComponentsFromFiber(fiber);
+					kv.tweets.tweetComponentsAvailable.set("true");
 				}
 			});
 		},
 	});
 };
+
+window.dispatchEvent(new CustomEvent("fd-reset"));
+
+const inject = () => {
+	initializeWebpack();
+	injectFiberObserver();
+	injectUrlObserver();
+	injectTweetObserver();
+	injectRenderers();
+	initializeMessageListener();
+};
+
+if (document.readyState === "complete") inject();
+else
+	document.addEventListener("readystatechange", () => {
+		if (document.readyState === "complete") inject();
+	});
+
+window.addEventListener("fd-reset", () => {
+	console.log("reloading");
+	window.location.reload();
+});

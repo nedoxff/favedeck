@@ -1,6 +1,7 @@
 type ReactType = typeof import("react");
 type ReactDOMType = typeof import("react-dom");
 type ReactDOMClientType = typeof import("react-dom/client");
+type ReactJSXRuntimeType = typeof import("react/jsx-runtime");
 
 // i have no idea if this is some custom history
 // thing by twitter based on its name (RichHistory)
@@ -62,6 +63,7 @@ export type WebpackHelper = {
 		react: {
 			React: ReactType;
 			ReactDOM: ReactDOMType & ReactDOMClientType;
+			JSXRuntime: ReactJSXRuntimeType;
 		};
 		history: HistoryType;
 	};
@@ -97,6 +99,10 @@ export const webpack: WebpackHelper = {
 				ReactDOM: findOrThrowByProperty<ReactDOMType & ReactDOMClientType>(
 					"createPortal",
 					"ReactDOM",
+				),
+				JSXRuntime: findOrThrowByProperty<ReactJSXRuntimeType>(
+					"jsx",
+					"react/jsx-runtime",
 				),
 			},
 			history: findOrThrowByProperty<{ ZP: HistoryType }>(

@@ -8,17 +8,11 @@ import { webpack } from "../../internals/webpack";
 export const tweetComponents: {
 	Tweet: ComponentType;
 	ContextBridge: FunctionComponent<{ children?: ReactNode }>;
-	meta: {
-		defaultTweetProps: Record<string, unknown>;
-		available: boolean;
-	};
+	defaultTweetProps: Record<string, unknown>;
 } = {
 	Tweet: null!,
 	ContextBridge: null!,
-	meta: {
-		available: false,
-		defaultTweetProps: null!,
-	},
+	defaultTweetProps: null!,
 };
 
 export const getTweetComponentsFromFiber = (fiber: Fiber) => {
@@ -54,39 +48,5 @@ export const getTweetComponentsFromFiber = (fiber: Fiber) => {
 			);
 		}, props.children);
 
-	tweetComponents.meta.defaultTweetProps = fiber.memoizedProps;
-	tweetComponents.meta.available = true;
+	tweetComponents.defaultTweetProps = fiber.memoizedProps;
 };
-
-/* try {
-								
-
-								const App = () => ContextBridge;
-
-								consale.log("rendering");
-								ReactDOM.createRoot(
-									document.querySelector("#testtweet"),
-								).render(React.createElement(App));
-								consale.log("success");
-
-								 consale.log(ContextBridge);
-							const portal = react.createPortal(
-								React.createElement("input"),
-								document.querySelector("#testtweet"),
-							);
-							console.log(portal);
-								/* console.log(
-								"eb",
-								React.createElement(ErrorBoundary, {}, ContextBridge),
-							);
-							flushSync(() => {
-								react
-									.createRoot(document.querySelector("#testtweet"))
-									.render(<ContextBridge></ContextBridge>);
-							});
-
-							consale.log("render success?");
-								//consale.log(type, "success??");
-							} catch (err) {
-								consale.error(err);
-							} */

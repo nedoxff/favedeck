@@ -6,106 +6,22 @@
 import {
 	getDeckSize,
 	getDeckThumbnails,
-	getDeckTweets,
 	getUserDecksAutomatically,
 	isTweetInDeck,
 	UNGROUPED_DECK,
 } from "@/src/features/storage/decks";
-import {
-	type DatabaseDeck,
-	type DatabaseTweet,
-	db,
-} from "@/src/features/storage/definition";
+import { type DatabaseDeck, db } from "@/src/features/storage/definition";
 import { kv } from "@/src/features/storage/kv";
 import { waitForSelector } from "@/src/helpers/observer";
-import { addEntitiesFromDatabaseTweets } from "@/src/internals/redux";
 import { webpack } from "@/src/internals/webpack";
 import clsx from "clsx";
 import Dexie from "dexie";
 import { useLiveQuery } from "dexie-react-hooks";
-import { mergician } from "mergician";
-import React from "react";
 import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
-import { tweetComponents } from "../external/Tweet";
 import CreateDeckModal from "../modals/CreateDeckModal";
 import EditDeckModal from "../modals/EditDeckModal";
-
-const patchTweetProps = (
-	tweet: DatabaseTweet,
-	props: Record<string, unknown>,
-) => {
-	const copy = mergician({}, props);
-	// @ts-expect-error
-	// NOTE: THE "-modified" HERE IS REALLY IMPORTANT
-	copy.item.id = `tweet-${tweet.id}-modified`;
-	// @ts-expect-error
-	copy.item.data.entryId = `tweet-${tweet.id}`;
-	// @ts-expect-error
-	copy.item.data.content.id = tweet.id;
-	// @ts-expect-error
-	copy.item.render = () => copy.item._renderer(copy.item.data, undefined);
-	// @ts-expect-error
-	copy.item.data.content.displayType = "Tweet";
-	// @ts-expect-error
-	copy.item.data.conversationPosition = undefined;
-	// @ts-expect-error
-	copy.visible = true;
-	// @ts-expect-error
-	copy.shouldAnimate = false;
-	return copy;
-};
-
-function DeckTweetList(props: { deck: DatabaseDeck }) {
-	const [tweetComponentsAvailable, setTweetComponentsAvailable] = useState(
-		tweetComponents.meta.available,
-	);
-	const tweets = useLiveQuery(() => getDeckTweets(props.deck.id));
-	const ref = useRef<HTMLDivElement>(null);
-	useEffect(() => {
-		if (!tweetComponentsAvailable) {
-			tweetComponents.meta = new Proxy(tweetComponents.meta, {
-				set(target, p, newValue, _receiver) {
-					if (p === "available") setTweetComponentsAvailable(newValue);
-					// @ts-expect-error
-					target[p] = newValue;
-					return true;
-				},
-			});
-			return;
-		}
-		if (!ref.current || !tweets || tweets.length === 0) return;
-
-		(async () => {
-			await addEntitiesFromDatabaseTweets(tweets ?? []);
-
-			queueMicrotask(() => {
-				if (!ref.current) return;
-				const TwitterReact = webpack.common.react.React;
-				const TwitterReactDOM = webpack.common.react.ReactDOM;
-				const root = TwitterReactDOM.createRoot(ref.current);
-
-				const tweetsContainer = TwitterReact.createElement(React.Fragment, {
-					children: tweets.map((t) =>
-						TwitterReact.createElement(tweetComponents.Tweet, {
-							...patchTweetProps(t, tweetComponents.meta.defaultTweetProps),
-						}),
-					),
-				});
-
-				const bridge = TwitterReact.createElement(
-					tweetComponents.ContextBridge,
-					{
-						children: tweetsContainer,
-					},
-				);
-				root.render(TwitterReact.createElement(() => bridge));
-			});
-		})();
-	}, [tweetComponentsAvailable, ref.current, tweets]);
-
-	return <div ref={ref} className="*:static!" />;
-}
+import { DeckTweetList } from "./DeckTweetList";
 
 function DeckBoardItemPreview(props: {
 	className: string;

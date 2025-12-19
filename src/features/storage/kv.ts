@@ -19,6 +19,9 @@ const createGettersSetters = <T>(key: string) => ({
 export const kv = {
 	tweets: {
 		currentTweet: createGettersSetters<string>("current-tweet"),
+		tweetComponentsAvailable: createGettersSetters<string>(
+			"tweet-components-available",
+		),
 	},
 	decks: {
 		newDeck: createGettersSetters<string>("new-deck"),
