@@ -16,7 +16,7 @@ import {
 	getDeckThumbnails,
 	getUserDecksAutomatically,
 	isTweetInDeck,
-	isTweetInSpecificDeck
+	isTweetInSpecificDeck,
 } from "../features/storage/decks";
 import { type DatabaseDeck, db } from "../features/storage/definition";
 import { kv } from "../features/storage/kv";
@@ -27,6 +27,7 @@ import {
 } from "../internals/goodies";
 import { findParentNode, matchers } from "../internals/matchers";
 import CreateDeckModal from "./modals/CreateDeckModal";
+import { components } from "./wrapper";
 
 enum DeckCardState {
 	IDLE,
@@ -117,7 +118,7 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 	}, [state]);
 
 	const getTweetId = () => {
-		const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
+		const fiber = components.SelectDeckPopup.getParentTweetFiber();
 		if (!fiber) throw new Error("cannot find the parent twitter fiber");
 		return getTweetIdFromFiber(fiber);
 	};
@@ -129,19 +130,19 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 		if ((await kv.decks.currentDeck.get())?.id === "ungrouped") {
 			const tweetNode = findParentNode(
 				// biome-ignore lint/style/noNonNullAssertion: guaranteed(?) to be present
-				SelectDeckPopupRenderer.getBookmarkButton()!,
+				components.SelectDeckPopup.getBookmarkButton()!,
 				matchers.tweetRoot.matcher,
 			);
 			if (!tweetNode) return;
 			tweetNode.style.display = "none";
-			SelectDeckPopupRenderer.hide();
+			components.SelectDeckPopup.hide();
 		}
 
 		setState(DeckCardState.SAVED);
 	}, [setState]);
 
 	const remove = useCallback(async () => {
-		const fiber = SelectDeckPopupRenderer.getParentTweetFiber();
+		const fiber = components.SelectDeckPopup.getParentTweetFiber();
 		if (!fiber) throw new Error("cannot find the parent twitter fiber");
 		const id = getTweetIdFromFiber(fiber);
 		await db.tweets
@@ -155,7 +156,7 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 
 		// if we're currently viewing this deck
 		if ((await kv.decks.currentDeck.get())?.id === props.deck.id)
-			SelectDeckPopupRenderer.hide();
+			components.SelectDeckPopup.hide();
 
 		if (await isTweetInDeck(id)) return;
 
@@ -236,7 +237,7 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 	);
 }
 
-export function SelectDeckPopup() {
+function InternalSelectDeckPopup() {
 	const decks = useLiveQuery(getUserDecksAutomatically);
 	const currentTweet = useLiveQuery(kv.tweets.currentTweet.get);
 
@@ -257,7 +258,7 @@ export function SelectDeckPopup() {
 	);
 }
 
-export const SelectDeckPopupRenderer = (() => {
+export const SelectDeckPopup = (() => {
 	let bookmarkButton: HTMLButtonElement | undefined;
 	let container: HTMLDivElement | undefined;
 	let visible: boolean = false;
@@ -336,7 +337,7 @@ export const SelectDeckPopupRenderer = (() => {
 			document.body.append(div);
 			container = div;
 
-			createRoot(div).render(<SelectDeckPopup />);
+			createRoot(div).render(<InternalSelectDeckPopup />);
 		},
 		getParentTweetFiber,
 		show() {

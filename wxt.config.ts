@@ -11,11 +11,13 @@ const twitterReactHijacker = (): Plugin => {
 			if (
 				source !== "react" &&
 				source !== "react-dom" &&
-				source !== "react/jsx-runtime"
+				source !== "react-dom/client" &&
+				source !== "react/jsx-runtime" &&
+				source !== "react/jsx-dev-runtime"
 			)
 				return null;
 
-			if (importer?.includes("react-virtuoso")) {
+			if (!importer?.includes("popup")) {
 				console.log(`hijacking ${source} import from ${importer}`);
 
 				switch (source) {
@@ -25,11 +27,13 @@ const twitterReactHijacker = (): Plugin => {
 							"src/internals/proxies/react-proxy.ts",
 						);
 					case "react-dom":
+					case "react-dom/client":
 						return path.resolve(
 							__dirname,
 							"src/internals/proxies/react-dom-proxy.ts",
 						);
 					case "react/jsx-runtime":
+					case "react/jsx-dev-runtime":
 						return path.resolve(
 							__dirname,
 							"src/internals/proxies/react-jsx-runtime-proxy.ts",

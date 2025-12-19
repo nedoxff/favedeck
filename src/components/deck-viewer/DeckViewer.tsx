@@ -21,7 +21,8 @@ import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import CreateDeckModal from "../modals/CreateDeckModal";
 import EditDeckModal from "../modals/EditDeckModal";
-import { DeckTweetList } from "./DeckTweetList";
+import { components } from "../wrapper";
+import { DeckMasonryList } from "./DeckTweetList";
 
 function DeckBoardItemPreview(props: {
 	className: string;
@@ -221,8 +222,9 @@ function DeckBoard() {
 	const currentDeck = useLiveQuery(kv.decks.currentDeck.get);
 
 	useEffect(() => {
-		if (currentDeck?.id === "ungrouped") DeckViewer.originalContainer.show();
-		else DeckViewer.originalContainer.hide();
+		if (currentDeck?.id === "ungrouped")
+			components.DeckViewer.originalContainer.show();
+		else components.DeckViewer.originalContainer.hide();
 	}, [currentDeck]);
 
 	return (
@@ -274,7 +276,7 @@ function DeckBoard() {
 					<NewDeckBoardItem />
 				</div>
 			) : currentDeck.id !== "ungrouped" ? (
-				<DeckTweetList deck={currentDeck} />
+				<DeckMasonryList deck={currentDeck} />
 			) : undefined}
 		</div>
 	);

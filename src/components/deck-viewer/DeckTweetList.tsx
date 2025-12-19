@@ -1,13 +1,18 @@
-import { getDeckTweets } from "@/src/features/storage/decks";
+import { getDeckSize, getDeckTweets } from "@/src/features/storage/decks";
 import type {
-    DatabaseDeck,
-    DatabaseTweet,
+	DatabaseDeck,
+	DatabaseTweet,
 } from "@/src/features/storage/definition";
 import { kv } from "@/src/features/storage/kv";
+import {
+	convertDatabaseTweetToMasonryInfos,
+	type TweetMasonryInfo,
+} from "@/src/internals/goodies";
 import { addEntitiesFromDatabaseTweets } from "@/src/internals/redux";
-import { webpack } from "@/src/internals/webpack";
 import { useLiveQuery } from "dexie-react-hooks";
+import { Masonry, useInfiniteLoader } from "masonic";
 import { mergician } from "mergician";
+import { Virtuoso } from "react-virtuoso";
 import { tweetComponents } from "../external/Tweet";
 
 const patchTweetProps = (
@@ -35,17 +40,91 @@ const patchTweetProps = (
 	return copy;
 };
 
-function InternalTweetList(props: {
-	deck: DatabaseDeck;
-	virtuoso: typeof import("react-virtuoso");
-}) {
-	const [tweets, setTweets] = webpack.common.react.React.useState<
-		DatabaseTweet[]
-	>([]);
-	const [windowHeight, setWindowHeight] =
-		webpack.common.react.React.useState<number>(window.innerHeight);
+export function DeckMasonryList(props: { deck: DatabaseDeck }) {
+	const tweetComponentsAvailable = useLiveQuery(
+		kv.tweets.tweetComponentsAvailable.get,
+	);
+	const deckSize = useLiveQuery(() => getDeckSize(props.deck.id));
+	const [tweets, setTweets] = useState<TweetMasonryInfo[]>([]);
 
-	webpack.common.react.React.useEffect(() => {
+	useEffect(() => {
+		(async () => {
+			const tweets = await getDeckTweets(props.deck.id, 0, 20);
+			await addEntitiesFromDatabaseTweets(tweets);
+			setTweets(tweets.flatMap((t) => convertDatabaseTweetToMasonryInfos(t)));
+		})();
+	}, []);
+
+	const maybeLoadMore = useInfiniteLoader(
+		async (start, stop) => {
+			console.log(start, stop);
+			const newTweets = await getDeckTweets(
+				props.deck.id,
+				start,
+				stop - start + 1,
+			);
+			await addEntitiesFromDatabaseTweets(newTweets);
+			setTweets((current) => [
+				...current,
+				...newTweets.flatMap((t) => convertDatabaseTweetToMasonryInfos(t)),
+			]);
+		},
+		{
+			isItemLoaded: (index, items) => !!items[index],
+			threshold: 2,
+			totalItems: deckSize ?? 0,
+		},
+	);
+
+	// note: thank your past self for implementing react proxies.
+	return (
+		<div className="grow p-4">
+			{tweetComponentsAvailable === "true" && (
+				<tweetComponents.ContextBridge>
+					<Masonry
+						onRender={maybeLoadMore}
+						items={tweets}
+						columnGutter={8}
+						rowGutter={8}
+						columnCount={2}
+						render={({ index, width, data }) => (
+							<div
+								style={{ width: `${width}px` }}
+								className="rounded-2xl overflow-hidden relative group"
+							>
+								<img
+									key={`${data.id}-${index}`}
+									src={data.info.url}
+									width={data.info.width}
+									height={data.info.height}
+									alt="meow"
+								/>
+								<img
+									className="absolute aspect-square rounded-full bottom-2 left-2 z-20 w-9"
+									src={data.authorProfileImage}
+									alt="pfp"
+									style={{
+										filter: "drop-shadow(rgba(0, 0, 0, 0.35) 0 0 10px)",
+									}}
+								/>
+								<div className="absolute w-full h-full top-0 left-0 z-10 group-hover:flex! rounded-2xl hidden bg-black/25"></div>
+							</div>
+						)}
+					/>
+				</tweetComponents.ContextBridge>
+			)}
+		</div>
+	);
+}
+
+export function DeckTweetList(props: { deck: DatabaseDeck }) {
+	const tweetComponentsAvailable = useLiveQuery(
+		kv.tweets.tweetComponentsAvailable.get,
+	);
+	const [tweets, setTweets] = useState<DatabaseTweet[]>([]);
+	const [windowHeight, setWindowHeight] = useState<number>(window.innerHeight);
+
+	useEffect(() => {
 		getDeckTweets(props.deck.id, 0, 20).then((v) => {
 			addEntitiesFromDatabaseTweets(v).then(() => setTweets(v));
 		});
@@ -55,58 +134,35 @@ function InternalTweetList(props: {
 		return () => window.removeEventListener("resize", handleResize);
 	}, []);
 
-	return webpack.common.react.React.createElement(
-		tweetComponents.ContextBridge,
-		{
-			children: webpack.common.react.React.createElement(
-				props.virtuoso.Virtuoso<DatabaseTweet>,
-				{
-					data: tweets,
-					totalCount: tweets.length,
-					itemContent: (_, tweet) =>
-						webpack.common.react.React.createElement("div", {
-							className: "*:static!",
-							children: webpack.common.react.React.createElement(
-								tweetComponents.Tweet,
-								patchTweetProps(tweet, tweetComponents.defaultTweetProps),
-							),
-						}),
-					async endReached(index) {
-						const newTweets = await getDeckTweets(props.deck.id, index + 1, 20);
-						await addEntitiesFromDatabaseTweets(newTweets);
-						setTweets([...tweets, ...newTweets]);
-					},
-					useWindowScroll: true,
-					increaseViewportBy: windowHeight,
-				} satisfies import("react-virtuoso").VirtuosoProps<DatabaseTweet, {}>,
-			),
-		},
+	// note: thank your past self for implementing react proxies.
+	return (
+		<div className="grow">
+			{tweetComponentsAvailable === "true" && (
+				<tweetComponents.ContextBridge>
+					<Virtuoso<DatabaseTweet>
+						data={tweets}
+						useWindowScroll
+						increaseViewportBy={windowHeight}
+						endReached={async (index) => {
+							const newTweets = await getDeckTweets(
+								props.deck.id,
+								index + 1,
+								20,
+							);
+							await addEntitiesFromDatabaseTweets(newTweets);
+							setTweets([...tweets, ...newTweets]);
+						}}
+						totalCount={tweets.length}
+						itemContent={(_, tweet) => (
+							<div className="*:static!">
+								<tweetComponents.Tweet
+									{...patchTweetProps(tweet, tweetComponents.defaultTweetProps)}
+								/>
+							</div>
+						)}
+					/>
+				</tweetComponents.ContextBridge>
+			)}
+		</div>
 	);
-}
-
-export function DeckTweetList(props: { deck: DatabaseDeck }) {
-	const tweetComponentsAvailable = useLiveQuery(
-		kv.tweets.tweetComponentsAvailable.get,
-	);
-
-	const ref = useRef<HTMLDivElement>(null);
-	useEffect(() => {
-		if (tweetComponentsAvailable !== "true") return;
-
-		queueMicrotask(async () => {
-			if (!ref.current) return;
-			const virtuoso = await import("react-virtuoso");
-			const TwitterReact = webpack.common.react.React;
-			const TwitterReactDOM = webpack.common.react.ReactDOM;
-			const root = TwitterReactDOM.createRoot(ref.current);
-			root.render(
-				TwitterReact.createElement(InternalTweetList, {
-					deck: props.deck,
-					virtuoso,
-				}),
-			);
-		});
-	}, [tweetComponentsAvailable]);
-
-	return <div ref={ref} className="grow" />;
 }

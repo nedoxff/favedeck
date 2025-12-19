@@ -28,6 +28,7 @@ export const {
 	useRef,
 	useLayoutEffect,
 	useImperativeHandle,
+    useSyncExternalStore,
 	createContext,
 	createElement,
 	cloneElement,

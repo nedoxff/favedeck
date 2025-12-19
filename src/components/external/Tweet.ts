@@ -1,9 +1,9 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: TODO */
 
+import { webpack } from "@/src/internals/webpack";
 import type { Fiber } from "bippy";
 import * as bippy from "bippy";
 import type { ComponentType, FunctionComponent, ReactNode } from "react";
-import { webpack } from "../../internals/webpack";
 
 export const tweetComponents: {
 	Tweet: ComponentType;
@@ -16,8 +16,6 @@ export const tweetComponents: {
 };
 
 export const getTweetComponentsFromFiber = (fiber: Fiber) => {
-	const TwitterReact = webpack.common.react.React;
-
 	const contexts = bippy
 		.getFiberStack(fiber)
 		.filter(
@@ -41,7 +39,7 @@ export const getTweetComponentsFromFiber = (fiber: Fiber) => {
 	tweetComponents.Tweet = type;
 	tweetComponents.ContextBridge = (props: { children?: ReactNode }) =>
 		contexts.reduceRight<React.ReactNode>((acc, cur) => {
-			return TwitterReact.createElement(
+			return webpack.common.react.React.createElement(
 				cur.context.Provider,
 				{ value: cur.value },
 				acc,

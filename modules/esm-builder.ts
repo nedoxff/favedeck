@@ -14,6 +14,7 @@ export default defineWxtModule((wxt) => {
 		const prebuildConfig: InlineConfig = {
 			esbuild: {
 				footer: "",
+                jsxDev: false
 			},
 			build: {
 				lib: {
@@ -26,7 +27,7 @@ export default defineWxtModule((wxt) => {
 					output: {
 						entryFileNames: "content.js",
 						assetFileNames: "[name][extname]",
-					},
+					}
 				},
 				outDir: resolve(wxt.config.outDir, "content-scripts/esm"),
 			},
@@ -53,16 +54,16 @@ export default defineWxtModule((wxt) => {
 		const ignoredFiles = new Set([resolve(esmBase, "index.ts")]);
 		wxt.server?.watcher.on("all", async (_, file) => {
 			//if (file.startsWith(esmBase) && !ignoredFiles.has(file)) {
-				await buildEsmContentScript();
-				wxt.server?.reloadContentScript({
-					contentScript: {
-						matches: contentScriptEntrypoint?.options?.matches,
-						js: ["/content-scripts/content.js"],
-					},
-				});
-				wxt.logger.success(
-					"`[esm-builder]` Reloaded `content` after changing ESM code",
-				);
+			await buildEsmContentScript();
+			wxt.server?.reloadContentScript({
+				contentScript: {
+					matches: contentScriptEntrypoint?.options?.matches,
+					js: ["/content-scripts/content.js"],
+				},
+			});
+			wxt.logger.success(
+				"`[esm-builder]` Reloaded `content` after changing ESM code",
+			);
 			//}
 		});
 	});

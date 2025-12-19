@@ -16,11 +16,13 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",
+    "@virtuoso.dev/masonry": "^1.3.5",
     "bippy": "^0.5.22",
     "buffer": "^6.0.3",
     "clsx": "^2.1.1",
     "dexie": "^4.2.1",
     "dexie-react-hooks": "^4.2.0",
+    "masonic": "^4.1.0",
     "mergician": "^2.0.2",
     "react": "^19.2.0",
     "react-dom": "^19.1.1",

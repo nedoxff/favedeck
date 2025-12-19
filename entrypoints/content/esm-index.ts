@@ -1,6 +1,5 @@
-import { DeckViewer } from "@/src/components/deck-viewer/DeckViewer";
 import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
-import { SelectDeckPopupRenderer } from "@/src/components/SelectDeckPopup";
+import { components, initializeComponents } from "@/src/components/wrapper";
 import { kv } from "@/src/features/storage/kv";
 import {
     type ForwarderMessagePayload,
@@ -38,16 +37,17 @@ const injectUrlObserver = () => {
 			location.pathname.endsWith("bookmarks") &&
 			!(webpack.common.history._locationsHistory.at(-1)?.isModalRoute ?? false);
 		console.log("should create DeckViewer:", shouldCreateViewer);
-		if (shouldCreateViewer) DeckViewer.create();
+		if (shouldCreateViewer) components.DeckViewer.create();
 	});
 	if (webpack.common.history._history.location.pathname.endsWith("bookmarks"))
-		queueMicrotask(DeckViewer.create);
+		queueMicrotask(components.DeckViewer.create);
 	else kv.decks.currentDeck.set(undefined);
 };
 
-const initializeWebpack = () => {
+const initializeWebpack = async () => {
 	console.log("loading webpack");
 	webpack.load();
+	await initializeComponents();
 
 	const themeModule = webpack.findByProperty("_activeTheme", {
 		maxDepth: 1,
@@ -103,7 +103,7 @@ const initializeWebpack = () => {
 
 const injectRenderers = () => {
 	console.log("renderers: injecting SelectDeckPopup");
-	SelectDeckPopupRenderer.create();
+	components.SelectDeckPopup.create();
 };
 
 const injectTweetObserver = () => {
@@ -121,21 +121,21 @@ const injectTweetObserver = () => {
 				ev.preventDefault();
 
 				if (
-					SelectDeckPopupRenderer.getBookmarkButton() === bookmarkButton &&
-					SelectDeckPopupRenderer.getVisible()
+					components.SelectDeckPopup.getBookmarkButton() === bookmarkButton &&
+					components.SelectDeckPopup.getVisible()
 				)
-					SelectDeckPopupRenderer.hide();
+					components.SelectDeckPopup.hide();
 				else {
-					SelectDeckPopupRenderer.setBookmarkButton(bookmarkButton);
-					SelectDeckPopupRenderer.show();
+					components.SelectDeckPopup.setBookmarkButton(bookmarkButton);
+					components.SelectDeckPopup.show();
 				}
 			}
 		};
 		bookmarkButton.onclick = () => {
-			SelectDeckPopupRenderer.setBookmarkButton(bookmarkButton);
+			components.SelectDeckPopup.setBookmarkButton(bookmarkButton);
 			bookmarkButton.getAttribute("data-testid") === "bookmark"
-				? SelectDeckPopupRenderer.show()
-				: SelectDeckPopupRenderer.hide(true);
+				? components.SelectDeckPopup.show()
+				: components.SelectDeckPopup.hide(true);
 		};
 	};
 
@@ -150,10 +150,10 @@ const injectTweetObserver = () => {
 						const tweet = tweetNode as HTMLElement;
 						injectTweetCallbacks(tweet);
 
-						if (DeckViewer.isMounted()) {
+						if (components.DeckViewer.isMounted()) {
 							const info = getTweetInfoFromElement(tweet);
 							if (!info) continue;
-							DeckViewer.checkUngroupedTweet(info.rootNode, info.id);
+							components.DeckViewer.checkUngroupedTweet(info.rootNode, info.id);
 						}
 					}
 				}
@@ -213,7 +213,7 @@ const injectFiberObserver = () => {
 					) {
 						fiber.stateNode.style.position = "relative";
 						const container = fiber.stateNode.childNodes[0] as HTMLElement;
-						DeckViewer.originalContainer.set(container);
+						components.DeckViewer.originalContainer.set(container);
 
 						const div = document.createElement("div");
 						div.id = "favedeck-viewer";
@@ -234,8 +234,8 @@ const injectFiberObserver = () => {
 
 window.dispatchEvent(new CustomEvent("fd-reset"));
 
-const inject = () => {
-	initializeWebpack();
+const inject = async () => {
+	await initializeWebpack();
 	injectFiberObserver();
 	injectUrlObserver();
 	injectTweetObserver();
