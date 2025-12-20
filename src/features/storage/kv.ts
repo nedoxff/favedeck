@@ -22,6 +22,9 @@ export const kv = {
 		tweetComponentsAvailable: createGettersSetters<string>(
 			"tweet-components-available",
 		),
+		recentlyRemovedTweet: createGettersSetters<string>(
+			"recently-removed-tweet",
+		),
 	},
 	decks: {
 		newDeck: createGettersSetters<string>("new-deck"),

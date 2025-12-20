@@ -2,9 +2,9 @@ import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
 import { components, initializeComponents } from "@/src/components/wrapper";
 import { kv } from "@/src/features/storage/kv";
 import {
-    type ForwarderMessagePayload,
-    isFromPostMessage,
-    sendContentToForwarder,
+	type ForwarderMessagePayload,
+	isFromPostMessage,
+	sendContentToForwarder,
 } from "@/src/helpers/messaging";
 import { waitForSelector } from "@/src/helpers/observer";
 import { getTweetInfoFromElement } from "@/src/internals/goodies";
@@ -232,7 +232,7 @@ const injectFiberObserver = () => {
 	});
 };
 
-window.dispatchEvent(new CustomEvent("fd-reset"));
+console.log("hello from esm content script!");
 
 const inject = async () => {
 	await initializeWebpack();
@@ -248,8 +248,4 @@ else
 	document.addEventListener("readystatechange", () => {
 		if (document.readyState === "complete") inject();
 	});
-
-window.addEventListener("fd-reset", () => {
-	console.log("reloading");
-	window.location.reload();
-});
+document.addEventListener("fd-reset", window.location.reload);

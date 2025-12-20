@@ -13,26 +13,37 @@ export default defineWxtModule((wxt) => {
 		wxt.logger.info("`[esm-builder]` Building `content/esm-index`...");
 		const prebuildConfig: InlineConfig = {
 			esbuild: {
+				jsxDev: false,
 				footer: "",
-                jsxDev: false
 			},
 			build: {
-				lib: {
-					entry: resolve(wxt.config.entrypointsDir, "content/esm-index.ts"),
-					fileName: "content",
-					formats: ["es"],
-					name: "_content",
-				},
+				lib: false,
 				rollupOptions: {
+					input: resolve(wxt.config.entrypointsDir, "content/esm-index.ts"),
 					output: {
+						format: "es",
 						entryFileNames: "content.js",
-						assetFileNames: "[name][extname]",
-					}
+						chunkFileNames: "chunks/[name]-[hash].js",
+						assetFileNames: "assets/[name]-[hash][extname]",
+					},
 				},
 				outDir: resolve(wxt.config.outDir, "content-scripts/esm"),
+				emptyOutDir: true,
 			},
 		};
-		const finalConfig = mergeConfig(baseViteConfig, prebuildConfig);
+		const finalConfig: InlineConfig = mergeConfig(
+			baseViteConfig,
+			prebuildConfig,
+		);
+		finalConfig.plugins = (finalConfig.plugins ?? []).filter((p) => {
+			return !(
+				typeof p === "object" &&
+				p !== null &&
+				"name" in p &&
+				p.name === "wxt:iife-footer"
+			);
+		});
+
 		console.log(JSON.stringify(finalConfig, null, 2));
 		await build(finalConfig);
 		wxt.logger.success("`[esm-builder]` Done!");

@@ -8,6 +8,8 @@ type MediaInfo = {
 	url: string;
 	width: number;
 	height: number;
+	type: string;
+	index: number;
 };
 export const getMediaInfo = (
 	tweet?: RawTweet,
@@ -17,10 +19,12 @@ export const getMediaInfo = (
 	const eligibleEntities = tweet.entities.media.filter(
 		(m) => m.type === "photo" || m.type === "video",
 	);
-	return eligibleEntities.map((ee) => ({
+	return eligibleEntities.map((ee, idx) => ({
 		url: `${ee.media_url_https}?name=${quality}`,
 		width: ee.sizes[quality].w,
 		height: ee.sizes[quality].h,
+		index: idx + 1,
+		type: ee.type,
 	}));
 };
 
@@ -29,9 +33,12 @@ export const getThumbnailUrl = (tweet?: RawTweet): string | undefined =>
 
 export type TweetMasonryInfo = {
 	id: string;
-	author: string;
+	author: {
+		id: string;
+		name: string;
+		profileImage: string;
+	};
 	info: MediaInfo;
-	authorProfileImage: string;
 };
 // this must be called AFTER adding the entities
 export const convertDatabaseTweetToMasonryInfos = (
@@ -47,8 +54,11 @@ export const convertDatabaseTweetToMasonryInfos = (
 			: []),
 	];
 	return infos.map((i) => ({
-		author: tweet.author,
-		authorProfileImage: authorEntity.profile_image_url_https,
+		author: {
+			id: tweet.author,
+			name: authorEntity.screen_name,
+			profileImage: authorEntity.profile_image_url_https,
+		},
 		id: tweet.id,
 		info: i,
 	}));

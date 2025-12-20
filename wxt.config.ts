@@ -47,12 +47,10 @@ const twitterReactHijacker = (): Plugin => {
 
 export default defineConfig({
 	modules: ["@wxt-dev/module-react"],
-	// @ts-expect-error
 	vite: () => ({
 		plugins: [twitterReactHijacker(), tailwindcss()],
 	}),
 	manifest: {
-		permissions: ["cookies", "storage"],
-		host_permissions: ["https://x.com", "https://api.x.com"],
+		host_permissions: ["*://*.x.com/*", "*://*.twitter.com/*"],
 	},
 });

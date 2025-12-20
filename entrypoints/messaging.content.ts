@@ -5,7 +5,7 @@ import {
 } from "@/src/helpers/messaging";
 
 export default defineContentScript({
-	matches: ["*://*.x.com/*"],
+	matches: ["*://*.x.com/*", "*://*.twitter.com/*"],
 	runAt: "document_start",
 	async main(ctx) {
 		window.addEventListener("message", (ev) => {

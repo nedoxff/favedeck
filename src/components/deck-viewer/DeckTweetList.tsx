@@ -9,6 +9,7 @@ import {
 	type TweetMasonryInfo,
 } from "@/src/internals/goodies";
 import { addEntitiesFromDatabaseTweets } from "@/src/internals/redux";
+import { webpack } from "@/src/internals/webpack";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Masonry, useInfiniteLoader } from "masonic";
 import { mergician } from "mergician";
@@ -87,29 +88,72 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 						columnGutter={8}
 						rowGutter={8}
 						columnCount={2}
-						render={({ index, width, data }) => (
-							<div
-								style={{ width: `${width}px` }}
-								className="rounded-2xl overflow-hidden relative group"
-							>
-								<img
-									key={`${data.id}-${index}`}
-									src={data.info.url}
-									width={data.info.width}
-									height={data.info.height}
-									alt="meow"
-								/>
-								<img
-									className="absolute aspect-square rounded-full bottom-2 left-2 z-20 w-9"
-									src={data.authorProfileImage}
-									alt="pfp"
-									style={{
-										filter: "drop-shadow(rgba(0, 0, 0, 0.35) 0 0 10px)",
-									}}
-								/>
-								<div className="absolute w-full h-full top-0 left-0 z-10 group-hover:flex! rounded-2xl hidden bg-black/25"></div>
-							</div>
-						)}
+						render={({ index, width, data }) => {
+							const url = `/${data.author.name}/status/${data.id}${data.info.type === "photo" ? `/photo/${data.info.index}` : ""}`;
+							return (
+								<article
+									style={{ width: `${width}px` }}
+									className="rounded-2xl overflow-hidden relative group"
+								>
+									<a
+										href={url}
+										onClick={(ev) => {
+											ev.preventDefault();
+											webpack.common.history.push(url);
+										}}
+									>
+										<img
+											key={`${data.id}-${index}`}
+											src={data.info.url}
+											width={data.info.width}
+											height={data.info.height}
+											alt="meow"
+										/>
+									</a>
+									<a
+										href={`/${data.author.name}`}
+										onClick={(ev) => {
+											ev.preventDefault();
+											webpack.common.history.push(`/${data.author.name}`);
+										}}
+										className="absolute bottom-2 left-2 z-20"
+									>
+										<img
+											className="rounded-full aspect-square w-9"
+											src={data.author.profileImage}
+											alt="pfp"
+											style={{
+												filter: "drop-shadow(rgba(0, 0, 0, 0.35) 0 0 10px)",
+											}}
+										/>
+									</a>
+									<div className="absolute w-full h-full top-0 left-0 z-10 group-hover:flex! pointer-events-none rounded-2xl hidden bg-black/25"></div>
+									<div className="absolute bottom-2 right-2 group-hover:flex! hidden flex-row justify-end items-center z-20">
+										<button
+											type="button"
+											className="hover:shadow-darken! bg-white rounded-full p-2 w-9"
+											onClick={(ev) => {
+												ev.stopPropagation();
+												ev.preventDefault();
+												console.log("meow");
+											}}
+											data-testid="removeBookmark"
+										>
+											<svg
+												className="text-fd-primary"
+												fill="currentcolor"
+												viewBox="0 0 24 24"
+											>
+												<title>bookmark icon</title>
+												<g>
+													<path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z"></path>
+												</g>
+											</svg>
+										</button>
+									</div>
+								</article>
+							);
+						}}
 					/>
 				</tweetComponents.ContextBridge>
 			)}
