@@ -1,5 +1,4 @@
 import { createDeck } from "@/src/features/storage/decks";
-import { kv } from "@/src/features/storage/kv";
 import { TwitterModal } from "../TwitterModal";
 
 export default function CreateDeckModal(props: { onClose: () => void }) {
@@ -32,8 +31,7 @@ export default function CreateDeckModal(props: { onClose: () => void }) {
 			<button
 				onClick={async () => {
 					props.onClose();
-					const id = await createDeck(deckName, deckSecret);
-					await kv.decks.newDeck.set(id);
+					await createDeck(deckName, deckSecret);
 				}}
 				disabled={deckName.length === 0}
 				type="button"

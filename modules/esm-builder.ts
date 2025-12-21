@@ -17,11 +17,14 @@ export default defineWxtModule((wxt) => {
 				footer: "",
 			},
 			build: {
-				lib: false,
+				lib: {
+					entry: resolve(wxt.config.entrypointsDir, "content/esm-index.ts"),
+					fileName: "content",
+					formats: ["es"],
+					name: "_content",
+				},
 				rollupOptions: {
-					input: resolve(wxt.config.entrypointsDir, "content/esm-index.ts"),
 					output: {
-						format: "es",
 						entryFileNames: "content.js",
 						chunkFileNames: "chunks/[name]-[hash].js",
 						assetFileNames: "assets/[name]-[hash][extname]",
@@ -43,8 +46,6 @@ export default defineWxtModule((wxt) => {
 				p.name === "wxt:iife-footer"
 			);
 		});
-
-		console.log(JSON.stringify(finalConfig, null, 2));
 		await build(finalConfig);
 		wxt.logger.success("`[esm-builder]` Done!");
 	};
@@ -61,10 +62,7 @@ export default defineWxtModule((wxt) => {
 
 	// Rebuilt during development
 	wxt.hooks.hookOnce("build:done", () => {
-		const esmBase = resolve(wxt.config.entrypointsDir, "content");
-		const ignoredFiles = new Set([resolve(esmBase, "index.ts")]);
-		wxt.server?.watcher.on("all", async (_, file) => {
-			//if (file.startsWith(esmBase) && !ignoredFiles.has(file)) {
+		wxt.server?.watcher.on("all", async (_, __) => {
 			await buildEsmContentScript();
 			wxt.server?.reloadContentScript({
 				contentScript: {
@@ -75,7 +73,6 @@ export default defineWxtModule((wxt) => {
 			wxt.logger.success(
 				"`[esm-builder]` Reloaded `content` after changing ESM code",
 			);
-			//}
 		});
 	});
 
@@ -83,7 +80,7 @@ export default defineWxtModule((wxt) => {
 	wxt.hooks.hook("build:manifestGenerated", (_, manifest) => {
 		manifest.web_accessible_resources ??= [];
 		// @ts-expect-error: MV2 types are conflicting with MV3 declaration
-		// Note, this also works when targetting MV2 - WXT automatically transforms it to the MV2 syntax
+		// Note, this also works when targeting MV2 - WXT automatically transforms it to the MV2 syntax
 		manifest.web_accessible_resources.push({
 			matches: contentScriptEntrypoint?.options?.matches ?? [],
 			resources: ["/content-scripts/esm/*"],

@@ -8,4 +8,5 @@ export const initializeComponents = async () => {
 		SelectDeckPopup: (await import("./SelectDeckPopup")).SelectDeckPopup,
 		DeckViewer: (await import("./deck-viewer/DeckViewer")).DeckViewer,
 	};
+	console.log("initialized modules", components);
 };

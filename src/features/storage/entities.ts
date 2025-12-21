@@ -37,7 +37,6 @@ export const getTweetEntityPayload = async (
 		tweets: { [id]: tweetEntity },
 		users: { [tweetEntity.user]: userEntity },
 	};
-	console.log(payload);
 	return tweetEntity.quoted_status
 		? mergician(payload, await getTweetEntityPayload(tweetEntity.quoted_status))
 		: payload;

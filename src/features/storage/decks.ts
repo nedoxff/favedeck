@@ -2,6 +2,7 @@ import { getUserId } from "@/src/internals/foolproof";
 import { getThumbnailUrl } from "@/src/internals/goodies";
 import { getTweetEntity } from "@/src/internals/redux";
 import { v6 } from "uuid";
+import { decksEventTarget } from "../events/decks";
 import { type DatabaseDeck, db } from "./definition";
 import { putTweetEntity } from "./entities";
 
@@ -14,15 +15,16 @@ export const UNGROUPED_DECK: DatabaseDeck = {
 };
 
 export const createDeck = async (name: string, secret: boolean) => {
-	const id = v6();
-	await db.decks.put({
-		id,
+	const deck: DatabaseDeck = {
+		id: v6(),
 		name,
 		secret,
 		user: (await getUserId()) ?? "",
 		dateModified: new Date(),
-	});
-	return id;
+	};
+	await db.decks.put(deck);
+	decksEventTarget.dispatchDeckCreated(deck);
+	return deck.id;
 };
 
 export const getUserDecks = (userId: string) =>

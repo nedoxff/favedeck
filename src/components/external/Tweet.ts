@@ -1,5 +1,6 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: TODO */
 
+import { tweetsEventTarget } from "@/src/features/events/tweets";
 import { webpack } from "@/src/internals/webpack";
 import type { Fiber } from "bippy";
 import * as bippy from "bippy";
@@ -8,11 +9,17 @@ import type { ComponentType, FunctionComponent, ReactNode } from "react";
 export const tweetComponents: {
 	Tweet: ComponentType;
 	ContextBridge: FunctionComponent<{ children?: ReactNode }>;
-	defaultTweetProps: Record<string, unknown>;
+	meta: {
+		defaultTweetProps: Record<string, unknown>;
+		available: boolean;
+	};
 } = {
 	Tweet: null!,
 	ContextBridge: null!,
-	defaultTweetProps: null!,
+	meta: {
+		defaultTweetProps: null!,
+		available: false,
+	},
 };
 
 export const getTweetComponentsFromFiber = (fiber: Fiber) => {
@@ -46,5 +53,6 @@ export const getTweetComponentsFromFiber = (fiber: Fiber) => {
 			);
 		}, props.children);
 
-	tweetComponents.defaultTweetProps = fiber.memoizedProps;
+	tweetComponents.meta.defaultTweetProps = fiber.memoizedProps;
+	tweetsEventTarget.dispatchComponentsAvailable();
 };

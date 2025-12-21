@@ -35,6 +35,9 @@ importers:
       mergician:
         specifier: ^2.0.2
         version: 2.0.2
+      micro-memoize:
+        specifier: ^5.1.1
+        version: 5.1.1
       react:
         specifier: ^19.2.0
         version: 19.2.0
@@ -50,6 +53,9 @@ importers:
       tailwindcss:
         specifier: ^4.1.17
         version: 4.1.17
+      typescript-event-target:
+        specifier: ^1.1.1
+        version: 1.1.1
       uuid:
         specifier: ^13.0.0
         version: 13.0.0
@@ -1412,6 +1418,10 @@ packages:
   exsolve@1.0.8:
     resolution: {integrity: sha512-LmDxfWXwcTArk8fUEnOfSZpHOJ6zOMUJKOtFLFqJLoKJetuQG874Uc7/Kki7zFLzYybmZhp1M7+98pfMqeX8yA==}
 
+  fast-equals@5.4.0:
+    resolution: {integrity: sha512-jt2DW/aNFNwke7AUd+Z+e6pz39KO5rzdbbFCg2sGafS4mk13MI7Z8O5z9cADNn5lhGODIgLwug6TZO2ctf7kcw==}
+    engines: {node: '>=6.0.0'}
+
   fast-glob@3.3.3:
     resolution: {integrity: sha512-7MptL8U0cqcFdzIzwOTHoilX9x5BrNqye7Z/LuC7kCMRio1EMSyqRK3BEAUD7sXRq4iT4AzTVuZdhgQ2TCvYLg==}
     engines: {node: '>=8.6.0'}
@@ -1419,6 +1429,9 @@ packages:
   fast-redact@3.5.0:
     resolution: {integrity: sha512-dwsoQlS7h9hMeYUq1W++23NDcBLV4KqONnITDV9DjfS3q1SgDGVrBdvvTLUotWtPSD7asWDV9/CmsZPy8Hf70A==}
     engines: {node: '>=6'}
+
+  fast-stringify@4.0.0:
+    resolution: {integrity: sha512-lE2DIivBaLysf6hK5WH/VfMgqRbvBVHcpGVVTmA5Zi8oWIjq9YxIt6lYGdUgP1HNSXxTIat7HEIDnrSvXSeKQw==}
 
   fastq@1.19.1:
     resolution: {integrity: sha512-GwLTyxkCXjXbxqIhTsMI2Nui8huMPtnxg7krajPJAjnEG/iiOS7i+zCtWGZR9G0NBKbXKh6X9m9UIsYX/N6vvQ==}
@@ -1831,6 +1844,9 @@ packages:
   mergician@2.0.2:
     resolution: {integrity: sha512-1GDF4LuMcc7UpE7XitfSm822yDtTxLoOVB+9QFnb3o/+zoMAVKxM67UjvmEXOA7FQnz9209K0ZyHAoD+5Ibe4A==}
     engines: {node: '>=10.0.0'}
+
+  micro-memoize@5.1.1:
+    resolution: {integrity: sha512-QDwluos8YeMijiKxZGwaV4f4tzj0soS6+xcsJhJ3+4wdEIHMyKbIKVUziebOgWX3e6yiijdoaHo+9tyhbnaWXA==}
 
   micromatch@4.0.8:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
@@ -2256,6 +2272,9 @@ packages:
 
   typedarray@0.0.6:
     resolution: {integrity: sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==}
+
+  typescript-event-target@1.1.1:
+    resolution: {integrity: sha512-dFSOFBKV6uwaloBCCUhxlD3Pr/P1a/tJdcmPrTXCHlEFD3faj0mztjcGn6VBAhQ0/Bdy8K3VWrrqwbt/ffsYsg==}
 
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
@@ -3557,6 +3576,8 @@ snapshots:
 
   exsolve@1.0.8: {}
 
+  fast-equals@5.4.0: {}
+
   fast-glob@3.3.3:
     dependencies:
       '@nodelib/fs.stat': 2.0.5
@@ -3566,6 +3587,8 @@ snapshots:
       micromatch: 4.0.8
 
   fast-redact@3.5.0: {}
+
+  fast-stringify@4.0.0: {}
 
   fastq@1.19.1:
     dependencies:
@@ -3915,6 +3938,11 @@ snapshots:
   merge2@1.4.1: {}
 
   mergician@2.0.2: {}
+
+  micro-memoize@5.1.1:
+    dependencies:
+      fast-equals: 5.4.0
+      fast-stringify: 4.0.0
 
   micromatch@4.0.8:
     dependencies:
@@ -4363,6 +4391,8 @@ snapshots:
   type-fest@4.41.0: {}
 
   typedarray@0.0.6: {}
+
+  typescript-event-target@1.1.1: {}
 
   typescript@5.9.3: {}
 

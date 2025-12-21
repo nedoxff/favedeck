@@ -1,4 +1,5 @@
 import * as bippy from "bippy";
+import { memoize } from "micro-memoize";
 import type { DatabaseTweet } from "../features/storage/definition";
 import type { RawTweet } from "../types/tweet";
 import { findParentNode, matchers } from "./matchers";
@@ -64,8 +65,17 @@ export const convertDatabaseTweetToMasonryInfos = (
 	}));
 };
 
-export const getTweetIdFromFiber = (fiber: bippy.Fiber): string => {
-	const tweet: RawTweet = fiber.memoizedProps?.tweet as RawTweet;
+export const findTweetFiber = (anyFiber: bippy.Fiber) =>
+	bippy.traverseFiber(
+		anyFiber,
+		(f) => bippy.getDisplayName(f) === "Tweet",
+		true,
+	);
+
+export const getTweetIdFromFiber = (tweetFiber: bippy.Fiber): string => {
+	if (bippy.getDisplayName(tweetFiber) !== "Tweet")
+		throw new Error('bippy.getDisplayName(fiber) !== "Tweet"');
+	const tweet: RawTweet = tweetFiber.memoizedProps?.tweet as RawTweet;
 	if (!tweet)
 		throw new Error(
 			"the tweet fiber (somehow) doesn't have the tweet in memoizedProps",
@@ -73,21 +83,17 @@ export const getTweetIdFromFiber = (fiber: bippy.Fiber): string => {
 	return tweet.id_str;
 };
 
-export const getTweetInfoFromElement = (
-	el: HTMLElement,
-): { rootNode: HTMLElement; fiber: bippy.Fiber; id: string } | null => {
-	const fiber = bippy.getFiberFromHostInstance(el);
-	const tweetFiber = bippy.traverseFiber(
-		fiber,
-		(f) => bippy.getDisplayName(f) === "Tweet",
-		true,
-	);
-	if (!tweetFiber) return null;
-	const rootNode = findParentNode(el, matchers.tweetRoot.matcher);
-	if (!rootNode) return null;
-	return {
-		rootNode,
-		fiber: tweetFiber,
-		id: getTweetIdFromFiber(tweetFiber),
-	};
-};
+export const getRootNodeFromTweetElement = memoize(
+	(el: HTMLElement): { rootNode: HTMLElement; id: string } | null => {
+		const anyFiber = bippy.getFiberFromHostInstance(el);
+		if (!anyFiber) return null;
+		const tweetFiber = findTweetFiber(anyFiber);
+		if (!tweetFiber) return null;
+		const rootNode = findParentNode(el, matchers.tweetRoot.matcher);
+		if (!rootNode) return null;
+		return {
+			rootNode,
+			id: getTweetIdFromFiber(tweetFiber),
+		};
+	},
+);

@@ -17,17 +17,9 @@ const createGettersSetters = <T>(key: string) => ({
 });
 
 export const kv = {
-	tweets: {
-		currentTweet: createGettersSetters<string>("current-tweet"),
-		tweetComponentsAvailable: createGettersSetters<string>(
-			"tweet-components-available",
-		),
-		recentlyRemovedTweet: createGettersSetters<string>(
-			"recently-removed-tweet",
-		),
-	},
+	reloaded: createGettersSetters<string>("reloaded"),
+	tweets: {},
 	decks: {
-		newDeck: createGettersSetters<string>("new-deck"),
 		currentDeck: createGettersSetters<DatabaseDeck>("current-deck"),
 	},
 };

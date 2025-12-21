@@ -24,11 +24,13 @@
     "dexie-react-hooks": "^4.2.0",
     "masonic": "^4.1.0",
     "mergician": "^2.0.2",
+    "micro-memoize": "^5.1.1",
     "react": "^19.2.0",
     "react-dom": "^19.1.1",
     "react-error-boundary": "^6.0.0",
     "react-virtuoso": "^4.17.0",
     "tailwindcss": "^4.1.17",
+    "typescript-event-target": "^1.1.1",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

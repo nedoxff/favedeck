@@ -7,7 +7,7 @@ import {
 	sendContentToForwarder,
 } from "@/src/helpers/messaging";
 import { waitForSelector } from "@/src/helpers/observer";
-import { getTweetInfoFromElement } from "@/src/internals/goodies";
+import { getRootNodeFromTweetElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
 import { setReduxStoreFromFiber } from "@/src/internals/redux";
 import { webpack } from "@/src/internals/webpack";
@@ -101,42 +101,49 @@ const initializeWebpack = async () => {
 	console.log(`danger color: ${dangerColor}`);
 };
 
-const injectRenderers = () => {
-	console.log("renderers: injecting SelectDeckPopup");
-	components.SelectDeckPopup.create();
-};
-
 const injectTweetObserver = () => {
 	console.log("injecting tweet MutationObserver");
 
-	const injectTweetCallbacks = async (tweet: Element) => {
+	const injectedTweets = new Set<string>();
+	const injectTweetCallbacks = async (tweet: HTMLElement) => {
+		const info = getRootNodeFromTweetElement(tweet);
+		if (!info) return;
+		if (injectedTweets.has(info.id)) return;
+		else injectedTweets.add(info.id);
+
 		const bookmarkButton = (await waitForSelector(
 			tweet,
 			matchers.bookmarkButton.querySelector,
 		)) as HTMLButtonElement;
 
-		// this could be an a11y nightmare...
-		bookmarkButton.oncontextmenu = (ev) => {
-			if (bookmarkButton.getAttribute("data-testid") === "removeBookmark") {
-				ev.preventDefault();
+		let allowOriginalCallback = false;
+		const onRemoveTweet = () => {
+			allowOriginalCallback = true;
+			bookmarkButton.dispatchEvent(new PointerEvent("click"));
+		};
 
+		bookmarkButton.addEventListener(
+			"click",
+			(ev) => {
+				if (allowOriginalCallback) {
+					console.log("removing tweet");
+					return;
+				}
+
+				if (bookmarkButton.getAttribute("data-testid") === "removeBookmark") {
+					ev.stopPropagation();
+					ev.stopImmediatePropagation();
+					ev.preventDefault();
+				}
 				if (
-					components.SelectDeckPopup.getBookmarkButton() === bookmarkButton &&
-					components.SelectDeckPopup.getVisible()
+					components.SelectDeckPopup.initiator === bookmarkButton &&
+					bookmarkButton.getAttribute("data-testid") === "removeBookmark"
 				)
 					components.SelectDeckPopup.hide();
-				else {
-					components.SelectDeckPopup.setBookmarkButton(bookmarkButton);
-					components.SelectDeckPopup.show();
-				}
-			}
-		};
-		bookmarkButton.onclick = () => {
-			components.SelectDeckPopup.setBookmarkButton(bookmarkButton);
-			bookmarkButton.getAttribute("data-testid") === "bookmark"
-				? components.SelectDeckPopup.show()
-				: components.SelectDeckPopup.hide(true);
-		};
+				else components.SelectDeckPopup.show(bookmarkButton, "tweet");
+			},
+			true,
+		);
 	};
 
 	const tweetObserver = new MutationObserver((mutations) => {
@@ -151,7 +158,7 @@ const injectTweetObserver = () => {
 						injectTweetCallbacks(tweet);
 
 						if (components.DeckViewer.isMounted()) {
-							const info = getTweetInfoFromElement(tweet);
+							const info = getRootNodeFromTweetElement(tweet);
 							if (!info) continue;
 							components.DeckViewer.checkUngroupedTweet(info.rootNode, info.id);
 						}
@@ -163,7 +170,8 @@ const injectTweetObserver = () => {
 				);
 				if (!tweetNode) continue;
 				const computedDisplay = getComputedStyle(tweetNode).display;
-				if (computedDisplay === "flex") injectTweetCallbacks(tweetNode);
+				if (computedDisplay === "flex")
+					injectTweetCallbacks(tweetNode as HTMLElement);
 			}
 		}
 	});
@@ -177,8 +185,6 @@ const injectTweetObserver = () => {
 
 const injectFiberObserver = () => {
 	console.log("injecting react fiber observer (bippy)");
-	kv.tweets.tweetComponentsAvailable.set("false");
-
 	let found = false;
 	let reduxFiber: bippy.Fiber | null;
 	bippy.instrument({
@@ -225,7 +231,6 @@ const injectFiberObserver = () => {
 					found = true;
 					console.log("found the tweet component");
 					getTweetComponentsFromFiber(fiber);
-					kv.tweets.tweetComponentsAvailable.set("true");
 				}
 			});
 		},
@@ -234,12 +239,19 @@ const injectFiberObserver = () => {
 
 console.log("hello from esm content script!");
 
+(async () => {
+	const reloaded = await kv.reloaded.get();
+	if (reloaded === "true") {
+		await kv.reloaded.set(undefined);
+		window.location.reload();
+	}
+})();
+
 const inject = async () => {
 	await initializeWebpack();
 	injectFiberObserver();
 	injectUrlObserver();
 	injectTweetObserver();
-	injectRenderers();
 	initializeMessageListener();
 };
 
@@ -248,4 +260,3 @@ else
 	document.addEventListener("readystatechange", () => {
 		if (document.readyState === "complete") inject();
 	});
-document.addEventListener("fd-reset", window.location.reload);

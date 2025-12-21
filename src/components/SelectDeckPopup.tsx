@@ -2,15 +2,11 @@
 /** biome-ignore-all lint/a11y/useSemanticElements: TODO */
 /** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
 
-import {
-	type Fiber,
-	getDisplayName,
-	getFiberFromHostInstance,
-	getFiberStack,
-} from "bippy";
+import * as bippy from "bippy";
 import { useLiveQuery } from "dexie-react-hooks";
 import { createPortal } from "react-dom";
-import { createRoot } from "react-dom/client";
+import { createRoot, type Root } from "react-dom/client";
+import { decksEventTarget } from "../features/events/decks";
 import {
 	addTweetToDeck,
 	getDeckThumbnails,
@@ -22,8 +18,9 @@ import { type DatabaseDeck, db } from "../features/storage/definition";
 import { kv } from "../features/storage/kv";
 import { getUserId } from "../internals/foolproof";
 import {
+	findTweetFiber,
+	getRootNodeFromTweetElement,
 	getTweetIdFromFiber,
-	getTweetInfoFromElement,
 } from "../internals/goodies";
 import { findParentNode, matchers } from "../internals/matchers";
 import CreateDeckModal from "./modals/CreateDeckModal";
@@ -71,25 +68,26 @@ function NewDeckCard() {
 	);
 }
 
-function DeckCard(props: { deck: DatabaseDeck }) {
+function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 	const [state, setState] = useState<DeckCardState>(DeckCardState.IDLE);
 	const thumbnails = useLiveQuery(() => getDeckThumbnails(props.deck.id, 1));
-	const currentTweet = useLiveQuery(kv.tweets.currentTweet.get);
-	const currentNewDeck = useLiveQuery(kv.decks.newDeck.get);
 	const saveButtonRef = useRef<HTMLButtonElement>(null);
 
 	useEffect(() => {
-		if (!saveButtonRef.current || currentNewDeck !== props.deck.id) return;
-		setState(DeckCardState.SAVING);
-		kv.decks.newDeck.set(undefined);
-	}, [currentNewDeck, saveButtonRef]);
+		const listener = (ev: CustomEvent<DatabaseDeck>) => {
+			if (ev.detail.id === props.deck.id) setState(DeckCardState.SAVING);
+		};
+		if (decksEventTarget.latestCreatedDeck?.id === props.deck.id)
+			setState(DeckCardState.SAVING);
+		else decksEventTarget.addEventListener("deck-created", listener);
+		return () => decksEventTarget.removeEventListener("deck-created", listener);
+	}, []);
 
 	useEffect(() => {
-		if (!currentTweet) return;
-		isTweetInSpecificDeck(currentTweet, props.deck.id).then((v) => {
+		isTweetInSpecificDeck(props.tweet, props.deck.id).then((v) => {
 			if (v) setState(DeckCardState.SAVED);
 		});
-	}, [currentTweet]);
+	}, [props.tweet]);
 
 	useEffect(() => {
 		if (!saveButtonRef.current) return;
@@ -117,20 +115,16 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 		else if (state === DeckCardState.REMOVING) remove();
 	}, [state]);
 
-	const getTweetId = () => {
-		const fiber = components.SelectDeckPopup.getParentTweetFiber();
-		if (!fiber) throw new Error("cannot find the parent twitter fiber");
-		return getTweetIdFromFiber(fiber);
-	};
-
 	const save = useCallback(async () => {
-		await addTweetToDeck(props.deck.id, getTweetId());
+		await addTweetToDeck(props.deck.id, props.tweet);
 
 		// if we saved a tweet from the ungrouped "deck", hide the tweet
-		if ((await kv.decks.currentDeck.get())?.id === "ungrouped") {
+		if (
+			(await kv.decks.currentDeck.get())?.id === "ungrouped" &&
+			components.SelectDeckPopup.initiator
+		) {
 			const tweetNode = findParentNode(
-				// biome-ignore lint/style/noNonNullAssertion: guaranteed(?) to be present
-				components.SelectDeckPopup.getBookmarkButton()!,
+				components.SelectDeckPopup.initiator,
 				matchers.tweetRoot.matcher,
 			);
 			if (!tweetNode) return;
@@ -142,13 +136,10 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 	}, [setState]);
 
 	const remove = useCallback(async () => {
-		const fiber = components.SelectDeckPopup.getParentTweetFiber();
-		if (!fiber) throw new Error("cannot find the parent twitter fiber");
-		const id = getTweetIdFromFiber(fiber);
 		await db.tweets
 			.where({
-				id: id,
-				user: await getUserId(fiber),
+				id: props.tweet,
+				user: await getUserId(),
 				deck: props.deck.id,
 			})
 			.delete();
@@ -158,7 +149,7 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 		if ((await kv.decks.currentDeck.get())?.id === props.deck.id)
 			components.SelectDeckPopup.hide();
 
-		if (await isTweetInDeck(id)) return;
+		if (await isTweetInDeck(props.tweet)) return;
 
 		// if it was previously in the ungrouped "deck", it's supposed to be brought back.
 		// although, it needs to be found in the original list, not the DeckTweetList...
@@ -167,9 +158,13 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 			document.querySelectorAll(matchers.tweet.querySelector),
 		).map((n) => n as HTMLElement);
 		for (const tweet of tweets) {
-			const info = getTweetInfoFromElement(tweet);
-			if (!info || info.id !== id) continue;
-			console.log("showing tweet", id, "again since it became ungrouped");
+			const info = getRootNodeFromTweetElement(tweet);
+			if (!info || info.id !== props.tweet) continue;
+			console.log(
+				"showing tweet",
+				props.tweet,
+				"again since it became ungrouped",
+			);
 			info.rootNode.style.display = "flex";
 		}
 	}, [setState]);
@@ -184,7 +179,7 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 		<div
 			onClick={saveButtonClicked}
 			role="button"
-			className="hover:shadow-lighten! focus:shadow-lighten! hover:cursor-pointer p-2 rounded-lg h-20 w-sm flex flex-row justify-between items-center gap-4"
+			className="hover:shadow-lighten! focus:shadow-lighten! hover:cursor-pointer p-2 rounded-lg h-20 shrink-0 w-sm flex flex-row justify-between items-center gap-4"
 		>
 			<div className="flex flex-row h-full gap-4 justify-center items-center">
 				<div className="h-full rounded-lg bg-fd-bg-even-lighter! aspect-square relative flex justify-center items-center">
@@ -237,142 +232,163 @@ function DeckCard(props: { deck: DatabaseDeck }) {
 	);
 }
 
-function InternalSelectDeckPopup() {
+function InternalSelectDeckPopup(props: {
+	tweet: string;
+	onReady: () => void;
+}) {
 	const decks = useLiveQuery(getUserDecksAutomatically);
-	const currentTweet = useLiveQuery(kv.tweets.currentTweet.get);
+
+	useEffect(() => {
+		if (decks !== undefined) props.onReady();
+	}, [decks]);
 
 	return (
 		<div
-			key={currentTweet}
 			className="bg-fd-bg p-2 rounded-xl gap-1 flex flex-col"
 			style={{
 				boxShadow:
 					"rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px",
 			}}
 		>
-			{(decks ?? []).map((d) => (
-				<DeckCard key={d.id} deck={d} />
-			))}
+			<div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
+				{(decks ?? []).map((d) => (
+					<DeckCard key={d.id} deck={d} tweet={props.tweet} />
+				))}
+			</div>
 			<NewDeckCard />
 		</div>
 	);
 }
 
 export const SelectDeckPopup = (() => {
-	let bookmarkButton: HTMLButtonElement | undefined;
-	let container: HTMLDivElement | undefined;
-	let visible: boolean = false;
+	let root: Root | undefined;
+	let initiatorElement: HTMLElement | undefined;
+	let container: HTMLElement | undefined;
+	let currentTweet: string | undefined;
 
-	const hide = (remove = false) => {
-		if (remove) {
-			(async () => {
-				const fiber = getParentTweetFiber();
-				if (!fiber) return;
-				db.tweets
-					.where({
-						id: getTweetIdFromFiber(fiber),
-						user: await getUserId(fiber),
-					})
-					.delete();
-			})();
-		}
-
-		document.removeEventListener("resize", layoutCallback);
-		document.removeEventListener("scroll", layoutCallback);
-		document.removeEventListener("click", clickCallback);
-		if (!container) return;
-		container.style.left = "0";
-		container.style.top = "0";
-		container.style.zIndex = "-1000";
-		container.style.opacity = "0";
-		container.style.pointerEvents = "none";
-		bookmarkButton = undefined;
-		visible = false;
-	};
-
+	let lastKnownInitiatorRect: DOMRect;
 	const layoutCallback = () => {
-		if (!bookmarkButton || !container) return;
-		const rect = bookmarkButton.getBoundingClientRect();
-		const popupRect = container.getBoundingClientRect();
-		const top = rect.top + rect.height + window.scrollY + 15;
+		if (!initiatorElement || !container) return;
+		// if the initiator got removed in the process (e.g. in a masonry cell),
+		// use the last available information
+		if (initiatorElement.isConnected)
+			lastKnownInitiatorRect = initiatorElement.getBoundingClientRect();
+		const containerRect = container.getBoundingClientRect();
+		const top =
+			lastKnownInitiatorRect.top +
+			lastKnownInitiatorRect.height +
+			window.scrollY +
+			15;
 		/* const left =
 			rect.left + window.scrollX - popupRect.width / 2 + rect.width / 2; */
-		const left = rect.left + rect.width - popupRect.width;
+		const left =
+			lastKnownInitiatorRect.left +
+			lastKnownInitiatorRect.width -
+			containerRect.width;
 
 		container.style.top = `${top}px`;
 		container.style.left = `${left}px`;
 	};
 
-	const getParentTweetFiber = () => {
-		const buttonFiber = getFiberFromHostInstance(bookmarkButton);
-		if (!buttonFiber) return null;
-		const stack = getFiberStack(buttonFiber);
-		return stack.filter((f) => getDisplayName(f) === "Tweet").at(0) ?? null;
-	};
-
 	const clickCallback = (ev: PointerEvent) => {
-		if (
-			!bookmarkButton ||
-			!container ||
-			!ev.target ||
-			!(ev.target instanceof Node)
-		)
-			return;
+		if (!container || !ev.target || !(ev.target instanceof Node)) return;
 		if (!container.contains(ev.target)) hide();
 	};
 
+	const hide = () => {
+		console.log("hiding SelectDeckPopup");
+		document.removeEventListener("resize", layoutCallback);
+		document.removeEventListener("scroll", layoutCallback);
+		document.removeEventListener("click", clickCallback);
+		currentTweet = undefined;
+		initiatorElement = undefined;
+		if (!root || !container) return;
+		root.unmount();
+		root = undefined;
+		container.remove();
+		container = undefined;
+	};
+
 	return {
-		create() {
-			if (document.querySelector("#favedeck-select-deck"))
-				window.dispatchEvent(new CustomEvent("remove-fd-select-deck"));
+		show(initiator, mode = "tweet") {
+			console.log("showing SelectDeckPopup");
+			if (initiatorElement && initiatorElement !== initiator) hide();
+			switch (mode) {
+				case "tweet": {
+					const initiatorFiber = bippy.getFiberFromHostInstance(initiator);
+					if (!initiatorFiber) {
+						console.error(
+							"cannot show SelectDeckPopup for initiator (no fiber found)",
+							initiator,
+						);
+						return;
+					}
+					const tweetFiber = findTweetFiber(initiatorFiber);
+					if (!tweetFiber) {
+						console.error(
+							"cannot show SelectDeckPopup for initiator (no tweet found)",
+							initiator,
+						);
+						return;
+					}
+					currentTweet = getTweetIdFromFiber(tweetFiber);
+					break;
+				}
+				case "masonry-cell": {
+					const id = initiator.getAttribute("favedeck-tweet-id");
+					if (!id) {
+						console.error(
+							"cannot show SelectDeckPopup for masonry cell (no favedeck-tweet-id attribute present)",
+							initiator,
+						);
+						return;
+					}
+					currentTweet = id;
+					break;
+				}
+			}
+			initiatorElement = initiator;
 
-			const div = document.createElement("div");
-			div.style.zIndex = "-1000";
-			div.style.pointerEvents = "none";
-			div.style.opacity = "0";
-			div.style.position = "absolute";
-			div.style.left = "0";
-			div.style.top = "0";
-			div.id = "favedeck-select-deck";
-			document.body.append(div);
-			container = div;
-
-			createRoot(div).render(<InternalSelectDeckPopup />);
-		},
-		getParentTweetFiber,
-		show() {
-			if (!container || !bookmarkButton) return;
+			container = document.createElement("div");
 			container.style.zIndex = "1000";
 			container.style.pointerEvents = "auto";
-			container.style.opacity = "1";
+			container.style.opacity = "0";
+			container.style.position = "absolute";
+			container.style.left = "0";
+			container.style.top = "0";
+			document.body.append(container);
 			document.addEventListener("resize", layoutCallback);
 			document.addEventListener("scroll", layoutCallback);
 			document.addEventListener("click", clickCallback);
-			layoutCallback();
-			visible = true;
+			root = createRoot(container);
+			root.render(
+				<InternalSelectDeckPopup
+					onReady={() => {
+						layoutCallback();
+						queueMicrotask(() => {
+							// biome-ignore lint/style/noNonNullAssertion: it's not going to be hidden on the same frame
+							container!.style.opacity = "1";
+						});
+					}}
+					tweet={currentTweet ?? ""}
+				/>,
+			);
 		},
 		hide,
-		setBookmarkButton(bb) {
-			bookmarkButton = bb;
-
-			// set currentTweet if possible
-			try {
-				const fiber = getParentTweetFiber();
-				if (!fiber) return;
-				kv.tweets.currentTweet.set(getTweetIdFromFiber(fiber));
-			} catch (ex) {
-				console.error(`failed to get current tweet: ${ex}`);
-			}
+		get currentTweet() {
+			return currentTweet;
 		},
-		getVisible: () => visible,
-		getBookmarkButton: () => bookmarkButton,
+		get initiator() {
+			return initiatorElement;
+		},
+		get visible() {
+			return currentTweet !== undefined;
+		},
 	} satisfies {
-		create: () => void;
-		setBookmarkButton: (bookmarkButton: HTMLButtonElement) => void;
-		getBookmarkButton: () => HTMLButtonElement | undefined;
-		show: () => void;
-		hide: (remove: boolean) => void;
-		getParentTweetFiber: () => Fiber | null;
-		getVisible: () => boolean;
+		show: (initiator: HTMLElement, mode: "tweet" | "masonry-cell") => void;
+		hide: () => void;
+		currentTweet?: string;
+		initiator?: HTMLElement;
+		visible: boolean;
 	};
 })();

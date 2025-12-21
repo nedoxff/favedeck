@@ -53,4 +53,5 @@ export default defineConfig({
 	manifest: {
 		host_permissions: ["*://*.x.com/*", "*://*.twitter.com/*"],
 	},
+	manifestVersion: 3,
 });
