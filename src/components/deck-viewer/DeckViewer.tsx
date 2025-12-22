@@ -282,9 +282,20 @@ function DeckBoard() {
 	);
 }
 
-export const DeckViewer = (() => {
+export const DeckViewer: {
+	create: () => void;
+	hide: () => void;
+	isMounted: boolean;
+	checkUngroupedTweet: (node: HTMLElement, id: string) => void;
+	originalContainer: {
+		set: (container: HTMLElement) => void;
+		show: () => void;
+		hide: () => void;
+	};
+} = (() => {
 	let root: Root | undefined;
 	let originalContainer: HTMLElement | undefined;
+	let container: HTMLElement | undefined;
 	let currentDeck: DatabaseDeck | undefined;
 
 	Dexie.liveQuery(kv.decks.currentDeck.get).subscribe({
@@ -297,16 +308,12 @@ export const DeckViewer = (() => {
 	return {
 		async create() {
 			await kv.decks.currentDeck.set(undefined);
-			if (root) {
+			if (components.DeckViewer.isMounted) {
 				console.log("unmounting old DeckViewer");
-				root.unmount();
-				root = undefined;
+				components.DeckViewer.hide();
 			}
 
-			const container = await waitForSelector(
-				document.body,
-				"#favedeck-viewer",
-			);
+			container = await waitForSelector(document.body, "#favedeck-viewer");
 			if (!container) {
 				console.error("couldn't find favedeck container");
 				return;
@@ -327,9 +334,11 @@ export const DeckViewer = (() => {
 			console.log("unmounting DeckViewer");
 			root?.unmount();
 			root = undefined;
+			if (container?.isConnected) container.remove();
+			container = undefined;
 		},
-		isMounted() {
-			return root !== undefined;
+		get isMounted() {
+			return root !== undefined && (container?.isConnected ?? false);
 		},
 		async checkUngroupedTweet(node, id) {
 			if (currentDeck !== undefined && currentDeck.id !== "ungrouped") return;
@@ -366,15 +375,5 @@ export const DeckViewer = (() => {
 				this.hide();
 			},
 		},
-	} satisfies {
-		create: () => void;
-		hide: () => void;
-		isMounted: () => void;
-		checkUngroupedTweet: (node: HTMLElement, id: string) => void;
-		originalContainer: {
-			set: (container: HTMLElement) => void;
-			show: () => void;
-			hide: () => void;
-		};
 	};
 })();

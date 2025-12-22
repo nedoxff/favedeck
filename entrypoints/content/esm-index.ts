@@ -33,9 +33,11 @@ const initializeMessageListener = () => {
 const injectUrlObserver = () => {
 	console.log("injecting url observer");
 	webpack.common.history.listen((location, _action) => {
+		const previousRoute = webpack.common.history._locationsHistory.at(-1);
 		const shouldCreateViewer =
 			location.pathname.endsWith("bookmarks") &&
-			!(webpack.common.history._locationsHistory.at(-1)?.isModalRoute ?? false);
+			!components.DeckViewer.isMounted &&
+			!(previousRoute?.isModalRoute ?? false);
 		console.log("should create DeckViewer:", shouldCreateViewer);
 		if (shouldCreateViewer) components.DeckViewer.create();
 	});
@@ -157,7 +159,7 @@ const injectTweetObserver = () => {
 						const tweet = tweetNode as HTMLElement;
 						injectTweetCallbacks(tweet);
 
-						if (components.DeckViewer.isMounted()) {
+						if (components.DeckViewer.isMounted) {
 							const info = getRootNodeFromTweetElement(tweet);
 							if (!info) continue;
 							components.DeckViewer.checkUngroupedTweet(info.rootNode, info.id);
