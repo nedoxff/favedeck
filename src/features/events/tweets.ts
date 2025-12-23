@@ -5,6 +5,8 @@ interface TweetsEventMap {
 	"components-available": Event;
 	"tweet-bookmarked": CustomEvent<string>;
 	"tweet-unbookmarked": CustomEvent<string>;
+	"tweet-decked": CustomEvent<{ tweet: string; deck: string }>;
+	"tweet-undecked": CustomEvent<{ tweet: string; deck: string }>;
 }
 
 class TweetsEventTarget extends TypedEventTarget<TweetsEventMap> {
@@ -27,6 +29,30 @@ class TweetsEventTarget extends TypedEventTarget<TweetsEventMap> {
 		this.dispatchTypedEvent(
 			"tweet-unbookmarked",
 			new CustomEvent("tweet-unbookmarked", { detail: id }),
+		);
+	}
+
+	public dispatchTweetDecked(tweet: string, deck: string) {
+		this.dispatchTypedEvent(
+			"tweet-decked",
+			new CustomEvent("tweet-decked", {
+				detail: {
+					tweet,
+					deck,
+				},
+			}),
+		);
+	}
+
+	public dispatchTweetUndecked(tweet: string, deck: string) {
+		this.dispatchTypedEvent(
+			"tweet-undecked",
+			new CustomEvent("tweet-undecked", {
+				detail: {
+					tweet,
+					deck,
+				},
+			}),
 		);
 	}
 }

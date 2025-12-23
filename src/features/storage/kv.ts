@@ -1,4 +1,4 @@
-import { type DatabaseDeck, db } from "./definition";
+import { db } from "./definition";
 
 const kvGet =
 	<T>(key: string) =>
@@ -19,7 +19,5 @@ const createGettersSetters = <T>(key: string) => ({
 export const kv = {
 	reloaded: createGettersSetters<string>("reloaded"),
 	tweets: {},
-	decks: {
-		currentDeck: createGettersSetters<DatabaseDeck>("current-deck"),
-	},
+	decks: {},
 };

@@ -14,6 +14,11 @@ export const UNGROUPED_DECK: DatabaseDeck = {
 	dateModified: new Date(),
 };
 
+export const getDeck = async (id: string) => {
+	if (id === "ungrouped") return UNGROUPED_DECK;
+	return await db.decks.get(id);
+};
+
 export const createDeck = async (name: string, secret: boolean) => {
 	const deck: DatabaseDeck = {
 		id: v6(),

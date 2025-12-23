@@ -56,16 +56,33 @@ function GenericTweetMasonry<T extends { id: string }>(
 
 	const [removedTweetsCount, setRemovedTweetsCount] = useState(0);
 	useEffect(() => {
-		const listener = (ev: CustomEvent<string>) => {
-			const newTweets = tweets.filter((t) => t.id !== ev.detail);
+		const removeTweet = (tweet: string) => {
+			const newTweets = tweets.filter((t) => t.id !== tweet);
 			if (newTweets.length < tweets.length)
 				setRemovedTweetsCount((cur) => cur + 1);
 			setTweets(newTweets);
 		};
 
-		tweetsEventTarget.addEventListener("tweet-unbookmarked", listener);
-		return () =>
-			tweetsEventTarget.removeEventListener("tweet-unbookmarked", listener);
+		const unbookmarkedListener = (ev: CustomEvent<string>) =>
+			removeTweet(ev.detail);
+		const undeckedListener = (
+			ev: CustomEvent<{ deck: string; tweet: string }>,
+		) => {
+			if (props.deck.id === ev.detail.deck) removeTweet(ev.detail.tweet);
+		};
+
+		tweetsEventTarget.addEventListener(
+			"tweet-unbookmarked",
+			unbookmarkedListener,
+		);
+		tweetsEventTarget.addEventListener("tweet-undecked", undeckedListener);
+		return () => {
+			tweetsEventTarget.removeEventListener(
+				"tweet-unbookmarked",
+				unbookmarkedListener,
+			);
+			tweetsEventTarget.removeEventListener("tweet-undecked", undeckedListener);
+		};
 	}, [tweets]);
 
 	const maybeLoadMore = useInfiniteLoader(
@@ -119,6 +136,17 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 						<article
 							style={{ width: `${width}px` }}
 							className="rounded-2xl overflow-hidden relative group"
+							onMouseEnter={(ev) => {
+								const video = ev.currentTarget.querySelector("video");
+								if (video) video.play();
+							}}
+							onMouseLeave={(ev) => {
+								const video = ev.currentTarget.querySelector("video");
+								if (video) {
+									video.pause();
+									video.currentTime = 0;
+								}
+							}}
 						>
 							<a
 								href={url}
@@ -129,11 +157,25 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 							>
 								<img
 									key={`${data.id}-${index}`}
-									src={data.info.url}
+									src={
+										data.info.type === "video"
+											? data.info.thumbnail
+											: data.info.url
+									}
 									width={data.info.width}
 									height={data.info.height}
 									alt="meow"
 								/>
+								{data.info.type === "video" && (
+									<video
+										src={data.info.url}
+										width={data.info.width}
+										height={data.info.height}
+										className="absolute top-0 left-0 w-full h-full hidden group-hover:flex!"
+										loop
+										muted
+									/>
+								)}
 							</a>
 							<div className="absolute w-full h-full top-0 left-0 group-hover:flex! pointer-events-none rounded-2xl hidden bg-black/25"></div>
 							<a

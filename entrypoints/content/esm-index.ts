@@ -1,5 +1,6 @@
 import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
 import { components, initializeComponents } from "@/src/components/wrapper";
+import { decksEventTarget } from "@/src/features/events/decks";
 import { kv } from "@/src/features/storage/kv";
 import {
 	type ForwarderMessagePayload,
@@ -33,6 +34,18 @@ const initializeMessageListener = () => {
 const injectUrlObserver = () => {
 	console.log("injecting url observer");
 	webpack.common.history.listen((location, _action) => {
+		if (
+			location.pathname.endsWith("bookmarks") &&
+			components.DeckViewer.isMounted
+		) {
+			decksEventTarget.setCurrentDeck(
+				location.hash && location.hash.length !== 0
+					? location.hash.substring(4)
+					: null,
+			);
+			return;
+		}
+
 		const previousRoute = webpack.common.history._locationsHistory.at(-1);
 		const shouldCreateViewer =
 			location.pathname.endsWith("bookmarks") &&
@@ -50,7 +63,6 @@ const injectUrlObserver = () => {
 		initialRoute?.locationPathname.endsWith("bookmarks")
 	)
 		queueMicrotask(components.DeckViewer.create);
-	else kv.decks.currentDeck.set(undefined);
 };
 
 const initializeWebpack = async () => {

@@ -7,6 +7,7 @@ import { getTweetEntity, getUserEntity } from "./redux";
 
 type MediaInfo = {
 	url: string;
+	thumbnail: string;
 	width: number;
 	height: number;
 	type: string;
@@ -20,17 +21,38 @@ export const getMediaInfo = (
 	const eligibleEntities = tweet.entities.media.filter(
 		(m) => m.type === "photo" || m.type === "video",
 	);
-	return eligibleEntities.map((ee, idx) => ({
-		url: `${ee.media_url_https}?name=${quality}`,
-		width: ee.sizes[quality].w,
-		height: ee.sizes[quality].h,
-		index: idx + 1,
-		type: ee.type,
-	}));
+	return eligibleEntities.map((ee, idx) =>
+		ee.type === "photo"
+			? {
+					url: `${ee.media_url_https}?name=${quality}`,
+					thumbnail: `${ee.media_url_https}?name=thumb`,
+					width: ee.sizes[quality].w,
+					height: ee.sizes[quality].h,
+					index: idx + 1,
+					type: ee.type,
+				}
+			: {
+					url:
+						// biome-ignore lint/style/noNonNullAssertion: nuh uh
+						ee
+							.video_info!.variants.filter(
+								(v) => v.bitrate && v.content_type !== "application/x-mpegURL",
+							)
+							.sort((a, b) => (a.bitrate ?? 0) - (b.bitrate ?? 0))
+							.at(0)?.url ?? "",
+					thumbnail: `${ee.media_url_https}?name=thumb`,
+					width: ee.original_info.width,
+					height: ee.original_info.height,
+					index: idx + 1,
+					type: ee.type,
+				},
+	);
 };
 
-export const getThumbnailUrl = (tweet?: RawTweet): string | undefined =>
-	getMediaInfo(tweet).at(0)?.url;
+export const getThumbnailUrl = (tweet?: RawTweet): string | undefined => {
+	const info = getMediaInfo(tweet, "thumb").at(0);
+	return info ? (info.type === "photo" ? info.url : info.thumbnail) : undefined;
+};
 
 export type TweetMasonryInfo = {
 	id: string;

@@ -6,11 +6,12 @@ type ReactJSXRuntimeType = typeof import("react/jsx-runtime");
 // i have no idea if this is some custom history
 // thing by twitter based on its name (RichHistory)
 export type HistoryLocation = {
-	hash: string;
-	key: string;
+	hash?: string;
+	key?: string;
 	pathname: string;
-	query: Record<string, string>;
-	search: string;
+	query?: Record<string, string>;
+	search?: string;
+	state?: unknown;
 };
 export type HistoryType = {
 	_history: {
@@ -23,8 +24,8 @@ export type HistoryType = {
 	}[];
 
 	go: (path: string) => void;
-	goBack: (path: string) => void;
-	push: (path: string) => void;
+	goBack: (path?: string) => void;
+	push: (path: string | HistoryLocation) => void;
 	replace: (path: string) => void;
 	listen: (
 		listener: (location: HistoryLocation, action: string) => void,

@@ -3,20 +3,19 @@
 /** biome-ignore-all lint/a11y/useFocusableInteractive: TODO */
 /** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
 
+import { decksEventTarget } from "@/src/features/events/decks";
 import { tweetsEventTarget } from "@/src/features/events/tweets";
 import {
+	getDeck,
 	getDeckSize,
 	getDeckThumbnails,
 	getUserDecksAutomatically,
 	isTweetInDeck,
-	UNGROUPED_DECK,
 } from "@/src/features/storage/decks";
 import { type DatabaseDeck, db } from "@/src/features/storage/definition";
-import { kv } from "@/src/features/storage/kv";
 import { waitForSelector } from "@/src/helpers/observer";
 import { webpack } from "@/src/internals/webpack";
 import clsx from "clsx";
-import Dexie from "dexie";
 import { useLiveQuery } from "dexie-react-hooks";
 import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
@@ -109,8 +108,12 @@ function UngroupedDeckBoardItem() {
 			role="button"
 			onClick={(ev) => {
 				ev.preventDefault();
-				kv.decks.currentDeck.set(UNGROUPED_DECK);
-				window.history.pushState("from-deck-view", "", `#fd-ungrouped`);
+				decksEventTarget.setCurrentDeck("ungrouped");
+				webpack.common.history.push({
+					hash: "#fd-ungrouped",
+					pathname: "/i/bookmarks",
+					state: "from-deck-view",
+				});
 			}}
 			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
 		>
@@ -148,12 +151,12 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 				role="button"
 				onClick={(ev) => {
 					ev.preventDefault();
-					kv.decks.currentDeck.set(props.deck);
-					window.history.pushState(
-						"from-deck-view",
-						"",
-						`#fd-${props.deck.id}`,
-					);
+					decksEventTarget.setCurrentDeck(props.deck.id);
+					webpack.common.history.push({
+						hash: `#fd-${props.deck.id}`,
+						pathname: "/i/bookmarks",
+						state: "from-deck-view",
+					});
 				}}
 				className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
 			>
@@ -219,13 +222,27 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 
 function DeckBoard() {
 	const userDecks = useLiveQuery(getUserDecksAutomatically);
-	const currentDeck = useLiveQuery(kv.decks.currentDeck.get);
+	const [currentDeck, setCurrentDeck] = useState<string | null>(
+		decksEventTarget.currentDeck,
+	);
+	const currentDatabaseDeck = useLiveQuery(
+		() => getDeck(currentDeck ?? ""),
+		[currentDeck],
+	);
 
 	useEffect(() => {
-		if (currentDeck?.id === "ungrouped")
-			components.DeckViewer.originalContainer.show();
-		else components.DeckViewer.originalContainer.hide();
+		currentDeck === "ungrouped"
+			? components.DeckViewer.originalContainer.show()
+			: components.DeckViewer.originalContainer.hide();
 	}, [currentDeck]);
+
+	useEffect(() => {
+		const listener = (ev: CustomEvent<string | null>) =>
+			setCurrentDeck(ev.detail);
+		decksEventTarget.addEventListener("current-deck-changed", listener);
+		return () =>
+			decksEventTarget.removeEventListener("current-deck-changed", listener);
+	}, []);
 
 	const [tweetComponentsAvailable, setTweetComponentsAvailable] =
 		useState(false);
@@ -244,12 +261,15 @@ function DeckBoard() {
 					href="/home"
 					onClick={(ev) => {
 						ev.preventDefault();
-						if (currentDeck === undefined) webpack.common.history.push("/home");
+						if (currentDeck === null) webpack.common.history.push("/home");
 						else {
-							kv.decks.currentDeck.set(undefined);
-							if (window.history.state === "from-deck-view")
-								window.history.back();
-							else window.history.pushState(null, "", "/i/bookmarks");
+							setCurrentDeck(null);
+							if (
+								webpack.common.history._history.location.state ===
+								"from-deck-view"
+							)
+								webpack.common.history.goBack();
+							else webpack.common.history.push("/i/bookmarks");
 						}
 					}}
 				>
@@ -273,11 +293,11 @@ function DeckBoard() {
 					</div>
 				</a>
 				<p className="font-bold text-2xl">
-					{currentDeck ? currentDeck.name : "Decks"}
+					{currentDatabaseDeck ? currentDatabaseDeck.name : "Decks"}
 				</p>
 			</div>
 			<hr className="border-t-2" />
-			{currentDeck === undefined ? (
+			{currentDeck === null ? (
 				<div className="p-4 gap-2 flex flex-row flex-wrap">
 					{(userDecks ?? []).map((d) => (
 						<DeckBoardItem key={d.id} deck={d} />
@@ -285,10 +305,11 @@ function DeckBoard() {
 					<UngroupedDeckBoardItem />
 					<NewDeckBoardItem />
 				</div>
-			) : currentDeck.id !== "ungrouped" ? (
-				tweetComponentsAvailable && (
+			) : currentDeck !== "ungrouped" ? (
+				tweetComponentsAvailable &&
+				currentDatabaseDeck && (
 					<tweetComponents.ContextBridge>
-						<DeckMasonryList deck={currentDeck} />
+						<DeckMasonryList deck={currentDatabaseDeck} />
 					</tweetComponents.ContextBridge>
 				)
 			) : undefined}
@@ -310,18 +331,9 @@ export const DeckViewer: {
 	let root: Root | undefined;
 	let originalContainer: HTMLElement | undefined;
 	let container: HTMLElement | undefined;
-	let currentDeck: DatabaseDeck | undefined;
-
-	Dexie.liveQuery(kv.decks.currentDeck.get).subscribe({
-		next: (v) => {
-			currentDeck = v;
-		},
-		error: console.error,
-	});
 
 	return {
 		async create() {
-			await kv.decks.currentDeck.set(undefined);
 			if (components.DeckViewer.isMounted) {
 				console.log("unmounting old DeckViewer");
 				components.DeckViewer.hide();
@@ -336,13 +348,6 @@ export const DeckViewer: {
 			console.log("mounting new DeckViewer");
 			root = createRoot(container);
 			root.render(<DeckBoard />);
-
-			if (window.location.hash.includes("fd")) {
-				const id = window.location.hash.substring(4);
-				await kv.decks.currentDeck.set(
-					id === "ungrouped" ? UNGROUPED_DECK : await db.decks.get(id),
-				);
-			}
 		},
 		hide() {
 			console.log("unmounting DeckViewer");
@@ -350,12 +355,17 @@ export const DeckViewer: {
 			root = undefined;
 			if (container?.isConnected) container.remove();
 			container = undefined;
+			decksEventTarget.setCurrentDeck(null);
 		},
 		get isMounted() {
 			return root !== undefined && (container?.isConnected ?? false);
 		},
 		async checkUngroupedTweet(node, id) {
-			if (currentDeck !== undefined && currentDeck.id !== "ungrouped") return;
+			if (
+				decksEventTarget.currentDeck !== undefined &&
+				decksEventTarget.currentDeck !== "ungrouped"
+			)
+				return;
 			if (await isTweetInDeck(id)) {
 				console.log("removing tweet", id, "since it's present in a deck");
 				node.style.display = "none";

@@ -1,7 +1,10 @@
 import { createDeck } from "@/src/features/storage/decks";
 import { TwitterModal } from "../TwitterModal";
 
-export default function CreateDeckModal(props: { onClose: () => void }) {
+export default function CreateDeckModal(props: {
+	onClose: () => void;
+	onCreated?: (id: string) => void;
+}) {
 	const [deckName, setDeckName] = useState("");
 	const [deckSecret, setDeckSecret] = useState(false);
 
@@ -31,7 +34,8 @@ export default function CreateDeckModal(props: { onClose: () => void }) {
 			<button
 				onClick={async () => {
 					props.onClose();
-					await createDeck(deckName, deckSecret);
+					const id = await createDeck(deckName, deckSecret);
+					props.onCreated?.(id);
 				}}
 				disabled={deckName.length === 0}
 				type="button"

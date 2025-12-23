@@ -17,7 +17,6 @@ import {
 	wipeTweet,
 } from "../features/storage/decks";
 import { type DatabaseDeck, db } from "../features/storage/definition";
-import { kv } from "../features/storage/kv";
 import { getUserId } from "../internals/foolproof";
 import {
 	findTweetFiber,
@@ -36,6 +35,25 @@ enum DeckCardState {
 	REMOVING,
 	REMOVED,
 }
+
+const saveTweet = async (deck: string, tweet: string) => {
+	await addTweetToDeck(deck, tweet);
+	tweetsEventTarget.dispatchTweetDecked(tweet, deck);
+
+	// if we saved a tweet from the ungrouped "deck", hide the tweet
+	if (
+		decksEventTarget.currentDeck === "ungrouped" &&
+		components.SelectDeckPopup.initiator
+	) {
+		const tweetNode = findParentNode(
+			components.SelectDeckPopup.initiator,
+			matchers.tweetRoot.matcher,
+		);
+		if (!tweetNode) return;
+		tweetNode.style.display = "none";
+		components.SelectDeckPopup.hide();
+	}
+};
 
 function ActionsCard(props: { tweet: string }) {
 	const [showNewDeckModal, setShowNewDeckModal] = useState(false);
@@ -86,7 +104,10 @@ function ActionsCard(props: { tweet: string }) {
 			</div>
 			{showNewDeckModal &&
 				createPortal(
-					<CreateDeckModal onClose={() => setShowNewDeckModal(false)} />,
+					<CreateDeckModal
+						onCreated={(deck) => saveTweet(deck, props.tweet)}
+						onClose={() => setShowNewDeckModal(false)}
+					/>,
 					document.body,
 				)}
 		</>
@@ -97,16 +118,6 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 	const [state, setState] = useState<DeckCardState>(DeckCardState.IDLE);
 	const thumbnails = useLiveQuery(() => getDeckThumbnails(props.deck.id, 1));
 	const saveButtonRef = useRef<HTMLButtonElement>(null);
-
-	useEffect(() => {
-		const listener = (ev: CustomEvent<DatabaseDeck>) => {
-			if (ev.detail.id === props.deck.id) setState(DeckCardState.SAVING);
-		};
-		if (decksEventTarget.latestCreatedDeck?.id === props.deck.id)
-			setState(DeckCardState.SAVING);
-		else decksEventTarget.addEventListener("deck-created", listener);
-		return () => decksEventTarget.removeEventListener("deck-created", listener);
-	}, []);
 
 	useEffect(() => {
 		isTweetInSpecificDeck(props.tweet, props.deck.id).then((v) => {
@@ -141,22 +152,7 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 	}, [state]);
 
 	const save = useCallback(async () => {
-		await addTweetToDeck(props.deck.id, props.tweet);
-
-		// if we saved a tweet from the ungrouped "deck", hide the tweet
-		if (
-			(await kv.decks.currentDeck.get())?.id === "ungrouped" &&
-			components.SelectDeckPopup.initiator
-		) {
-			const tweetNode = findParentNode(
-				components.SelectDeckPopup.initiator,
-				matchers.tweetRoot.matcher,
-			);
-			if (!tweetNode) return;
-			tweetNode.style.display = "none";
-			components.SelectDeckPopup.hide();
-		}
-
+		await saveTweet(props.deck.id, props.tweet);
 		setState(DeckCardState.SAVED);
 	}, [setState]);
 
@@ -168,10 +164,11 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 				deck: props.deck.id,
 			})
 			.delete();
+		tweetsEventTarget.dispatchTweetUndecked(props.tweet, props.deck.id);
 		setState(DeckCardState.REMOVED);
 
 		// if we're currently viewing this deck
-		if ((await kv.decks.currentDeck.get())?.id === props.deck.id)
+		if (decksEventTarget.currentDeck === props.deck.id)
 			components.SelectDeckPopup.hide();
 
 		if (await isTweetInDeck(props.tweet)) return;
@@ -306,7 +303,7 @@ export const SelectDeckPopup = (() => {
 			lastKnownInitiatorRect.height +
 			window.scrollY +
 			10;
-		console.log(top + containerRect.height, window.innerHeight);
+		// position it above the button if it doesn't fit below
 		if (top - window.scrollY + containerRect.height > window.innerHeight) {
 			top =
 				lastKnownInitiatorRect.top -
