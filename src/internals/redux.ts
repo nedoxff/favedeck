@@ -3,6 +3,7 @@ import { mergician } from "mergician";
 import type { DatabaseTweet } from "../features/storage/definition";
 import { getTweetEntityPayload } from "../features/storage/entities";
 import type { RawTweet, RawTweetUser } from "../types/tweet";
+import { webpack } from "./webpack";
 
 export type AddEntitiesPayload = {
 	tweets?: Record<string, RawTweet>;
@@ -12,7 +13,7 @@ export type AddEntitiesPayload = {
 let reduxStore:
 	| {
 			getState: () => object;
-			dispatch: (action: object) => void;
+			dispatch: (action: unknown) => unknown;
 	  }
 	| undefined;
 
@@ -57,4 +58,30 @@ export const getUserEntity = (id: string): RawTweetUser => {
 	const users = reduxStore.getState()?.entities?.users?.entities;
 	if (!users) throw new Error("state.entities.users is undefined");
 	return users[id] as RawTweetUser;
+};
+
+export const unbookmarkTweet = async (id: string) => {
+	if (!reduxStore) {
+		console.error(`can't unbookmark tweet ${id}, redux store is undefined`);
+		return;
+	}
+
+	// TODO: add proper typing
+	try {
+		(await reduxStore.dispatch(
+			webpack.common.redux.api.tweets.unbookmark(id),
+		)) as Promise<void>;
+		reduxStore?.dispatch({
+			type: "rweb/urt/REMOVE_TWEETS",
+			meta: {
+				timelineId: "bookmarks",
+			},
+			payload: {
+				[id]: true,
+			},
+		});
+		console.log(`successfully unbookmarked tweet ${id}`);
+	} catch (ex) {
+		console.error(`failed to unbookmark tweet ${id}`, ex);
+	}
 };

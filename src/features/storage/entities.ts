@@ -4,7 +4,12 @@ import type { RawTweet, RawTweetUser } from "@/src/types/tweet";
 import { mergician } from "mergician";
 import { db } from "./definition";
 
-export const putTweetEntity = async (entity?: RawTweet) => {
+export type TweetEntityMeta = {
+	user: string;
+	quoteOf?: string;
+};
+
+export const putTweetEntity = async (entity?: RawTweet, quoteOf?: string) => {
 	if (!entity) return;
 	const userEntity = getUserEntity(entity.user);
 	await db.entities.put({
@@ -16,7 +21,35 @@ export const putTweetEntity = async (entity?: RawTweet) => {
 		key: `tweet-${entity.id_str}`,
 		type: "tweet",
 		data: await compressObject(entity),
+		meta: {
+			user: entity.user,
+			quoteOf,
+		} satisfies TweetEntityMeta,
 	});
+};
+
+export const removeTweetEntityAndRelatives = async (id: string) => {
+	const tweetEntity = await db.entities.get(`tweet-${id}`);
+	if (!tweetEntity || !tweetEntity.meta) return;
+
+	const meta = tweetEntity.meta as TweetEntityMeta;
+	if (meta.quoteOf) {
+		const canSafelyRemoveQuoteTweet =
+			(await db.entities.where({ meta: { quoteOf: meta.quoteOf } }).count()) <=
+			1;
+		console.log("can safely remove quote tweet", canSafelyRemoveQuoteTweet);
+		if (!canSafelyRemoveQuoteTweet) return;
+
+		const quotedTweetEntity = await db.entities.get(`tweet-${meta.quoteOf}`);
+		if (!quotedTweetEntity || !quotedTweetEntity.meta) return;
+		await db.entities.delete(`tweet-${meta.quoteOf}`);
+		await db.entities.delete(
+			`user-${(quotedTweetEntity.meta as TweetEntityMeta).user}`,
+		);
+	}
+
+	await db.entities.delete(`tweet-${id}`);
+	await db.entities.delete(`user-${meta.user}`);
 };
 
 export const getTweetEntityPayload = async (

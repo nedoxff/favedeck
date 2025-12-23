@@ -7,12 +7,14 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { decksEventTarget } from "../features/events/decks";
+import { tweetsEventTarget } from "../features/events/tweets";
 import {
 	addTweetToDeck,
 	getDeckThumbnails,
 	getUserDecksAutomatically,
 	isTweetInDeck,
 	isTweetInSpecificDeck,
+	wipeTweet,
 } from "../features/storage/decks";
 import { type DatabaseDeck, db } from "../features/storage/definition";
 import { kv } from "../features/storage/kv";
@@ -23,6 +25,7 @@ import {
 	getTweetIdFromFiber,
 } from "../internals/goodies";
 import { findParentNode, matchers } from "../internals/matchers";
+import { unbookmarkTweet } from "../internals/redux";
 import CreateDeckModal from "./modals/CreateDeckModal";
 import { components } from "./wrapper";
 
@@ -34,37 +37,59 @@ enum DeckCardState {
 	REMOVED,
 }
 
-function NewDeckCard() {
-	const [showModal, setShowModal] = useState(false);
-
+function ActionsCard(props: { tweet: string }) {
+	const [showNewDeckModal, setShowNewDeckModal] = useState(false);
 	return (
-		<div
-			onClick={() => {
-				if (!showModal) setShowModal(true);
-			}}
-			role="button"
-			className="hover:shadow-lighten! focus:shadow-lighten! hover:cursor-pointer p-2 rounded-lg h-20 w-sm flex flex-row justify-between items-center gap-4"
-		>
-			<div className="flex flex-row h-full gap-4 justify-center items-center">
-				<div className="rounded-lg h-full aspect-square border-dashed border-2 border-white! flex justify-center items-center">
+		<>
+			<div className="flex flex-row gap-2 p-1 h-20">
+				<div
+					role="button"
+					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-lighter! hover:shadow-lighten! rounded-xl"
+					onClick={() => setShowNewDeckModal(true)}
+				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
-						width="24"
-						height="24"
+						width="32"
+						height="32"
 						viewBox="0 0 24 24"
 					>
 						<title>plus icon</title>
 						<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
 					</svg>
+					<p className="text-sm text-center">Create a new deck</p>
 				</div>
-				<p>Create a new deck</p>
+				<div
+					role="button"
+					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-lighter! hover:shadow-lighten! rounded-xl"
+					onClick={async () => {
+						components.SelectDeckPopup.hide();
+						await unbookmarkTweet(props.tweet);
+						await wipeTweet(props.tweet);
+						tweetsEventTarget.dispatchTweetUnbookmarked(props.tweet);
+					}}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="32"
+						height="32"
+						viewBox="0 0 24 24"
+						className="scale-80!"
+					>
+						<title>remove bookmark icon</title>
+						<path
+							fill="currentColor"
+							d="M20 20.72L18.73 22l-1.95-1.95L12 18l-7 3V8.27l-3-3L3.28 4zm-1-3.56V5a2 2 0 0 0-2-2H7c-.59 0-1.11.27-1.5.68z"
+						/>
+					</svg>
+					<p className="text-sm text-center">Remove from bookmarks</p>
+				</div>
 			</div>
-			{showModal &&
+			{showNewDeckModal &&
 				createPortal(
-					<CreateDeckModal onClose={() => setShowModal(false)} />,
+					<CreateDeckModal onClose={() => setShowNewDeckModal(false)} />,
 					document.body,
 				)}
-		</div>
+		</>
 	);
 }
 
@@ -179,9 +204,9 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 		<div
 			onClick={saveButtonClicked}
 			role="button"
-			className="hover:shadow-lighten! focus:shadow-lighten! hover:cursor-pointer p-2 rounded-lg h-20 shrink-0 w-sm flex flex-row justify-between items-center gap-4"
+			className="w-full hover:shadow-lighten! focus:shadow-lighten! hover:cursor-pointer p-2 rounded-lg h-20 shrink-0 flex flex-row justify-between items-center gap-4"
 		>
-			<div className="flex flex-row h-full gap-4 justify-center items-center">
+			<div className="flex flex-row h-full gap-4 justify-center items-center w-full min-w-0">
 				<div className="h-full rounded-lg bg-fd-bg-even-lighter! aspect-square relative flex justify-center items-center">
 					{props.deck.secret ? (
 						<svg
@@ -205,8 +230,10 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 					) : undefined}
 				</div>
 
-				<div className="flex flex-col">
-					<p>{props.deck.name}</p>
+				<div className="flex flex-col grow min-w-0">
+					<p className="overflow-hidden text-ellipsis whitespace-nowrap">
+						{props.deck.name}
+					</p>
 					{state === DeckCardState.SAVED && (
 						<p className="pointer-events-none opacity-50 text-sm -mt-1">
 							Click again to remove
@@ -244,7 +271,7 @@ function InternalSelectDeckPopup(props: {
 
 	return (
 		<div
-			className="bg-fd-bg p-2 rounded-xl gap-1 flex flex-col"
+			className="bg-fd-bg p-2 rounded-xl gap-1 flex flex-col w-sm"
 			style={{
 				boxShadow:
 					"rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px",
@@ -255,7 +282,7 @@ function InternalSelectDeckPopup(props: {
 					<DeckCard key={d.id} deck={d} tweet={props.tweet} />
 				))}
 			</div>
-			<NewDeckCard />
+			<ActionsCard tweet={props.tweet} />
 		</div>
 	);
 }
@@ -274,13 +301,20 @@ export const SelectDeckPopup = (() => {
 		if (initiatorElement.isConnected)
 			lastKnownInitiatorRect = initiatorElement.getBoundingClientRect();
 		const containerRect = container.getBoundingClientRect();
-		const top =
+		let top =
 			lastKnownInitiatorRect.top +
 			lastKnownInitiatorRect.height +
 			window.scrollY +
-			15;
-		/* const left =
-			rect.left + window.scrollX - popupRect.width / 2 + rect.width / 2; */
+			10;
+		console.log(top + containerRect.height, window.innerHeight);
+		if (top - window.scrollY + containerRect.height > window.innerHeight) {
+			top =
+				lastKnownInitiatorRect.top -
+				lastKnownInitiatorRect.height -
+				containerRect.height +
+				window.scrollY +
+				10;
+		}
 		const left =
 			lastKnownInitiatorRect.left +
 			lastKnownInitiatorRect.width -

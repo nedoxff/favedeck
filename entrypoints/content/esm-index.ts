@@ -41,7 +41,14 @@ const injectUrlObserver = () => {
 		console.log("should create DeckViewer:", shouldCreateViewer);
 		if (shouldCreateViewer) components.DeckViewer.create();
 	});
-	if (webpack.common.history._history.location.pathname.endsWith("bookmarks"))
+
+	const initialRoute = webpack.common.history._locationsHistory.find(
+		(l) => l.locationKey === "initialRwebLocationKey",
+	);
+	if (
+		webpack.common.history._history.location.pathname.endsWith("bookmarks") ||
+		initialRoute?.locationPathname.endsWith("bookmarks")
+	)
 		queueMicrotask(components.DeckViewer.create);
 	else kv.decks.currentDeck.set(undefined);
 };
@@ -106,32 +113,18 @@ const initializeWebpack = async () => {
 const injectTweetObserver = () => {
 	console.log("injecting tweet MutationObserver");
 
-	const injectedTweets = new Set<string>();
 	const injectTweetCallbacks = async (tweet: HTMLElement) => {
-		const info = getRootNodeFromTweetElement(tweet);
-		if (!info) return;
-		if (injectedTweets.has(info.id)) return;
-		else injectedTweets.add(info.id);
+		if ("favedeck" in tweet.dataset) return;
+		tweet.dataset.favedeck = "injected";
 
 		const bookmarkButton = (await waitForSelector(
 			tweet,
 			matchers.bookmarkButton.querySelector,
 		)) as HTMLButtonElement;
 
-		let allowOriginalCallback = false;
-		const onRemoveTweet = () => {
-			allowOriginalCallback = true;
-			bookmarkButton.dispatchEvent(new PointerEvent("click"));
-		};
-
 		bookmarkButton.addEventListener(
 			"click",
 			(ev) => {
-				if (allowOriginalCallback) {
-					console.log("removing tweet");
-					return;
-				}
-
 				if (bookmarkButton.getAttribute("data-testid") === "removeBookmark") {
 					ev.stopPropagation();
 					ev.stopImmediatePropagation();

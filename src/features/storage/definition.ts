@@ -21,6 +21,7 @@ export interface DatabaseCompressedEntity {
 	key: string;
 	type: string;
 	data: Blob;
+	meta?: object;
 }
 
 export const db = new Dexie("favedeck") as Dexie & {
@@ -34,5 +35,5 @@ db.version(1).stores({
 	tweets: "++, id, user, author, deck, dateAdded, thumbnail",
 	decks: "&id, user, name, secret, dateModified",
 	kv: "&key, value",
-	entities: "&key, type",
+	entities: "&key, type, meta.quoteOf, meta.user",
 });

@@ -3,6 +3,7 @@
 /** biome-ignore-all lint/a11y/useFocusableInteractive: TODO */
 /** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
 
+import { tweetsEventTarget } from "@/src/features/events/tweets";
 import {
 	getDeckSize,
 	getDeckThumbnails,
@@ -19,6 +20,7 @@ import Dexie from "dexie";
 import { useLiveQuery } from "dexie-react-hooks";
 import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
+import { tweetComponents } from "../external/Tweet";
 import CreateDeckModal from "../modals/CreateDeckModal";
 import EditDeckModal from "../modals/EditDeckModal";
 import { components } from "../wrapper";
@@ -62,7 +64,7 @@ function DeckBoardItemPreview(props: {
 
 function NewDeckBoardItem() {
 	const [showModal, setShowModal] = useState(false);
-	const decksCount = useLiveQuery(() => db.decks.count());
+	const decksCount = useLiveQuery(() => db.decks.count(), [], 0);
 
 	return (
 		<>
@@ -85,13 +87,11 @@ function NewDeckBoardItem() {
 				</div>
 				<div className="pointer-events-none">
 					<p className="font-bold text-xl">New deck</p>
-					{decksCount !== undefined && (
-						<p className="opacity-50">
-							{decksCount === 0
-								? "we all start somewhere..."
-								: `${decksCount} is never enough!`}
-						</p>
-					)}
+					<p className="opacity-50">
+						{decksCount === 0
+							? "we all start somewhere..."
+							: `${decksCount} is never enough!`}
+					</p>
 				</div>
 			</div>
 			{showModal &&
@@ -227,6 +227,16 @@ function DeckBoard() {
 		else components.DeckViewer.originalContainer.hide();
 	}, [currentDeck]);
 
+	const [tweetComponentsAvailable, setTweetComponentsAvailable] =
+		useState(false);
+	useEffect(() => {
+		const listener = () => setTweetComponentsAvailable(true);
+		if (tweetComponents.meta.available) setTweetComponentsAvailable(true);
+		else tweetsEventTarget.addEventListener("components-available", listener);
+		return () =>
+			tweetsEventTarget.removeEventListener("components-available", listener);
+	}, []);
+
 	return (
 		<div className="flex flex-col">
 			<div className="h-14 px-4 gap-6 flex flex-row items-center w-full sticky top-0 z-10 bg-fd-bg/75 backdrop-blur-xl">
@@ -276,7 +286,11 @@ function DeckBoard() {
 					<NewDeckBoardItem />
 				</div>
 			) : currentDeck.id !== "ungrouped" ? (
-				<DeckMasonryList deck={currentDeck} />
+				tweetComponentsAvailable && (
+					<tweetComponents.ContextBridge>
+						<DeckMasonryList deck={currentDeck} />
+					</tweetComponents.ContextBridge>
+				)
 			) : undefined}
 		</div>
 	);

@@ -46,6 +46,10 @@ type WebpackCache = Record<
 	{ id: number; loaded: boolean; exports: unknown }
 >;
 
+export type ReduxTweetsAPIType = {
+	unbookmark: (id: string) => unknown;
+};
+
 export type WebpackHelper = {
 	rawModules: Record<string, () => unknown>;
 	cache: WebpackCache;
@@ -66,6 +70,11 @@ export type WebpackHelper = {
 			JSXRuntime: ReactJSXRuntimeType;
 		};
 		history: HistoryType;
+		redux: {
+			api: {
+				tweets: ReduxTweetsAPIType;
+			};
+		};
 	};
 };
 
@@ -110,7 +119,18 @@ export const webpack: WebpackHelper = {
 				"the history (router?) module",
 				1,
 			).ZP,
+			redux: {
+				api: {
+					tweets: findOrThrowByProperty<{ Z: ReduxTweetsAPIType }>(
+						"unbookmark",
+						"tweets api actions store (redux)",
+						1,
+					).Z,
+				},
+			},
 		};
+
+		console.log(this.common);
 	},
 
 	findByProperty(key, opts) {

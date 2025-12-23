@@ -4,7 +4,7 @@ import { getTweetEntity } from "@/src/internals/redux";
 import { v6 } from "uuid";
 import { decksEventTarget } from "../events/decks";
 import { type DatabaseDeck, db } from "./definition";
-import { putTweetEntity } from "./entities";
+import { putTweetEntity, removeTweetEntityAndRelatives } from "./entities";
 
 export const UNGROUPED_DECK: DatabaseDeck = {
 	id: "ungrouped",
@@ -65,7 +65,7 @@ export const addTweetToDeck = async (deck: string, tweet: string) => {
 		: undefined;
 
 	await putTweetEntity(tweetEntity);
-	await putTweetEntity(quotedTweetEntity);
+	await putTweetEntity(quotedTweetEntity, tweet);
 	await db.tweets.put({
 		dateAdded: new Date(),
 		deck,
@@ -75,4 +75,9 @@ export const addTweetToDeck = async (deck: string, tweet: string) => {
 		thumbnail:
 			getThumbnailUrl(tweetEntity) ?? getThumbnailUrl(quotedTweetEntity),
 	});
+};
+
+export const wipeTweet = async (id: string) => {
+	await db.tweets.where({ id }).delete();
+	await removeTweetEntityAndRelatives(id);
 };
