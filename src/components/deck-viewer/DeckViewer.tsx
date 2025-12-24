@@ -362,11 +362,10 @@ export const DeckViewer: {
 		},
 		async checkUngroupedTweet(node, id) {
 			if (
-				decksEventTarget.currentDeck !== undefined &&
-				decksEventTarget.currentDeck !== "ungrouped"
-			)
-				return;
-			if (await isTweetInDeck(id)) {
+				(decksEventTarget.currentDeck === null ||
+					decksEventTarget.currentDeck === "ungrouped") &&
+				(await isTweetInDeck(id))
+			) {
 				console.log("removing tweet", id, "since it's present in a deck");
 				node.style.display = "none";
 			}

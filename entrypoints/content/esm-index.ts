@@ -1,6 +1,7 @@
 import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
 import { components, initializeComponents } from "@/src/components/wrapper";
 import { decksEventTarget } from "@/src/features/events/decks";
+import { isTweetInDeck } from "@/src/features/storage/decks";
 import { kv } from "@/src/features/storage/kv";
 import {
 	type ForwarderMessagePayload,
@@ -58,11 +59,21 @@ const injectUrlObserver = () => {
 	const initialRoute = webpack.common.history._locationsHistory.find(
 		(l) => l.locationKey === "initialRwebLocationKey",
 	);
-	if (
-		webpack.common.history._history.location.pathname.endsWith("bookmarks") ||
-		initialRoute?.locationPathname.endsWith("bookmarks")
+
+	const hash = webpack.common.history._history.location.pathname.endsWith(
+		"bookmarks",
 	)
+		? (webpack.common.history._history.location.hash ?? null)
+		: initialRoute?.locationPathname.endsWith("bookmarks")
+			? new URL(initialRoute?.locationPathname).hash
+			: null;
+
+	if (hash !== null) {
+		decksEventTarget.setCurrentDeck(
+			hash.length === 0 ? null : hash.substring(4),
+		);
 		queueMicrotask(components.DeckViewer.create);
+	}
 };
 
 const initializeWebpack = async () => {
@@ -153,7 +164,7 @@ const injectTweetObserver = () => {
 		);
 	};
 
-	const tweetObserver = new MutationObserver((mutations) => {
+	const tweetObserver = new MutationObserver(async (mutations) => {
 		for (const mutation of mutations) {
 			if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
 				for (const node of mutation.addedNodes) {
