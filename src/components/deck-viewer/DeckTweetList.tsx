@@ -158,7 +158,7 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 								<img
 									key={`${data.id}-${index}`}
 									src={
-										data.info.type === "video"
+										data.info.type !== "photo"
 											? data.info.thumbnail
 											: data.info.url
 									}
@@ -166,7 +166,7 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 									height={data.info.height}
 									alt="meow"
 								/>
-								{data.info.type === "video" && (
+								{data.info.type !== "photo" && (
 									<video
 										src={data.info.url}
 										width={data.info.width}

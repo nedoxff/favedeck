@@ -18,8 +18,8 @@ export const getMediaInfo = (
 	quality: string = "small",
 ): MediaInfo[] => {
 	if (!tweet || !tweet.entities.media) return [];
-	const eligibleEntities = tweet.entities.media.filter(
-		(m) => m.type === "photo" || m.type === "video",
+	const eligibleEntities = tweet.entities.media.filter((m) =>
+		["photo", "video", "animated_gif"].includes(m.type),
 	);
 	return eligibleEntities.map((ee, idx) =>
 		ee.type === "photo"
@@ -36,7 +36,9 @@ export const getMediaInfo = (
 						// biome-ignore lint/style/noNonNullAssertion: nuh uh
 						ee
 							.video_info!.variants.filter(
-								(v) => v.bitrate && v.content_type !== "application/x-mpegURL",
+								(v) =>
+									v.bitrate !== undefined &&
+									v.content_type !== "application/x-mpegURL",
 							)
 							.sort((a, b) => (a.bitrate ?? 0) - (b.bitrate ?? 0))
 							.at(0)?.url ?? "",

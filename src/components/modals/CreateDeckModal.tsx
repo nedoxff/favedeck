@@ -1,5 +1,5 @@
 import { createDeck } from "@/src/features/storage/decks";
-import { TwitterModal } from "../TwitterModal";
+import { TwitterModal } from "./TwitterModal";
 
 export default function CreateDeckModal(props: {
 	onClose: () => void;

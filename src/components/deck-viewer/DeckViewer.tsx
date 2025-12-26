@@ -17,9 +17,15 @@ import { waitForSelector } from "@/src/helpers/observer";
 import { webpack } from "@/src/internals/webpack";
 import clsx from "clsx";
 import { useLiveQuery } from "dexie-react-hooks";
+import { forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
+import {
+	TwitterDropdown,
+	TwitterDropdownItem,
+} from "../dropdown/TwitterDropdown";
 import { tweetComponents } from "../external/Tweet";
+import ConfirmModal from "../modals/ConfirmModal";
 import CreateDeckModal from "../modals/CreateDeckModal";
 import EditDeckModal from "../modals/EditDeckModal";
 import { components } from "../wrapper";
@@ -144,6 +150,7 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 	const thumbnails = useLiveQuery(() => getDeckThumbnails(props.deck.id, 3));
 	const size = useLiveQuery(() => getDeckSize(props.deck.id));
 	const [showEditModal, setShowEditModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
 
 	return (
 		<>
@@ -184,27 +191,69 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 							{size} {size === 1 ? "tweet" : "tweets"}
 						</p>
 					</div>
-					<button
-						type="button"
-						className="rounded-full aspect-square justify-center items-center p-2 h-fit hidden group-hover:flex! hover:shadow-lighten!"
-						onClick={(ev) => {
-							ev.stopPropagation();
-							setShowEditModal(true);
-						}}
+					<TwitterDropdown<HTMLButtonElement>
+						trigger={forwardRef(({ isOpen, setOpen }, ref) => (
+							<button
+								type="button"
+								ref={ref}
+								className="rounded-full aspect-square justify-center items-center p-2 h-fit hidden group-hover:flex! hover:shadow-lighten!"
+								onClick={(ev) => {
+									ev.stopPropagation();
+									setOpen(!isOpen);
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="24"
+									height="24"
+									viewBox="0 0 24 24"
+								>
+									<title>more icon</title>
+									<path
+										fill="currentColor"
+										d="M12 16a2 2 0 0 1 2 2a2 2 0 0 1-2 2a2 2 0 0 1-2-2a2 2 0 0 1 2-2m0-6a2 2 0 0 1 2 2a2 2 0 0 1-2 2a2 2 0 0 1-2-2a2 2 0 0 1 2-2m0-6a2 2 0 0 1 2 2a2 2 0 0 1-2 2a2 2 0 0 1-2-2a2 2 0 0 1 2-2"
+									/>
+								</svg>
+							</button>
+						))}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-						>
-							<path
-								fill="currentColor"
-								d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83l3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75z"
-							/>
-							<title>edit icon</title>
-						</svg>
-					</button>
+						<TwitterDropdownItem
+							icon={
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="24"
+									height="24"
+									viewBox="0 0 24 24"
+								>
+									<title>edit icon</title>
+									<path
+										fill="currentColor"
+										d="m14.06 9l.94.94L5.92 19H5v-.92zm3.6-6c-.25 0-.51.1-.7.29l-1.83 1.83l3.75 3.75l1.83-1.83c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94z"
+									/>
+								</svg>
+							}
+							text="Edit deck..."
+							onClick={() => setShowEditModal(true)}
+						/>
+						<TwitterDropdownItem
+							icon={
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="24"
+									height="24"
+									viewBox="0 0 24 24"
+								>
+									<title>delete icon</title>
+									<path
+										fill="currentColor"
+										d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM8 9h8v10H8zm7.5-5l-1-1h-5l-1 1H5v2h14V4z"
+									/>
+								</svg>
+							}
+							text="Delete deck..."
+							onClick={() => setShowDeleteModal(true)}
+						/>
+					</TwitterDropdown>
 				</div>
 			</div>
 
@@ -213,6 +262,22 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 					<EditDeckModal
 						deck={props.deck}
 						onClose={() => setShowEditModal(false)}
+					/>,
+					document.body,
+				)}
+
+			{showDeleteModal &&
+				createPortal(
+					<ConfirmModal
+						title="Delete deck"
+						description="Are you sure that you want to delete this deck?"
+						confirmIsDangerous
+						confirmText="Yes, I'm sure"
+						onCancelled={() => setShowDeleteModal(false)}
+						onConfirmed={async () => {
+							setShowDeleteModal(false);
+							await db.decks.delete(props.deck.id);
+						}}
 					/>,
 					document.body,
 				)}

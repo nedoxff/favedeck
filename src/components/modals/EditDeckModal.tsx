@@ -1,5 +1,5 @@
 import { type DatabaseDeck, db } from "@/src/features/storage/definition";
-import { TwitterModal } from "../TwitterModal";
+import { TwitterModal } from "./TwitterModal";
 
 export default function EditDeckModal(props: {
 	deck: DatabaseDeck;
@@ -7,7 +7,6 @@ export default function EditDeckModal(props: {
 }) {
 	const [deckName, setDeckName] = useState(props.deck.name);
 	const [deckSecret, setDeckSecret] = useState(props.deck.secret);
-	const [deleteClicked, setDeleteClicked] = useState(false);
 
 	return (
 		<TwitterModal onClose={props.onClose}>
@@ -45,20 +44,6 @@ export default function EditDeckModal(props: {
 				className="rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center"
 			>
 				Save
-			</button>
-			<button
-				onClick={async () => {
-					if (!deleteClicked) {
-						setDeleteClicked(true);
-						return;
-					}
-					await db.decks.delete(props.deck.id);
-					props.onClose();
-				}}
-				type="button"
-				className="rounded-full w-full text-white font-bold bg-fd-danger! hover:shadow-lighten! py-2 px-4 text-center"
-			>
-				{deleteClicked ? "Are you sure?" : "Delete"}
 			</button>
 			<button
 				onClick={props.onClose}
