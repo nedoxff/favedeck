@@ -115,7 +115,7 @@ export const checkDatabaseTweets = async (tweets: DatabaseTweet[]) => {
 				),
 			),
 		);
-		if(!payloads) return tweets;
+		if (!payloads) return tweets;
 		console.log(payloads);
 
 		let newTweets = tweets;

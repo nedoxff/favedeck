@@ -68,7 +68,7 @@ function ActionsCard(props: { tweet: string }) {
 					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-lighter! hover:shadow-lighten! rounded-xl"
 					onClick={() => setShowNewDeckModal(true)}
 				>
-					<PlusIcon width={24} height={24}/>
+					<PlusIcon width={24} height={24} />
 					<p className="text-sm text-center">Create a new deck</p>
 				</div>
 				<div
@@ -81,7 +81,7 @@ function ActionsCard(props: { tweet: string }) {
 						tweetsEventTarget.dispatchTweetUnbookmarked(props.tweet);
 					}}
 				>
-					<BookmarkIcon width={24} height={24}/>
+					<BookmarkIcon width={24} height={24} />
 					<p className="text-sm text-center">Remove from bookmarks</p>
 				</div>
 			</div>

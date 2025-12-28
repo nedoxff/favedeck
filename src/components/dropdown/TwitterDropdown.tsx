@@ -3,6 +3,7 @@
 /** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
 import type {
 	ForwardRefExoticComponent,
+	MouseEvent,
 	ReactNode,
 	RefAttributes,
 } from "react";
@@ -12,14 +13,14 @@ export function TwitterDropdownItem(props: {
 	icon: ReactNode;
 	text: string;
 	description?: string;
-	onClick?: () => void;
+	onClick?: (ev: MouseEvent) => void;
 }) {
 	return (
 		<div
 			role="button"
 			onClick={(ev) => {
 				ev.stopPropagation();
-				props.onClick?.();
+				props.onClick?.(ev);
 			}}
 			className="pointer-events-auto py-3 px-4 flex flex-row gap-3 w-full items-center hover:shadow-lighten!"
 		>

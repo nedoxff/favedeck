@@ -1,7 +1,7 @@
+import { v6 } from "uuid";
 import { getUserId } from "@/src/internals/foolproof";
 import { getThumbnailUrl } from "@/src/internals/goodies";
 import { getTweetEntity, getUserEntity } from "@/src/internals/redux";
-import { v6 } from "uuid";
 import { decksEventTarget } from "../events/decks";
 import { type DatabaseDeck, db } from "./definition";
 import { putTweetEntity, removeTweetEntityAndRelatives } from "./entities";
