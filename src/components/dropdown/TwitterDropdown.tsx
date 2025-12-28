@@ -1,10 +1,10 @@
-/** biome-ignore-all lint/a11y/useFocusableInteractive: <explanation> */
-/** biome-ignore-all lint/a11y/useSemanticElements: <explanation> */
-/** biome-ignore-all lint/a11y/useKeyWithClickEvents: <explanation> */
+/** biome-ignore-all lint/a11y/useFocusableInteractive: TODO */
+/** biome-ignore-all lint/a11y/useSemanticElements: TODO */
+/** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
 import type {
-    ForwardRefExoticComponent,
-    ReactNode,
-    RefAttributes,
+	ForwardRefExoticComponent,
+	ReactNode,
+	RefAttributes,
 } from "react";
 import { createPortal } from "react-dom";
 
@@ -40,7 +40,10 @@ export function TwitterDropdown<T extends HTMLElement>(props: {
 	trigger: ForwardRefExoticComponent<
 		RefAttributes<T> & { isOpen: boolean; setOpen: (open: boolean) => void }
 	>;
-	children?: ReactNode;
+	children?: (props: {
+		open: boolean;
+		setOpen: (open: boolean) => void;
+	}) => ReactNode;
 }) {
 	const [open, setOpen] = useState(false);
 	const triggerRef = useRef<T>(null);
@@ -117,7 +120,7 @@ export function TwitterDropdown<T extends HTMLElement>(props: {
 						}}
 						ref={containerRef}
 					>
-						{props.children}
+						{props.children?.({ open, setOpen })}
 					</div>,
 					document.body,
 				)}

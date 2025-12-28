@@ -1,5 +1,5 @@
 import { compressObject, decompressObject } from "@/src/helpers/compression";
-import { type AddEntitiesPayload, getUserEntity } from "@/src/internals/redux";
+import type { AddEntitiesPayload } from "@/src/internals/redux";
 import type { RawTweet, RawTweetUser } from "@/src/types/tweet";
 import { mergician } from "mergician";
 import { db } from "./definition";
@@ -9,9 +9,11 @@ export type TweetEntityMeta = {
 	quoteOf?: string;
 };
 
-export const putTweetEntity = async (entity?: RawTweet, quoteOf?: string) => {
-	if (!entity) return;
-	const userEntity = getUserEntity(entity.user);
+export const putTweetEntity = async (
+	entity: RawTweet,
+	userEntity: RawTweetUser,
+	quoteOf?: string,
+) => {
 	await db.entities.put({
 		key: `user-${userEntity.id_str}`,
 		type: "user",
@@ -50,6 +52,15 @@ export const removeTweetEntityAndRelatives = async (id: string) => {
 
 	await db.entities.delete(`tweet-${id}`);
 	await db.entities.delete(`user-${meta.user}`);
+};
+
+export const updateEntitiesFromPayload = async (
+	payload: AddEntitiesPayload,
+) => {
+	for (const [k, v] of Object.entries(payload.tweets ?? {}))
+		await db.entities.update(`tweet-${k}`, { data: await compressObject(v) });
+	for (const [k, v] of Object.entries(payload.users ?? {}))
+		await db.entities.update(`user-${k}`, { data: await compressObject(v) });
 };
 
 export const getTweetEntityPayload = async (

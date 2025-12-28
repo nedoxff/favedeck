@@ -20,6 +20,13 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
+import BackIcon from "~icons/mdi/arrow-left";
+import MoreIcon from "~icons/mdi/dots-horizontal";
+import VerticalMoreIcon from "~icons/mdi/dots-vertical";
+import LockIcon from "~icons/mdi/lock-outline";
+import EditIcon from "~icons/mdi/pencil-outline";
+import PlusIcon from "~icons/mdi/plus";
+import DeleteIcon from "~icons/mdi/trash-can-outline";
 import {
 	TwitterDropdown,
 	TwitterDropdownItem,
@@ -29,7 +36,7 @@ import ConfirmModal from "../modals/ConfirmModal";
 import CreateDeckModal from "../modals/CreateDeckModal";
 import EditDeckModal from "../modals/EditDeckModal";
 import { components } from "../wrapper";
-import { DeckMasonryList } from "./DeckTweetList";
+import { DeckTweetList } from "./DeckTweetList";
 
 function DeckBoardItemPreview(props: {
 	className: string;
@@ -44,18 +51,7 @@ function DeckBoardItemPreview(props: {
 			)}
 		>
 			{props.deck.secret ? (
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="24"
-					height="24"
-					viewBox="0 0 24 24"
-				>
-					<path
-						fill="currentColor"
-						d="M6 22q-.825 0-1.412-.587T4 20V10q0-.825.588-1.412T6 8h1V6q0-2.075 1.463-3.537T12 1t3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.587 1.413T18 22zm0-2h12V10H6zm6-3q.825 0 1.413-.587T14 15t-.587-1.412T12 13t-1.412.588T10 15t.588 1.413T12 17M9 8h6V6q0-1.25-.875-2.125T12 3t-2.125.875T9 6zM6 20V10z"
-					/>
-					<title>lock icon</title>
-				</svg>
+				<LockIcon width={24} height={24} />
 			) : props.thumbnail ? (
 				<img
 					src={props.thumbnail}
@@ -79,16 +75,7 @@ function NewDeckBoardItem() {
 				className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
 			>
 				<div className="grow rounded-xl overflow-hidden relative border-dashed border-2 border-white! flex justify-center items-center opacity-50">
-					<svg
-						className="scale-200!"
-						xmlns="http://www.w3.org/2000/svg"
-						width="24"
-						height="24"
-						viewBox="0 0 24 24"
-					>
-						<title>plus icon</title>
-						<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
-					</svg>
+					<PlusIcon width={36} height={36} />
 				</div>
 				<div className="pointer-events-none">
 					<p className="font-bold text-xl">New deck</p>
@@ -124,19 +111,7 @@ function UngroupedDeckBoardItem() {
 			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
 		>
 			<div className="grow rounded-xl overflow-hidden relative border-dashed border-2 border-white! flex justify-center items-center opacity-50">
-				<svg
-					className="scale-200!"
-					xmlns="http://www.w3.org/2000/svg"
-					width="24"
-					height="24"
-					viewBox="0 0 24 24"
-				>
-					<path
-						fill="currentColor"
-						d="M6 14q-.825 0-1.412-.587T4 12t.588-1.412T6 10t1.413.588T8 12t-.587 1.413T6 14m6 0q-.825 0-1.412-.587T10 12t.588-1.412T12 10t1.413.588T14 12t-.587 1.413T12 14m6 0q-.825 0-1.412-.587T16 12t.588-1.412T18 10t1.413.588T20 12t-.587 1.413T18 14"
-					/>
-					<title>more icon</title>
-				</svg>
+				<MoreIcon width={36} height={36} />
 			</div>
 			<div className="pointer-events-none">
 				<p className="font-bold text-xl">Ungrouped</p>
@@ -202,57 +177,30 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 									setOpen(!isOpen);
 								}}
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="24"
-									height="24"
-									viewBox="0 0 24 24"
-								>
-									<title>more icon</title>
-									<path
-										fill="currentColor"
-										d="M12 16a2 2 0 0 1 2 2a2 2 0 0 1-2 2a2 2 0 0 1-2-2a2 2 0 0 1 2-2m0-6a2 2 0 0 1 2 2a2 2 0 0 1-2 2a2 2 0 0 1-2-2a2 2 0 0 1 2-2m0-6a2 2 0 0 1 2 2a2 2 0 0 1-2 2a2 2 0 0 1-2-2a2 2 0 0 1 2-2"
-									/>
-								</svg>
+								<VerticalMoreIcon width={24} height={24} />
 							</button>
 						))}
 					>
-						<TwitterDropdownItem
-							icon={
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="24"
-									height="24"
-									viewBox="0 0 24 24"
-								>
-									<title>edit icon</title>
-									<path
-										fill="currentColor"
-										d="m14.06 9l.94.94L5.92 19H5v-.92zm3.6-6c-.25 0-.51.1-.7.29l-1.83 1.83l3.75 3.75l1.83-1.83c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94z"
-									/>
-								</svg>
-							}
-							text="Edit deck..."
-							onClick={() => setShowEditModal(true)}
-						/>
-						<TwitterDropdownItem
-							icon={
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="24"
-									height="24"
-									viewBox="0 0 24 24"
-								>
-									<title>delete icon</title>
-									<path
-										fill="currentColor"
-										d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM8 9h8v10H8zm7.5-5l-1-1h-5l-1 1H5v2h14V4z"
-									/>
-								</svg>
-							}
-							text="Delete deck..."
-							onClick={() => setShowDeleteModal(true)}
-						/>
+						{({ setOpen }) => (
+							<>
+								<TwitterDropdownItem
+									icon={<EditIcon width={24} height={24} />}
+									text="Edit deck..."
+									onClick={() => {
+										setShowEditModal(true);
+										setOpen(false);
+									}}
+								/>
+								<TwitterDropdownItem
+									icon={<DeleteIcon width={24} height={24} />}
+									text="Delete deck..."
+									onClick={() => {
+										setShowDeleteModal(true);
+										setOpen(false);
+									}}
+								/>
+							</>
+						)}
 					</TwitterDropdown>
 				</div>
 			</div>
@@ -321,45 +269,68 @@ function DeckBoard() {
 
 	return (
 		<div className="flex flex-col">
-			<div className="h-14 px-4 gap-6 flex flex-row items-center w-full sticky top-0 z-10 bg-fd-bg/75 backdrop-blur-xl">
-				<a
-					href="/home"
-					onClick={(ev) => {
-						ev.preventDefault();
-						if (currentDeck === null) webpack.common.history.push("/home");
-						else {
-							setCurrentDeck(null);
-							if (
-								webpack.common.history._history.location.state ===
-								"from-deck-view"
-							)
-								webpack.common.history.goBack();
-							else webpack.common.history.push("/i/bookmarks");
-						}
-					}}
-				>
-					<div className="rounded-full hover:shadow-lighten! p-2">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="24px"
-							height="24px"
-							viewBox="0 0 512 512"
-						>
-							<title>back arrow icon</title>
-							<path
-								fill="none"
-								stroke="currentColor"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth="48"
-								d="M244 400L100 256l144-144M120 256h292"
-							/>
-						</svg>
-					</div>
-				</a>
-				<p className="font-bold text-2xl">
-					{currentDatabaseDeck ? currentDatabaseDeck.name : "Decks"}
-				</p>
+			<div className="h-14 px-4 flex flex-row justify-between items-center w-full sticky top-0 z-10 bg-fd-bg/75 backdrop-blur-xl">
+				<div className="flex flex-row gap-6 justify-center items-center">
+					<a
+						href="/home"
+						onClick={(ev) => {
+							ev.preventDefault();
+							if (currentDeck === null) webpack.common.history.push("/home");
+							else {
+								setCurrentDeck(null);
+								if (
+									webpack.common.history._history.location.state ===
+									"from-deck-view"
+								)
+									webpack.common.history.goBack();
+								else webpack.common.history.push("/i/bookmarks");
+							}
+						}}
+					>
+						<div className="rounded-full hover:shadow-lighten! p-2">
+							<BackIcon width={24} height={24} />
+						</div>
+					</a>
+					<p className="font-bold text-2xl">
+						{currentDatabaseDeck ? currentDatabaseDeck.name : "Decks"}
+					</p>
+				</div>
+
+				{currentDeck ? (
+					<TwitterDropdown<HTMLButtonElement>
+						trigger={forwardRef(({ isOpen, setOpen }, ref) => (
+							<button
+								type="button"
+								ref={ref}
+								className="rounded-full aspect-square justify-center items-center p-2 h-fit hover:shadow-lighten!"
+								onClick={(ev) => {
+									ev.stopPropagation();
+									setOpen(!isOpen);
+								}}
+							>
+								<VerticalMoreIcon width={24} height={24} />
+							</button>
+						))}
+					></TwitterDropdown>
+				) : (
+					<TwitterDropdown<HTMLButtonElement>
+						trigger={forwardRef(({ isOpen, setOpen }, ref) => (
+							<button
+								type="button"
+								ref={ref}
+								className="rounded-full aspect-square justify-center items-center p-2 h-fit hover:shadow-lighten!"
+								onClick={(ev) => {
+									ev.stopPropagation();
+									setOpen(!isOpen);
+								}}
+							>
+								<VerticalMoreIcon width={24} height={24} />
+							</button>
+						))}
+					>
+						{() => <></>}
+					</TwitterDropdown>
+				)}
 			</div>
 			<hr className="border-t-2" />
 			{currentDeck === null ? (
@@ -374,7 +345,7 @@ function DeckBoard() {
 				tweetComponentsAvailable &&
 				currentDatabaseDeck && (
 					<tweetComponents.ContextBridge>
-						<DeckMasonryList deck={currentDatabaseDeck} />
+						<DeckTweetList deck={currentDatabaseDeck} />
 					</tweetComponents.ContextBridge>
 				)
 			) : undefined}

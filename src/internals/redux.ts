@@ -1,7 +1,11 @@
 import type { Fiber } from "bippy";
 import { mergician } from "mergician";
+import { wipeTweet } from "../features/storage/decks";
 import type { DatabaseTweet } from "../features/storage/definition";
-import { getTweetEntityPayload } from "../features/storage/entities";
+import {
+	getTweetEntityPayload,
+	updateEntitiesFromPayload,
+} from "../features/storage/entities";
 import type { RawTweet, RawTweetUser } from "../types/tweet";
 import { webpack } from "./webpack";
 
@@ -10,10 +14,18 @@ export type AddEntitiesPayload = {
 	users?: Record<string, RawTweetUser>;
 };
 
+export type ReduxDispatchAction =
+	| { type: string; meta?: unknown; payload: unknown }
+	| ((
+			dispatch: (action: object) => unknown,
+			getState: () => object,
+			tools: object,
+	  ) => object);
+
 let reduxStore:
 	| {
 			getState: () => object;
-			dispatch: (action: unknown) => unknown;
+			dispatch: <T = void>(action: ReduxDispatchAction) => T | Promise<T>;
 	  }
 	| undefined;
 
@@ -66,12 +78,11 @@ export const unbookmarkTweet = async (id: string) => {
 		return;
 	}
 
-	// TODO: add proper typing
 	try {
-		(await reduxStore.dispatch(
-			webpack.common.redux.api.tweets.unbookmark(id),
-		)) as Promise<void>;
-		reduxStore?.dispatch({
+		await Promise.resolve(
+			reduxStore.dispatch(webpack.common.redux.api.tweets.unbookmark(id)),
+		);
+		reduxStore.dispatch({
 			type: "rweb/urt/REMOVE_TWEETS",
 			meta: {
 				timelineId: "bookmarks",
@@ -83,5 +94,51 @@ export const unbookmarkTweet = async (id: string) => {
 		console.log(`successfully unbookmarked tweet ${id}`);
 	} catch (ex) {
 		console.error(`failed to unbookmark tweet ${id}`, ex);
+	}
+};
+
+// TODO: hide this behind a setting
+// fetches the tweets, updates entities in the database
+// if the tweet got unbookmarked, delete it entirely
+export const checkDatabaseTweets = async (tweets: DatabaseTweet[]) => {
+	try {
+		if (!reduxStore) throw new Error("redux store is undefined");
+		const payloads = await Promise.resolve(
+			reduxStore.dispatch<
+				{
+					entities: AddEntitiesPayload;
+					result: string;
+				}[]
+			>(
+				webpack.common.redux.api.tweets.fetchMultipleIfNeeded(
+					tweets.map((t) => t.id),
+				),
+			),
+		);
+		if(!payloads) return tweets;
+		console.log(payloads);
+
+		let newTweets = tweets;
+		for (const payload of payloads) {
+			const payloadTweets = payload.entities.tweets ?? {};
+			if (!(payload.result in payloadTweets)) continue;
+			// TODO: this is potentially undesired?
+			if (!payloadTweets[payload.result].bookmarked) {
+				console.log(
+					"wiping tweet",
+					payload.result,
+					"since it became unbookmarked (and favedeck didn't notice)",
+				);
+				newTweets = newTweets.filter((nt) => nt.id !== payload.result);
+				await wipeTweet(payload.result);
+			} else {
+				console.log("updating entities for tweet", payload.result);
+				await updateEntitiesFromPayload(payload.entities);
+			}
+		}
+		return newTweets;
+	} catch (ex) {
+		console.error("failed to check database tweets", ex);
+		return tweets;
 	}
 };

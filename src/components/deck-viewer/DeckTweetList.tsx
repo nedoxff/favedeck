@@ -8,12 +8,17 @@ import {
 	convertDatabaseTweetToMasonryInfos,
 	type TweetMasonryInfo,
 } from "@/src/internals/goodies";
-import { addEntitiesFromDatabaseTweets } from "@/src/internals/redux";
+import {
+	addEntitiesFromDatabaseTweets,
+	checkDatabaseTweets,
+} from "@/src/internals/redux";
 import { webpack } from "@/src/internals/webpack";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Masonry, type MasonryProps, useInfiniteLoader } from "masonic";
 import { mergician } from "mergician";
 import React from "react";
+import BookmarkIcon from "~icons/mdi/bookmark";
+import SadSmileyIcon from "~icons/mdi/emoticon-sad-outline";
 import { tweetComponents } from "../external/Tweet";
 import { components } from "../wrapper";
 
@@ -53,6 +58,7 @@ function GenericTweetMasonry<T extends { id: string }>(
 ) {
 	const deckSize = useLiveQuery(() => getDeckSize(props.deck.id), [], 0);
 	const [tweets, setTweets] = useState<T[]>([]);
+	const [initialFetchDone, setInitialFetchDone] = useState(false);
 
 	const [removedTweetsCount, setRemovedTweetsCount] = useState(0);
 	useEffect(() => {
@@ -100,10 +106,18 @@ function GenericTweetMasonry<T extends { id: string }>(
 	);
 
 	useEffect(() => {
-		props.fetcher(0, TWEET_LIST_FETCH_COUNT).then(setTweets);
+		props
+			.fetcher(0, TWEET_LIST_FETCH_COUNT)
+			.then(setTweets)
+			.then(() => setInitialFetchDone(true));
 	}, []);
 
-	return (
+	return initialFetchDone && tweets.length === 0 ? (
+		<div className="flex flex-col justify-center items-center p-4 opacity-60 gap-1">
+			<SadSmileyIcon width={64} height={64} />
+			<p className="text-xl font-medium">This deck is empty</p>
+		</div>
+	) : (
 		<Masonry<T>
 			{...props}
 			items={tweets}
@@ -120,10 +134,8 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 			<GenericTweetMasonry<TweetMasonryInfo>
 				deck={props.deck}
 				fetcher={async (start, stop) => {
-					const newTweets = await getDeckTweets(
-						props.deck.id,
-						start,
-						stop - start + 1,
+					const newTweets = await checkDatabaseTweets(
+						await getDeckTweets(props.deck.id, start, stop - start + 1),
 					);
 					await addEntitiesFromDatabaseTweets(newTweets);
 					return newTweets.flatMap((t) =>
@@ -212,16 +224,7 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 									}}
 									favedeck-tweet-id={data.id}
 								>
-									<svg
-										className="text-fd-primary"
-										fill="currentcolor"
-										viewBox="0 0 24 24"
-									>
-										<title>bookmark icon</title>
-										<g>
-											<path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z"></path>
-										</g>
-									</svg>
+									<BookmarkIcon width={24} height={24} />
 								</button>
 							</div>
 						</article>
@@ -254,7 +257,9 @@ export function DeckTweetList(props: { deck: DatabaseDeck }) {
 			<GenericTweetMasonry<DatabaseTweet>
 				deck={props.deck}
 				fetcher={async (start, stop) => {
-					const tweets = await getDeckTweets(props.deck.id, start, stop);
+					const tweets = await checkDatabaseTweets(
+						await getDeckTweets(props.deck.id, start, stop - start + 1),
+					);
 					await addEntitiesFromDatabaseTweets(tweets);
 					return tweets;
 				}}

@@ -6,6 +6,9 @@ import * as bippy from "bippy";
 import { useLiveQuery } from "dexie-react-hooks";
 import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
+import BookmarkIcon from "~icons/mdi/bookmark";
+import LockIcon from "~icons/mdi/lock";
+import PlusIcon from "~icons/mdi/plus";
 import { decksEventTarget } from "../features/events/decks";
 import { tweetsEventTarget } from "../features/events/tweets";
 import {
@@ -65,15 +68,7 @@ function ActionsCard(props: { tweet: string }) {
 					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-lighter! hover:shadow-lighten! rounded-xl"
 					onClick={() => setShowNewDeckModal(true)}
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="32"
-						height="32"
-						viewBox="0 0 24 24"
-					>
-						<title>plus icon</title>
-						<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
-					</svg>
+					<PlusIcon width={24} height={24}/>
 					<p className="text-sm text-center">Create a new deck</p>
 				</div>
 				<div
@@ -86,19 +81,7 @@ function ActionsCard(props: { tweet: string }) {
 						tweetsEventTarget.dispatchTweetUnbookmarked(props.tweet);
 					}}
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="32"
-						height="32"
-						viewBox="0 0 24 24"
-						className="scale-80!"
-					>
-						<title>remove bookmark icon</title>
-						<path
-							fill="currentColor"
-							d="M20 20.72L18.73 22l-1.95-1.95L12 18l-7 3V8.27l-3-3L3.28 4zm-1-3.56V5a2 2 0 0 0-2-2H7c-.59 0-1.11.27-1.5.68z"
-						/>
-					</svg>
+					<BookmarkIcon width={24} height={24}/>
 					<p className="text-sm text-center">Remove from bookmarks</p>
 				</div>
 			</div>
@@ -206,18 +189,7 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 			<div className="flex flex-row h-full gap-4 justify-center items-center w-full min-w-0">
 				<div className="h-full rounded-lg bg-fd-bg-even-lighter! aspect-square relative flex justify-center items-center">
 					{props.deck.secret ? (
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-						>
-							<path
-								fill="currentColor"
-								d="M6 22q-.825 0-1.412-.587T4 20V10q0-.825.588-1.412T6 8h1V6q0-2.075 1.463-3.537T12 1t3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.587 1.413T18 22zm0-2h12V10H6zm6-3q.825 0 1.413-.587T14 15t-.587-1.412T12 13t-1.412.588T10 15t.588 1.413T12 17M9 8h6V6q0-1.25-.875-2.125T12 3t-2.125.875T9 6zM6 20V10z"
-							/>
-							<title>lock icon</title>
-						</svg>
+						<LockIcon width={24} height={24} />
 					) : (thumbnails ?? []).length !== 0 ? (
 						<img
 							src={thumbnails?.[0]}

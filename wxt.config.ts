@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import icons from "unplugin-icons/vite";
 import type { Plugin } from "vite";
 import { defineConfig } from "wxt";
 
@@ -48,7 +49,11 @@ const twitterReactHijacker = (): Plugin => {
 export default defineConfig({
 	modules: ["@wxt-dev/module-react"],
 	vite: () => ({
-		plugins: [twitterReactHijacker(), tailwindcss()],
+		plugins: [
+			twitterReactHijacker(),
+			tailwindcss(),
+			icons({ compiler: "jsx", jsx: "react" }),
+		],
 	}),
 	manifest: {
 		host_permissions: ["*://*.x.com/*", "*://*.twitter.com/*"],

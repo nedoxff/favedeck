@@ -1,6 +1,6 @@
 import { getUserId } from "@/src/internals/foolproof";
 import { getThumbnailUrl } from "@/src/internals/goodies";
-import { getTweetEntity } from "@/src/internals/redux";
+import { getTweetEntity, getUserEntity } from "@/src/internals/redux";
 import { v6 } from "uuid";
 import { decksEventTarget } from "../events/decks";
 import { type DatabaseDeck, db } from "./definition";
@@ -69,8 +69,13 @@ export const addTweetToDeck = async (deck: string, tweet: string) => {
 		? getTweetEntity(tweetEntity.quoted_status)
 		: undefined;
 
-	await putTweetEntity(tweetEntity);
-	await putTweetEntity(quotedTweetEntity, tweet);
+	await putTweetEntity(tweetEntity, getUserEntity(tweetEntity.user));
+	if (quotedTweetEntity)
+		await putTweetEntity(
+			quotedTweetEntity,
+			getUserEntity(quotedTweetEntity.user),
+			tweet,
+		);
 	await db.tweets.put({
 		dateAdded: new Date(),
 		deck,

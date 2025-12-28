@@ -1,3 +1,5 @@
+import type { ReduxDispatchAction } from "./redux";
+
 type ReactType = typeof import("react");
 type ReactDOMType = typeof import("react-dom");
 type ReactDOMClientType = typeof import("react-dom/client");
@@ -47,8 +49,14 @@ type WebpackCache = Record<
 	{ id: number; loaded: boolean; exports: unknown }
 >;
 
+// this is not the full list of available functions, but others are likely not required by the extension
 export type ReduxTweetsAPIType = {
-	unbookmark: (id: string) => unknown;
+	bookmark: (id: string) => ReduxDispatchAction;
+	unbookmark: (id: string) => ReduxDispatchAction;
+	fetchOne: (id: string) => ReduxDispatchAction;
+	fetchOneIfNeeded: (id: string) => ReduxDispatchAction;
+	fetchMultiple: (ids: string[]) => ReduxDispatchAction;
+	fetchMultipleIfNeeded: (ids: string[]) => ReduxDispatchAction;
 };
 
 export type WebpackHelper = {
