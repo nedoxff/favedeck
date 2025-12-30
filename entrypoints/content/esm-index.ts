@@ -1,7 +1,7 @@
+import * as bippy from "bippy";
 import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
 import { components, initializeComponents } from "@/src/components/wrapper";
 import { decksEventTarget } from "@/src/features/events/decks";
-import { isTweetInDeck } from "@/src/features/storage/decks";
 import { kv } from "@/src/features/storage/kv";
 import {
 	type ForwarderMessagePayload,
@@ -13,7 +13,6 @@ import { getRootNodeFromTweetElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
 import { setReduxStoreFromFiber } from "@/src/internals/redux";
 import { webpack } from "@/src/internals/webpack";
-import * as bippy from "bippy";
 
 const initializeMessageListener = () => {
 	window.addEventListener("message", (ev) => {
@@ -254,7 +253,6 @@ const injectFiberObserver = () => {
 		},
 	});
 };
-
 console.log("hello from esm content script!");
 
 (async () => {

@@ -12,6 +12,7 @@ export const UNGROUPED_DECK: DatabaseDeck = {
 	secret: false,
 	user: "",
 	dateModified: new Date(),
+	viewMode: "regular",
 };
 
 export const getDeck = async (id: string) => {
@@ -26,6 +27,7 @@ export const createDeck = async (name: string, secret: boolean) => {
 		secret,
 		user: (await getUserId()) ?? "",
 		dateModified: new Date(),
+		viewMode: "regular",
 	};
 	await db.decks.put(deck);
 	decksEventTarget.dispatchDeckCreated(deck);

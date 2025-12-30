@@ -19,6 +19,7 @@
 	--color-fd-bg: var(--fd-bg);
 	--color-fd-danger: var(--fd-danger);
 
-	--color-fd-bg-lighter: color-mix(in srgb, var(--fd-bg), white 15%);
-	--color-fd-bg-even-lighter: color-mix(in srgb, var(--fd-bg), white 20%);
+	--color-fd-bg-15: color-mix(in srgb, var(--fd-bg), white 15%);
+	--color-fd-bg-20: color-mix(in srgb, var(--fd-bg), white 20%);
+	--color-fd-bg-25: color-mix(in srgb, var(--fd-bg), white 25%);
 }

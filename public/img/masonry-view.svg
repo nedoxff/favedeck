@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 512 256">
+  <defs>
+    <style>
+      .mv-st0 {
+        fill: currentColor;
+      }
+
+      .mv-st1 {
+        fill: #fff;
+        opacity: .8;
+      }
+    </style>
+  </defs>
+  <g>
+    <path class="mv-st0" d="M111.4,0h140v143c0,4.4-3.6,8-8,8h-124c-4.4,0-8-3.6-8-8V0h0Z" />
+    <circle class="mv-st1" cx="128.2" cy="134" r="10.1" />
+  </g>
+  <g>
+    <path class="mv-st0" d="M260.6,0h140v113c0,4.4-3.6,8-8,8h-124c-4.4,0-8-3.6-8-8V0h0Z" />
+    <circle class="mv-st1" cx="277.4" cy="104" r="10.1" />
+  </g>
+  <path class="mv-st0" d="M268.6,128h124c4.4,0,8,3.6,8,8v120h-140v-120c0-4.4,3.6-8,8-8Z" />
+  <path class="mv-st0" d="M119.4,157.8h124c4.4,0,8,3.6,8,8v90.2H111.4v-90.2c0-4.4,3.6-8,8-8Z" />
+</svg>

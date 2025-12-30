@@ -1,4 +1,1 @@
-declare global {
-	interface Window {}
-}
-export {};
+/// <reference types="vite-plugin-svgr/client" />

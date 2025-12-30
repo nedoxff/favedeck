@@ -1,3 +1,7 @@
+import { useLiveQuery } from "dexie-react-hooks";
+import { Masonry, type MasonryProps, useInfiniteLoader } from "masonic";
+import { mergician } from "mergician";
+import React from "react";
 import { tweetsEventTarget } from "@/src/features/events/tweets";
 import { getDeckSize, getDeckTweets } from "@/src/features/storage/decks";
 import type {
@@ -13,10 +17,6 @@ import {
 	checkDatabaseTweets,
 } from "@/src/internals/redux";
 import { webpack } from "@/src/internals/webpack";
-import { useLiveQuery } from "dexie-react-hooks";
-import { Masonry, type MasonryProps, useInfiniteLoader } from "masonic";
-import { mergician } from "mergician";
-import React from "react";
 import BookmarkIcon from "~icons/mdi/bookmark";
 import SadSmileyIcon from "~icons/mdi/emoticon-sad-outline";
 import { tweetComponents } from "../external/Tweet";
@@ -210,7 +210,7 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 							<div className="absolute bottom-2 right-2 group-hover:flex! hidden flex-row justify-end items-center z-1">
 								<button
 									type="button"
-									className="hover:shadow-darken! bg-white rounded-full p-2 w-9"
+									className="hover:shadow-darken! bg-white rounded-full w-9 h-9 flex justify-center items-center"
 									onClick={(ev) => {
 										ev.stopPropagation();
 										ev.preventDefault();
@@ -224,7 +224,11 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 									}}
 									favedeck-tweet-id={data.id}
 								>
-									<BookmarkIcon width={24} height={24} />
+									<BookmarkIcon
+										className="text-fd-primary"
+										width={24}
+										height={24}
+									/>
 								</button>
 							</div>
 						</article>

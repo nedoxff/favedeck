@@ -21,7 +21,7 @@ import { components } from "../wrapper";
 import DeckAboutView from "./DeckAboutView";
 import { DeckBoard } from "./DeckBoard";
 import DeckSettingsView from "./DeckSettingsView";
-import { DeckTweetList } from "./DeckTweetList";
+import { DeckMasonryList, DeckTweetList } from "./DeckTweetList";
 
 function InternalDeckRenderer(props: { deck: DatabaseDeck }) {
 	const [tweetComponentsAvailable, setTweetComponentsAvailable] =
@@ -39,7 +39,11 @@ function InternalDeckRenderer(props: { deck: DatabaseDeck }) {
 		? null
 		: tweetComponentsAvailable && (
 				<tweetComponents.ContextBridge>
-					<DeckTweetList deck={props.deck} />
+					{props.deck.viewMode === "regular" ? (
+						<DeckTweetList deck={props.deck} />
+					) : (
+						<DeckMasonryList deck={props.deck} />
+					)}
 				</tweetComponents.ContextBridge>
 			);
 }

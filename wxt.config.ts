@@ -2,6 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import icons from "unplugin-icons/vite";
 import type { Plugin } from "vite";
+import svgr from "vite-plugin-svgr";
 import { defineConfig } from "wxt";
 
 const twitterReactHijacker = (): Plugin => {
@@ -53,6 +54,7 @@ export default defineConfig({
 			twitterReactHijacker(),
 			tailwindcss(),
 			icons({ compiler: "jsx", jsx: "react" }),
+			svgr(),
 		],
 	}),
 	manifest: {

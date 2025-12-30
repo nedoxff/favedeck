@@ -65,7 +65,7 @@ function ActionsCard(props: { tweet: string }) {
 			<div className="flex flex-row gap-2 p-1 h-20">
 				<div
 					role="button"
-					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-lighter! hover:shadow-lighten! rounded-xl"
+					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-15! hover:shadow-lighten! rounded-xl"
 					onClick={() => setShowNewDeckModal(true)}
 				>
 					<PlusIcon width={24} height={24} />
@@ -73,7 +73,7 @@ function ActionsCard(props: { tweet: string }) {
 				</div>
 				<div
 					role="button"
-					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-lighter! hover:shadow-lighten! rounded-xl"
+					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-15! hover:shadow-lighten! rounded-xl"
 					onClick={async () => {
 						components.SelectDeckPopup.hide();
 						await unbookmarkTweet(props.tweet);
@@ -187,7 +187,7 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 			className="w-full hover:shadow-lighten! focus:shadow-lighten! hover:cursor-pointer p-2 rounded-lg h-20 shrink-0 flex flex-row justify-between items-center gap-4"
 		>
 			<div className="flex flex-row h-full gap-4 justify-center items-center w-full min-w-0">
-				<div className="h-full rounded-lg bg-fd-bg-even-lighter! aspect-square relative flex justify-center items-center">
+				<div className="h-full rounded-lg bg-fd-bg-20! aspect-square relative flex justify-center items-center">
 					{props.deck.secret ? (
 						<LockIcon width={24} height={24} />
 					) : (thumbnails ?? []).length !== 0 ? (

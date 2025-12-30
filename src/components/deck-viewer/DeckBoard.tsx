@@ -28,7 +28,7 @@ function DeckBoardItemPreview(props: {
 		<div
 			className={clsx(
 				props.className,
-				"bg-fd-bg-even-lighter relative flex justify-center items-center",
+				"bg-fd-bg-20 relative flex justify-center items-center",
 			)}
 		>
 			{props.deck.secret ? (
@@ -36,7 +36,7 @@ function DeckBoardItemPreview(props: {
 			) : props.thumbnail ? (
 				<img
 					src={props.thumbnail}
-					className="absolute w-full h-full object-cover"
+					className="absolute w-full h-full! object-cover"
 					alt="deck preview"
 				/>
 			) : undefined}
