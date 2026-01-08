@@ -44,10 +44,8 @@ export type WebpackSearchResult =
 	  }
 	| undefined;
 
-type WebpackCache = Record<
-	string,
-	{ id: number; loaded: boolean; exports: unknown }
->;
+type WebpackCacheEntry = { id: number; loaded: boolean; exports: unknown };
+type WebpackCache = Record<string, WebpackCacheEntry>;
 
 // this is not the full list of available functions, but others are likely not required by the extension
 export type ReduxTweetsAPIType = {
@@ -68,6 +66,7 @@ export type WebpackHelper = {
 		key: string,
 		opts?: {
 			maxDepth: number;
+			value?: unknown;
 		},
 	) => WebpackSearchResult;
 	findByCode: (code: string) => WebpackSearchResult;
@@ -123,39 +122,62 @@ export const webpack: WebpackHelper = {
 					"react/jsx-runtime",
 				),
 			},
-			history: findOrThrowByProperty<{ ZP: HistoryType }>(
+			history: findOrThrowByProperty(
 				"goBack",
 				"the history (router?) module",
 				1,
-			).ZP,
+			),
 			redux: {
 				api: {
-					tweets: findOrThrowByProperty<{ Z: ReduxTweetsAPIType }>(
+					tweets: findOrThrowByProperty(
 						"unbookmark",
 						"tweets api actions store (redux)",
 						1,
-					).Z,
+					),
 				},
 			},
 		};
 
+		console.log(
+			this.findByProperty("timelineId", {
+				maxDepth: 1,
+				value: "bookmarks",
+			}),
+		);
 		console.log(this.common);
 	},
 
 	findByProperty(key, opts) {
-		const matches = (obj: unknown, key: string, depth = 0) => {
-			if (typeof obj !== "object" || obj === null) return false;
-			if (key in obj) return true;
-			if (depth >= (opts?.maxDepth ?? 0)) return false;
+		const matches = (obj: unknown, key: string, depth = 0): unknown | null => {
+			try {
+				if (typeof obj !== "object" || obj === null) return null;
+				if (key in obj) {
+					if (
+						opts &&
+						opts?.value !== undefined &&
+						(obj as Record<string, unknown>)[key] !== opts.value
+					)
+						return null;
+					return obj;
+				}
+				if (depth >= (opts?.maxDepth ?? 0)) return null;
 
-			if (Object.values(obj).some((o) => matches(o, key, depth + 1)))
-				return true;
-			return false;
+				for (const value of Object.values(obj)) {
+					const result = matches(value, key, depth + 1);
+					if (result !== null) return result;
+				}
+				return null;
+			} catch (_) {
+				return null;
+			}
 		};
-		const entry = Object.entries(this.cache).find((kv) =>
-			matches(kv[1].exports, key),
-		);
-		return entry ? { id: entry[0], module: entry[1].exports } : undefined;
+
+		let entry: [string, WebpackCacheEntry, unknown] | undefined;
+		for (const kv of Object.entries(this.cache)) {
+			const match = matches(kv[1].exports, key);
+			if (match !== null) entry = [...kv, match];
+		}
+		return entry ? { id: entry[0], module: entry[2] } : undefined;
 	},
 
 	findByCode(code) {

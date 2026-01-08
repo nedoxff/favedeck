@@ -2,14 +2,14 @@ import { createDeck } from "@/src/features/storage/decks";
 import { TwitterModal } from "./TwitterModal";
 
 export default function CreateDeckModal(props: {
-	onClose: () => void;
-	onCreated?: (id: string) => void;
+	onClose: (cancelled: boolean) => void;
+	onCreated?: (id: string) => void | Promise<void>;
 }) {
 	const [deckName, setDeckName] = useState("");
 	const [deckSecret, setDeckSecret] = useState(false);
 
 	return (
-		<TwitterModal onClose={props.onClose}>
+		<TwitterModal onClose={() => props.onClose(true)}>
 			<p className="font-bold text-2xl">New deck</p>
 			<p className="opacity-75">Enter the name for your new deck:</p>
 			<input
@@ -33,9 +33,9 @@ export default function CreateDeckModal(props: {
 			</div>
 			<button
 				onClick={async () => {
-					props.onClose();
 					const id = await createDeck(deckName, deckSecret);
-					props.onCreated?.(id);
+					await props.onCreated?.(id);
+					props.onClose(false);
 				}}
 				disabled={deckName.length === 0}
 				type="button"
@@ -44,7 +44,7 @@ export default function CreateDeckModal(props: {
 				Create
 			</button>
 			<button
-				onClick={props.onClose}
+				onClick={() => props.onClose(true)}
 				type="button"
 				className="rounded-full w-full text-white font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center"
 			>

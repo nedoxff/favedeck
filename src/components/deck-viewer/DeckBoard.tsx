@@ -12,6 +12,7 @@ import {
 	getUserDecksAutomatically,
 } from "@/src/features/storage/decks";
 import { type DatabaseDeck, db } from "@/src/features/storage/definition";
+import { cn } from "@/src/helpers/cn";
 import { webpack } from "@/src/internals/webpack";
 import MoreIcon from "~icons/mdi/dots-horizontal";
 import LockIcon from "~icons/mdi/lock-outline";
@@ -26,7 +27,7 @@ function DeckBoardItemPreview(props: {
 }) {
 	return (
 		<div
-			className={clsx(
+			className={cn(
 				props.className,
 				"bg-fd-bg-20 relative flex justify-center items-center",
 			)}
@@ -40,6 +41,54 @@ function DeckBoardItemPreview(props: {
 					alt="deck preview"
 				/>
 			) : undefined}
+		</div>
+	);
+}
+
+function DeckBoardItem(props: { deck: DatabaseDeck }) {
+	const thumbnails = useLiveQuery(() => getDeckThumbnails(props.deck.id, 3));
+	const size = useLiveQuery(() => getDeckSize(props.deck.id));
+
+	return (
+		<div
+			role="button"
+			onClick={(ev) => {
+				ev.preventDefault();
+				decksEventTarget.setCurrentDeck(props.deck.id);
+				webpack.common.history.push({
+					hash: `#fd-${props.deck.id}`,
+					pathname: "/i/bookmarks",
+					state: "from-deck-view",
+				});
+			}}
+			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
+		>
+			<div className="grow rounded-xl overflow-hidden relative grid grid-cols-4 grid-rows-2 gap-1">
+				<DeckBoardItemPreview
+					className="col-span-2 row-span-2"
+					deck={props.deck}
+					thumbnail={(thumbnails ?? []).at(0)}
+				/>
+				<DeckBoardItemPreview
+					className="col-span-2 col-start-3!"
+					deck={props.deck}
+					thumbnail={(thumbnails ?? []).at(1)}
+				/>
+				<DeckBoardItemPreview
+					className="col-span-2 col-start-3! row-start-2"
+					deck={props.deck}
+					thumbnail={(thumbnails ?? []).at(2)}
+				/>
+			</div>
+			<div className="flex flex-row justify-between items-center">
+				<div className="pointer-events-none">
+					<p className="font-bold text-xl">{props.deck.name}</p>
+					<p className="opacity-50">
+						{size} {size === 1 ? "tweet" : "tweets"}
+					</p>
+				</div>
+				<DeckDropdown deck={props.deck} className="hidden group-hover:flex!" />
+			</div>
 		</div>
 	);
 }
@@ -97,54 +146,6 @@ function UngroupedDeckBoardItem() {
 			<div className="pointer-events-none">
 				<p className="font-bold text-xl">Ungrouped</p>
 				<p className="opacity-50">the rest of your bookmarks</p>
-			</div>
-		</div>
-	);
-}
-
-function DeckBoardItem(props: { deck: DatabaseDeck }) {
-	const thumbnails = useLiveQuery(() => getDeckThumbnails(props.deck.id, 3));
-	const size = useLiveQuery(() => getDeckSize(props.deck.id));
-
-	return (
-		<div
-			role="button"
-			onClick={(ev) => {
-				ev.preventDefault();
-				decksEventTarget.setCurrentDeck(props.deck.id);
-				webpack.common.history.push({
-					hash: `#fd-${props.deck.id}`,
-					pathname: "/i/bookmarks",
-					state: "from-deck-view",
-				});
-			}}
-			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
-		>
-			<div className="grow rounded-xl overflow-hidden relative grid grid-cols-4 grid-rows-2 gap-1">
-				<DeckBoardItemPreview
-					className="col-span-2 row-span-2"
-					deck={props.deck}
-					thumbnail={(thumbnails ?? []).at(0)}
-				/>
-				<DeckBoardItemPreview
-					className="col-span-2 col-start-3!"
-					deck={props.deck}
-					thumbnail={(thumbnails ?? []).at(1)}
-				/>
-				<DeckBoardItemPreview
-					className="col-span-2 col-start-3! row-start-2"
-					deck={props.deck}
-					thumbnail={(thumbnails ?? []).at(2)}
-				/>
-			</div>
-			<div className="flex flex-row justify-between items-center">
-				<div className="pointer-events-none">
-					<p className="font-bold text-xl">{props.deck.name}</p>
-					<p className="opacity-50">
-						{size} {size === 1 ? "tweet" : "tweets"}
-					</p>
-				</div>
-				<DeckDropdown deck={props.deck} className="hidden group-hover:flex!" />
 			</div>
 		</div>
 	);

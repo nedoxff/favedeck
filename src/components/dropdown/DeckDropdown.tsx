@@ -5,9 +5,12 @@ import { decksEventTarget } from "@/src/features/events/decks";
 import { type DatabaseDeck, db } from "@/src/features/storage/definition";
 import VerticalMoreIcon from "~icons/mdi/dots-vertical";
 import EditIcon from "~icons/mdi/pencil-outline";
+import StarIcon from "~icons/mdi/star-four-points-outline";
 import DeleteIcon from "~icons/mdi/trash-can-outline";
+import { IconButton } from "../common/IconButton";
 import ConfirmModal from "../modals/ConfirmModal";
 import EditDeckModal from "../modals/EditDeckModal";
+import SortDeckModal from "../modals/SortDeckModal";
 import { TwitterDropdown, TwitterDropdownItem } from "./TwitterDropdown";
 
 export default function DeckDropdown(props: {
@@ -16,25 +19,55 @@ export default function DeckDropdown(props: {
 }) {
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [showSortModal, setShowSortModal] = useState(false);
 
-	return props.deck.id === "ungrouped" ? null : (
+	return props.deck.id === "ungrouped" ? (
 		<>
 			<TwitterDropdown<HTMLButtonElement>
 				trigger={forwardRef(({ isOpen, setOpen }, ref) => (
-					<button
-						type="button"
+					<IconButton
 						ref={ref}
-						className={clsx(
-							"rounded-full aspect-square justify-center items-center p-2 h-fit hover:shadow-lighten!",
-							props.className,
-						)}
 						onClick={(ev) => {
 							ev.stopPropagation();
 							setOpen(!isOpen);
 						}}
 					>
 						<VerticalMoreIcon width={24} height={24} />
-					</button>
+					</IconButton>
+				))}
+			>
+				{({ setOpen }) => (
+					<>
+						<TwitterDropdownItem
+							icon={<StarIcon width={24} height={24} />}
+							text="Sort"
+							onClick={() => {
+								setShowSortModal(true);
+								setOpen(false);
+							}}
+						/>
+					</>
+				)}
+			</TwitterDropdown>
+			{showSortModal &&
+				createPortal(
+					<SortDeckModal onClose={() => setShowSortModal(false)} />,
+					document.body,
+				)}
+		</>
+	) : (
+		<>
+			<TwitterDropdown<HTMLButtonElement>
+				trigger={forwardRef(({ isOpen, setOpen }, ref) => (
+					<IconButton
+						ref={ref}
+						onClick={(ev) => {
+							ev.stopPropagation();
+							setOpen(!isOpen);
+						}}
+					>
+						<VerticalMoreIcon width={24} height={24} />
+					</IconButton>
 				))}
 			>
 				{({ setOpen }) => (

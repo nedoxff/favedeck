@@ -91,8 +91,8 @@ const initializeWebpack = async () => {
 		colors: Record<string, string>;
 		primaryColorName: string;
 	};
-	// @ts-expect-error
-	const theme = themeModule.module.Z as {
+
+	const theme = themeModule.module as {
 		_activeTheme: ThemeSample;
 		_themeChangeListeners: ((newTheme: ThemeSample) => void)[];
 	};
@@ -147,14 +147,14 @@ const injectTweetObserver = () => {
 		bookmarkButton.addEventListener(
 			"click",
 			(ev) => {
-				if (bookmarkButton.getAttribute("data-testid") === "removeBookmark") {
+				if (bookmarkButton.dataset.testid === "removeBookmark") {
 					ev.stopPropagation();
 					ev.stopImmediatePropagation();
 					ev.preventDefault();
 				}
 				if (
 					components.SelectDeckPopup.initiator === bookmarkButton &&
-					bookmarkButton.getAttribute("data-testid") === "removeBookmark"
+					bookmarkButton.dataset.testid === "removeBookmark"
 				)
 					components.SelectDeckPopup.hide();
 				else components.SelectDeckPopup.show(bookmarkButton, "tweet");
@@ -187,8 +187,14 @@ const injectTweetObserver = () => {
 				);
 				if (!tweetNode) continue;
 				const computedDisplay = getComputedStyle(tweetNode).display;
-				if (computedDisplay === "flex")
+				if (computedDisplay === "flex") {
 					injectTweetCallbacks(tweetNode as HTMLElement);
+					if (components.DeckViewer.isMounted) {
+						const info = getRootNodeFromTweetElement(tweetNode as HTMLElement);
+						if (!info) continue;
+						components.DeckViewer.checkUngroupedTweet(info.rootNode, info.id);
+					}
+				}
 			}
 		}
 	});
@@ -235,8 +241,8 @@ const injectFiberObserver = () => {
 						document.querySelector("#favedeck-viewer") === null
 					) {
 						fiber.stateNode.style.position = "relative";
-						const container = fiber.stateNode.childNodes[0] as HTMLElement;
-						components.DeckViewer.originalContainer.set(container);
+						components.DeckViewer.originalContainer.value = fiber.stateNode
+							.childNodes[0] as HTMLElement;
 
 						const div = document.createElement("div");
 						div.id = "favedeck-viewer";

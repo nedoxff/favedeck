@@ -17,7 +17,7 @@ export default function ConfirmModal(props: {
 			<button
 				type="button"
 				onClick={props.onConfirmed}
-				className={clsx(
+				className={cn(
 					"rounded-full w-full text-white font-bold disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center",
 					(props.confirmIsDangerous ?? false)
 						? "bg-fd-danger!"

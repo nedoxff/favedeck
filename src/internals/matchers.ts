@@ -1,24 +1,22 @@
 export const matchers = {
 	tweet: {
 		querySelector: "article[data-testid=tweet]",
-		matcher: (el: HTMLElement) => el.getAttribute("data-testid") === "tweet",
+		matcher: (el: HTMLElement) => el.dataset.testid === "tweet",
 	},
 	tweetRoot: {
 		querySelector: "div[data-testid=cellInnerDiv]",
-		matcher: (el: HTMLElement) =>
-			el.getAttribute("data-testid") === "cellInnerDiv",
+		matcher: (el: HTMLElement) => el.dataset.testid === "cellInnerDiv",
 	},
 	bookmarkButton: {
 		querySelector:
 			"button[data-testid=bookmark], button[data-testid=removeBookmark]",
 		matcher: (el: HTMLElement) =>
-			el.getAttribute("data-testid") === "bookmark" ||
-			el.getAttribute("data-testid") === "removeBookmark",
+			el.dataset.testid === "bookmark" ||
+			el.dataset.testid === "removeBookmark",
 	},
 	primaryColumn: {
 		querySelector: "div[data-testid=primaryColumn]",
-		matcher: (el: HTMLElement) =>
-			el.getAttribute("data-testid") === "primaryColumn",
+		matcher: (el: HTMLElement) => el.dataset.testid === "primaryColumn",
 	},
 };
 

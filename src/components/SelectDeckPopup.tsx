@@ -41,7 +41,6 @@ enum DeckCardState {
 
 const saveTweet = async (deck: string, tweet: string) => {
 	await addTweetToDeck(deck, tweet);
-	tweetsEventTarget.dispatchTweetDecked(tweet, deck);
 
 	// if we saved a tweet from the ungrouped "deck", hide the tweet
 	if (
@@ -338,7 +337,7 @@ export const SelectDeckPopup = (() => {
 					break;
 				}
 				case "masonry-cell": {
-					const id = initiator.getAttribute("favedeck-tweet-id");
+					const id = initiator.dataset.favedeckTweetId;
 					if (!id) {
 						console.error(
 							"cannot show SelectDeckPopup for masonry cell (no favedeck-tweet-id attribute present)",

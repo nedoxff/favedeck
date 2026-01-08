@@ -95,9 +95,9 @@ export function TwitterDropdown<T extends HTMLElement>(props: {
 			document.addEventListener("resize", layoutCallback);
 			document.addEventListener("scroll", layoutCallback);
 			document.addEventListener("click", clickCallback);
-			layoutCallback();
 			queueMicrotask(() => {
 				if (containerRef.current) containerRef.current.style.opacity = "1";
+				layoutCallback();
 			});
 		}
 

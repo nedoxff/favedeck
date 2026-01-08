@@ -6,11 +6,13 @@ import { tweetsEventTarget } from "@/src/features/events/tweets";
 import { getDeck, isTweetInDeck } from "@/src/features/storage/decks";
 import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { waitForSelector } from "@/src/helpers/observer";
+import { matchers } from "@/src/internals/matchers";
 import { webpack } from "@/src/internals/webpack";
 import BackIcon from "~icons/mdi/arrow-left";
 import SettingsIcon from "~icons/mdi/cog-outline";
 import VerticalMoreIcon from "~icons/mdi/dots-vertical";
 import InformationIcon from "~icons/mdi/information-outline";
+import { IconButton } from "../common/IconButton";
 import DeckDropdown from "../dropdown/DeckDropdown";
 import {
 	TwitterDropdown,
@@ -129,17 +131,15 @@ function InternalDeckViewer() {
 					!isSpecialSection && (
 						<TwitterDropdown<HTMLButtonElement>
 							trigger={forwardRef(({ isOpen, setOpen }, ref) => (
-								<button
-									type="button"
+								<IconButton
 									ref={ref}
-									className="rounded-full aspect-square justify-center items-center p-2 h-fit hover:shadow-lighten!"
 									onClick={(ev) => {
 										ev.stopPropagation();
 										setOpen(!isOpen);
 									}}
 								>
 									<VerticalMoreIcon width={24} height={24} />
-								</button>
+								</IconButton>
 							))}
 						>
 							{({ setOpen }) => (
@@ -190,7 +190,7 @@ export const DeckViewer: {
 	isMounted: boolean;
 	checkUngroupedTweet: (node: HTMLElement, id: string) => void;
 	originalContainer: {
-		set: (container: HTMLElement) => void;
+		value: HTMLElement | undefined;
 		show: () => void;
 		hide: () => void;
 	};
@@ -260,7 +260,10 @@ export const DeckViewer: {
 				originalContainer.style.maxHeight = "100vh";
 				originalContainer.style.overflowY = "hidden";
 			},
-			set(container) {
+			get value() {
+				return originalContainer;
+			},
+			set value(container) {
 				originalContainer = container;
 				this.hide();
 			},

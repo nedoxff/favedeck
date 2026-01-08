@@ -39,4 +39,6 @@ export const {
 	Children,
 	Suspense,
 	lazy,
+	startTransition,
+	useInsertionEffect,
 } = ReactProxy as typeof import("react");

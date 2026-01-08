@@ -19,36 +19,13 @@ import {
 import { webpack } from "@/src/internals/webpack";
 import BookmarkIcon from "~icons/mdi/bookmark";
 import SadSmileyIcon from "~icons/mdi/emoticon-sad-outline";
+import { IconButton } from "../common/IconButton";
 import { tweetComponents } from "../external/Tweet";
+import { TweetWrapper } from "../external/TweetWrapper";
 import { components } from "../wrapper";
 
 const TWEET_LIST_FETCH_COUNT = 20;
 const TWEET_LIST_FETCH_THRESHOLD = 5;
-
-const patchTweetProps = (
-	tweet: DatabaseTweet,
-	props: Record<string, unknown>,
-) => {
-	const copy = mergician({}, props);
-	// @ts-expect-error
-	// NOTE: THE "-modified" HERE IS REALLY IMPORTANT
-	copy.item.id = `tweet-${tweet.id}-modified`;
-	// @ts-expect-error
-	copy.item.data.entryId = `tweet-${tweet.id}`;
-	// @ts-expect-error
-	copy.item.data.content.id = tweet.id;
-	// @ts-expect-error
-	copy.item.render = () => copy.item._renderer(copy.item.data, undefined);
-	// @ts-expect-error
-	copy.item.data.content.displayType = "Tweet";
-	// @ts-expect-error
-	copy.item.data.conversationPosition = undefined;
-	// @ts-expect-error
-	copy.visible = true;
-	// @ts-expect-error
-	copy.shouldAnimate = false;
-	return copy;
-};
 
 function GenericTweetMasonry<T extends { id: string }>(
 	props: {
@@ -208,9 +185,9 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 								/>
 							</a>
 							<div className="absolute bottom-2 right-2 group-hover:flex! hidden flex-row justify-end items-center z-1">
-								<button
-									type="button"
-									className="hover:shadow-darken! bg-white rounded-full w-9 h-9 flex justify-center items-center"
+								<IconButton
+									className="hover:shadow-darken! bg-white w-9 h-9"
+									data-favedeck-tweet-id={data.id}
 									onClick={(ev) => {
 										ev.stopPropagation();
 										ev.preventDefault();
@@ -222,14 +199,13 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 													"masonry-cell",
 												);
 									}}
-									favedeck-tweet-id={data.id}
 								>
 									<BookmarkIcon
 										className="text-fd-primary"
 										width={24}
 										height={24}
 									/>
-								</button>
+								</IconButton>
 							</div>
 						</article>
 					);
@@ -242,30 +218,18 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 	);
 }
 
-const TweetWrapper = React.memo(function TweetWrapper(props: {
-	data: DatabaseTweet;
-}) {
-	return (
-		<div className="*:static!">
-			<tweetComponents.Tweet
-				{...patchTweetProps(props.data, tweetComponents.meta.defaultTweetProps)}
-			/>
-		</div>
-	);
-});
-
 export function DeckTweetList(props: { deck: DatabaseDeck }) {
 	// note: thank your past self for implementing react proxies.
 	return (
 		<div className="grow">
-			<GenericTweetMasonry<DatabaseTweet>
+			<GenericTweetMasonry<{ id: string }>
 				deck={props.deck}
 				fetcher={async (start, stop) => {
 					const tweets = await checkDatabaseTweets(
 						await getDeckTweets(props.deck.id, start, stop - start + 1),
 					);
 					await addEntitiesFromDatabaseTweets(tweets);
-					return tweets;
+					return tweets.map((t) => ({ id: t.id }));
 				}}
 				render={TweetWrapper}
 				columnCount={1}

@@ -107,8 +107,9 @@ export const getTweetIdFromFiber = (tweetFiber: bippy.Fiber): string => {
 	return tweet.id_str;
 };
 
+export type RootNodeInfo = { rootNode: HTMLElement; id: string };
 export const getRootNodeFromTweetElement = memoize(
-	(el: HTMLElement): { rootNode: HTMLElement; id: string } | null => {
+	(el: HTMLElement): RootNodeInfo | null => {
 		const anyFiber = bippy.getFiberFromHostInstance(el);
 		if (!anyFiber) return null;
 		const tweetFiber = findTweetFiber(anyFiber);

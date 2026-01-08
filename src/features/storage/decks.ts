@@ -3,6 +3,7 @@ import { getUserId } from "@/src/internals/foolproof";
 import { getThumbnailUrl } from "@/src/internals/goodies";
 import { getTweetEntity, getUserEntity } from "@/src/internals/redux";
 import { decksEventTarget } from "../events/decks";
+import { tweetsEventTarget } from "../events/tweets";
 import { type DatabaseDeck, db } from "./definition";
 import { putTweetEntity, removeTweetEntityAndRelatives } from "./entities";
 
@@ -87,6 +88,7 @@ export const addTweetToDeck = async (deck: string, tweet: string) => {
 		thumbnail:
 			getThumbnailUrl(tweetEntity) ?? getThumbnailUrl(quotedTweetEntity),
 	});
+	tweetsEventTarget.dispatchTweetDecked(tweet, deck);
 };
 
 export const wipeTweet = async (id: string) => {
