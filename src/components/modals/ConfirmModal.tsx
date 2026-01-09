@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { cn } from "@/src/helpers/cn";
 import { TwitterModal } from "./TwitterModal";
 
 export default function ConfirmModal(props: {

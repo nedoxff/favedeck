@@ -45,6 +45,7 @@ export function TwitterDropdown<T extends HTMLElement>(props: {
 		open: boolean;
 		setOpen: (open: boolean) => void;
 	}) => ReactNode;
+	zIndex?: number;
 }) {
 	const [open, setOpen] = useState(false);
 	const triggerRef = useRef<T>(null);
@@ -114,10 +115,11 @@ export function TwitterDropdown<T extends HTMLElement>(props: {
 			{open &&
 				createPortal(
 					<div
-						className="bg-fd-bg max-w-sm rounded-xl flex flex-col absolute z-1000 opacity-0 top-0 left-0 overflow-hidden"
+						className="bg-fd-bg max-w-sm rounded-xl flex flex-col absolute opacity-0 top-0 left-0 overflow-hidden"
 						style={{
 							boxShadow:
 								"rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px",
+							zIndex: props.zIndex ? props.zIndex.toString() : "0",
 						}}
 						ref={containerRef}
 					>

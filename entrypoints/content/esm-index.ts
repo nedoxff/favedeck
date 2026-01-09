@@ -8,7 +8,7 @@ import {
 	isFromPostMessage,
 	sendContentToForwarder,
 } from "@/src/helpers/messaging";
-import { waitForSelector } from "@/src/helpers/observer";
+import { createTweetObserver, waitForSelector } from "@/src/helpers/observer";
 import { getRootNodeFromTweetElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
 import { setReduxStoreFromFiber } from "@/src/internals/redux";
@@ -163,46 +163,16 @@ const injectTweetObserver = () => {
 		);
 	};
 
-	const tweetObserver = new MutationObserver(async (mutations) => {
-		for (const mutation of mutations) {
-			if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-				for (const node of mutation.addedNodes) {
-					if (!(node instanceof HTMLElement)) continue;
-					for (const tweetNode of (node as HTMLElement).querySelectorAll(
-						"article[data-testid=tweet]",
-					)) {
-						const tweet = tweetNode as HTMLElement;
-						injectTweetCallbacks(tweet);
-
-						if (components.DeckViewer.isMounted) {
-							const info = getRootNodeFromTweetElement(tweet);
-							if (!info) continue;
-							components.DeckViewer.checkUngroupedTweet(info.rootNode, info.id);
-						}
-					}
-				}
-			} else {
-				const tweetNode = (mutation.target as HTMLElement).querySelector(
-					matchers.tweet.querySelector,
-				);
-				if (!tweetNode) continue;
-				const computedDisplay = getComputedStyle(tweetNode).display;
-				if (computedDisplay === "flex") {
-					injectTweetCallbacks(tweetNode as HTMLElement);
-					if (components.DeckViewer.isMounted) {
-						const info = getRootNodeFromTweetElement(tweetNode as HTMLElement);
-						if (!info) continue;
-						components.DeckViewer.checkUngroupedTweet(info.rootNode, info.id);
-					}
-				}
+	createTweetObserver((tweet) => {
+		const computedDisplay = getComputedStyle(tweet).display;
+		if (computedDisplay === "flex") {
+			injectTweetCallbacks(tweet as HTMLElement);
+			if (components.DeckViewer.isMounted) {
+				const info = getRootNodeFromTweetElement(tweet);
+				if (!info) return;
+				components.DeckViewer.checkTweet(info.rootNode, info.id);
 			}
 		}
-	});
-	tweetObserver.observe(document.body, {
-		childList: true,
-		subtree: true,
-		attributes: true,
-		attributeFilter: ["style"],
 	});
 };
 

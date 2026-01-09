@@ -138,12 +138,6 @@ export const webpack: WebpackHelper = {
 			},
 		};
 
-		console.log(
-			this.findByProperty("timelineId", {
-				maxDepth: 1,
-				value: "bookmarks",
-			}),
-		);
 		console.log(this.common);
 	},
 

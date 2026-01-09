@@ -125,15 +125,15 @@ function NewDeckBoardItem() {
 	);
 }
 
-function UngroupedDeckBoardItem() {
+function AllBookmarksDeckBoardItem() {
 	return (
 		<div
 			role="button"
 			onClick={(ev) => {
 				ev.preventDefault();
-				decksEventTarget.setCurrentDeck("ungrouped");
+				decksEventTarget.setCurrentDeck("all");
 				webpack.common.history.push({
-					hash: "#fd-ungrouped",
+					hash: "#fd-all",
 					pathname: "/i/bookmarks",
 					state: "from-deck-view",
 				});
@@ -144,8 +144,8 @@ function UngroupedDeckBoardItem() {
 				<MoreIcon width={36} height={36} />
 			</div>
 			<div className="pointer-events-none">
-				<p className="font-bold text-xl">Ungrouped</p>
-				<p className="opacity-50">the rest of your bookmarks</p>
+				<p className="font-bold text-xl">All bookmarks</p>
+				<p className="opacity-50">like all of them</p>
 			</div>
 		</div>
 	);
@@ -159,7 +159,7 @@ export function DeckBoard() {
 			{(userDecks ?? []).map((d) => (
 				<DeckBoardItem key={d.id} deck={d} />
 			))}
-			<UngroupedDeckBoardItem />
+			<AllBookmarksDeckBoardItem />
 			<NewDeckBoardItem />
 		</div>
 	);

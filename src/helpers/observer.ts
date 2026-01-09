@@ -1,3 +1,5 @@
+import { matchers } from "../internals/matchers";
+
 export const waitForSelector = (
 	el: Element,
 	selector: string,
@@ -23,3 +25,35 @@ export const waitForSelector = (
 
 		observer.observe(el, { childList: true, subtree: true });
 	});
+
+export const createTweetObserver = (callback: (node: HTMLElement) => void) => {
+	const tweetObserver = new MutationObserver(async (mutations) => {
+		for (const mutation of mutations) {
+			if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+				for (const node of mutation.addedNodes) {
+					if (!(node instanceof HTMLElement)) continue;
+					for (const tweetNode of (node as HTMLElement).querySelectorAll(
+						"article[data-testid=tweet]",
+					))
+						callback(tweetNode as HTMLElement);
+				}
+			} else if (mutation.type === "attributes") {
+				if (mutation.oldValue === "display: none") {
+					console.log(getComputedStyle(mutation.target as HTMLElement).display);
+					const tweetNode = (mutation.target as HTMLElement).querySelector(
+						matchers.tweet.querySelector,
+					);
+					if (tweetNode) callback(tweetNode as HTMLElement);
+				}
+			}
+		}
+	});
+	tweetObserver.observe(document.body, {
+		childList: true,
+		subtree: true,
+		attributes: true,
+		attributeOldValue: true,
+		attributeFilter: ["style"],
+	});
+	return tweetObserver;
+};

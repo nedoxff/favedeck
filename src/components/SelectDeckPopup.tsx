@@ -42,9 +42,9 @@ enum DeckCardState {
 const saveTweet = async (deck: string, tweet: string) => {
 	await addTweetToDeck(deck, tweet);
 
-	// if we saved a tweet from the ungrouped "deck", hide the tweet
+	// if we saved a tweet from the ungrouped "deck", highlight the tweet
 	if (
-		decksEventTarget.currentDeck === "ungrouped" &&
+		decksEventTarget.currentDeck === "all" &&
 		components.SelectDeckPopup.initiator
 	) {
 		const tweetNode = findParentNode(
@@ -52,8 +52,7 @@ const saveTweet = async (deck: string, tweet: string) => {
 			matchers.tweetRoot.matcher,
 		);
 		if (!tweetNode) return;
-		tweetNode.style.display = "none";
-		components.SelectDeckPopup.hide();
+		components.DeckViewer.checkTweet(tweetNode, tweet);
 	}
 };
 
@@ -154,7 +153,6 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 			components.SelectDeckPopup.hide();
 
 		if (await isTweetInDeck(props.tweet)) return;
-
 		// if it was previously in the ungrouped "deck", it's supposed to be brought back.
 		// although, it needs to be found in the original list, not the DeckTweetList...
 		// TODO: move this into a helper function?
@@ -164,12 +162,7 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 		for (const tweet of tweets) {
 			const info = getRootNodeFromTweetElement(tweet);
 			if (!info || info.id !== props.tweet) continue;
-			console.log(
-				"showing tweet",
-				props.tweet,
-				"again since it became ungrouped",
-			);
-			info.rootNode.style.display = "flex";
+			components.DeckViewer.checkTweet(info.rootNode, info.id);
 		}
 	}, [setState]);
 
@@ -352,7 +345,6 @@ export const SelectDeckPopup = (() => {
 			initiatorElement = initiator;
 
 			container = document.createElement("div");
-			container.style.zIndex = "1000";
 			container.style.pointerEvents = "auto";
 			container.style.opacity = "0";
 			container.style.position = "absolute";

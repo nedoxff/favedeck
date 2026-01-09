@@ -37,7 +37,7 @@ function InternalDeckRenderer(props: { deck: DatabaseDeck }) {
 			tweetsEventTarget.removeEventListener("components-available", listener);
 	}, []);
 
-	return props.deck.id === "ungrouped"
+	return props.deck.id === "all"
 		? null
 		: tweetComponentsAvailable && (
 				<tweetComponents.ContextBridge>
@@ -76,7 +76,7 @@ function InternalDeckViewer() {
 	useEffect(
 		() =>
 			queueMicrotask(() => {
-				currentSection === "ungrouped"
+				currentSection === "all"
 					? components.DeckViewer.originalContainer.show()
 					: components.DeckViewer.originalContainer.hide();
 			}),
@@ -188,7 +188,7 @@ export const DeckViewer: {
 	create: () => void;
 	hide: () => void;
 	isMounted: boolean;
-	checkUngroupedTweet: (node: HTMLElement, id: string) => void;
+	checkTweet: (node: HTMLElement, id: string) => void;
 	originalContainer: {
 		value: HTMLElement | undefined;
 		show: () => void;
@@ -227,14 +227,19 @@ export const DeckViewer: {
 		get isMounted() {
 			return root !== undefined && (container?.isConnected ?? false);
 		},
-		async checkUngroupedTweet(node, id) {
+		async checkTweet(node, id) {
 			if (
+				this.isMounted &&
 				(decksEventTarget.currentDeck === null ||
-					decksEventTarget.currentDeck === "ungrouped") &&
-				(await isTweetInDeck(id))
+					decksEventTarget.currentDeck === "all")
 			) {
-				console.log("removing tweet", id, "since it's present in a deck");
-				node.style.display = "none";
+				const decked = await isTweetInDeck(id);
+				node.style.backgroundColor = decked
+					? "color-mix(in srgb, var(--fd-primary), transparent 85%)"
+					: "transparent";
+				node.dataset.favedeckDecked = decked ? "yes" : "no";
+				node.dataset.favedeckId = id;
+				//node.style.display = "none";
 			}
 		},
 		originalContainer: {

@@ -3,8 +3,9 @@
 // updates as well.
 
 import type { Fiber } from "bippy";
+import { memoize } from "micro-memoize";
 
-export const getUserId = async (tweetFiber?: Fiber) => {
+export const getUserId = memoize(async (tweetFiber?: Fiber) => {
 	// window.__META_DATA__ has a lot of goodies
 	if (
 		"__META_DATA__" in window &&
@@ -36,4 +37,4 @@ export const getUserId = async (tweetFiber?: Fiber) => {
 	}
 
 	return undefined;
-};
+});

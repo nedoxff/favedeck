@@ -7,9 +7,9 @@ import { tweetsEventTarget } from "../events/tweets";
 import { type DatabaseDeck, db } from "./definition";
 import { putTweetEntity, removeTweetEntityAndRelatives } from "./entities";
 
-export const UNGROUPED_DECK: DatabaseDeck = {
-	id: "ungrouped",
-	name: "Ungrouped",
+export const ALL_BOOKMARKS_DECK: DatabaseDeck = {
+	id: "all",
+	name: "All bookmarks",
 	secret: false,
 	user: "",
 	dateModified: new Date(),
@@ -17,7 +17,7 @@ export const UNGROUPED_DECK: DatabaseDeck = {
 };
 
 export const getDeck = async (id: string) => {
-	if (id === "ungrouped") return UNGROUPED_DECK;
+	if (id === "all") return ALL_BOOKMARKS_DECK;
 	return await db.decks.get(id);
 };
 
@@ -35,6 +35,12 @@ export const createDeck = async (name: string, secret: boolean) => {
 	return deck.id;
 };
 
+export const deleteDeck = async (deckId: string) => {
+	const tweets = await (await getAllDeckTweets(deckId)).toArray();
+	await db.decks.delete(deckId);
+	await Promise.all(tweets.map((t) => wipeTweet(t.id)));
+};
+
 export const getUserDecks = (userId: string) =>
 	db.decks.where("user").equals(userId).toArray();
 export const getUserDecksAutomatically = async () =>
@@ -42,6 +48,8 @@ export const getUserDecksAutomatically = async () =>
 
 export const getDeckSize = (deckId: string) =>
 	db.tweets.where("deck").equals(deckId).count();
+export const getAllDeckTweets = async (deckId: string) =>
+	db.tweets.where("deck").equals(deckId);
 export const getDeckTweets = async (deckId: string, skip = 0, count = -1) => {
 	let collection = db.tweets.where("deck").equals(deckId);
 	if (skip !== 0) collection = collection.offset(skip);
@@ -92,6 +100,6 @@ export const addTweetToDeck = async (deck: string, tweet: string) => {
 };
 
 export const wipeTweet = async (id: string) => {
-	await db.tweets.where({ id }).delete();
+	await db.tweets.where({ id, user: await getUserId() }).delete();
 	await removeTweetEntityAndRelatives(id);
 };

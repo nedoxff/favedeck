@@ -13,9 +13,11 @@ import {
 	getDeckSize,
 	getDeckThumbnails,
 	getUserDecksAutomatically,
+	isTweetInDeck,
 } from "@/src/features/storage/decks";
 import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { cn } from "@/src/helpers/cn";
+import { createTweetObserver } from "@/src/helpers/observer";
 import {
 	getRootNodeFromTweetElement,
 	type RootNodeInfo,
@@ -164,9 +166,10 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 	const userDecks = useLiveQuery(getUserDecksAutomatically, [], []);
 	const deckContainerRef = useRef<HTMLDivElement>(null);
 
+	const [hiddenTweets, setHiddenTweets] = useState<RootNodeInfo[]>([]);
 	const [allTweets, setAllTweets] = useState<RootNodeInfo[]>([]);
-	const [currentTweets, setCurrentTweets] = useState<string[]>([]);
-	const [tweetShift, setTweetShift] = useState(0);
+	const [sortedTweets, setSortedTweets] = useState<string[]>([]);
+
 	const [pendingNewDeckTweet, setPendingNewDeckTweet] = useState<
 		| {
 				id: string;
@@ -177,61 +180,45 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 
 	useEffect(() => {
 		if (!allowedToRender) return;
-		const tweetObserver = new MutationObserver(async (mutations) => {
-			const newTweets: RootNodeInfo[] = [];
-			for (const mutation of mutations) {
-				if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-					for (const node of mutation.addedNodes) {
-						if (!(node instanceof HTMLElement)) continue;
-						for (const tweetNode of (node as HTMLElement).querySelectorAll(
-							"article[data-testid=tweet]",
-						)) {
-							const tweet = tweetNode as HTMLElement;
-							const info = getRootNodeFromTweetElement(tweet);
-							const isFromWrapper =
-								info?.rootNode.parentElement?.classList.contains(
-									"fd-tweet-wrapper",
-								);
-							if (!info || isFromWrapper) continue;
-							newTweets.push(info);
+
+		queueMicrotask(() => {
+			const tweets = Array.from(
+				(components.DeckViewer.originalContainer.value?.querySelectorAll(
+					matchers.tweet.querySelector,
+				) ?? []) as HTMLElement[],
+			);
+			setAllTweets(() =>
+				tweets
+					.map(getRootNodeFromTweetElement)
+					.filter((i) => i !== null)
+					.filter((i) => {
+						const isDecked = i.rootNode.dataset.favedeckDecked === "yes";
+						if (isDecked) {
+							i.rootNode.style.display = "none";
+							setHiddenTweets((cur) => [...cur, i]);
 						}
-					}
-				}
-			}
-			setAllTweets((cur) => [
-				...cur,
-				...newTweets.filter((t) => !cur.some((t1) => t1.id === t.id)),
-			]);
+						return !isDecked;
+					}),
+			);
 		});
 
-		const tweets = Array.from(
-			(components.DeckViewer.originalContainer.value?.querySelectorAll(
-				matchers.tweet.querySelector,
-			) ?? []) as HTMLElement[],
-		);
-		setAllTweets(
-			tweets
-				.map(getRootNodeFromTweetElement)
-				.filter((i) => i !== null)
-				.filter((i) => getComputedStyle(i.rootNode).display !== "none"),
-		);
-
-		tweetObserver.observe(document.body, {
-			childList: true,
-			subtree: true,
-			attributes: true,
+		const tweetObserver = createTweetObserver(async (tweet) => {
+			const info = getRootNodeFromTweetElement(tweet);
+			const isFromWrapper =
+				info?.rootNode.parentElement?.classList.contains("fd-tweet-wrapper") ??
+				false;
+			if (!info || isFromWrapper) return;
+			const isDecked = await isTweetInDeck(info.id);
+			if (isDecked) {
+				info.rootNode.style.display = "none";
+				setHiddenTweets((cur) => [...cur, info]);
+			} else
+				setAllTweets((cur) =>
+					cur.some((t) => t.id === info.id) ? cur : [...cur, info],
+				);
 		});
 		return () => tweetObserver.disconnect();
 	}, []);
-
-	useEffect(() => {
-		if (currentTweets.length === 0 && allTweets.length !== 0) {
-			setCurrentTweets(
-				allTweets.slice(tweetShift * 5, (tweetShift + 1) * 5).map((i) => i.id),
-			);
-			setTweetShift(tweetShift + 1);
-		}
-	}, [tweetShift, currentTweets, allTweets]);
 
 	const handleTweetOpacity = (
 		operation: Parameters<DragDropEvents["dragend"]>["0"]["operation"],
@@ -241,11 +228,23 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 			element.style.opacity = operation.target === null ? "1" : "0.75";
 	};
 
+	const onClose = useCallback(() => {
+		for (const tweet of hiddenTweets) tweet.rootNode.style.display = "flex";
+		props.onClose();
+	}, [hiddenTweets]);
+
+	useEffect(() => {
+		if (sortedTweets.length === 5) {
+			setAllTweets((cur) => cur.slice(5));
+			setSortedTweets([]);
+		}
+	}, [allTweets, sortedTweets]);
+
 	return (
 		<>
-			<TwitterModal className="p-0 w-[95%] h-[95%]" onClose={props.onClose}>
+			<TwitterModal className="p-0 w-[95%] h-[95%]" onClose={onClose}>
 				<div className="flex flex-row gap-4 items-center pt-8 px-8">
-					<IconButton onClick={props.onClose}>
+					<IconButton onClick={onClose}>
 						<CloseIcon width={24} height={24} />
 					</IconButton>
 					<p className="font-bold text-2xl">Sort bookmarks</p>
@@ -263,6 +262,8 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 
 								const tweet = ev.operation.source.id.toString();
 								const target = ev.operation.target.id.toString();
+								const info = allTweets.find((t) => t.id === tweet);
+								if (!info) return;
 
 								try {
 									switch (target) {
@@ -273,7 +274,7 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 										case "new-deck": {
 											setPendingNewDeckTweet({
 												id: tweet,
-												index: currentTweets.indexOf(tweet),
+												index: allTweets.findIndex((t) => t.id === tweet),
 											});
 											break;
 										}
@@ -283,9 +284,12 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 										}
 									}
 
-									const info = allTweets.find((t) => t.id === tweet);
-									if (info) info.rootNode.style.display = "none";
-									setCurrentTweets(currentTweets.filter((id) => id !== tweet));
+									const rootNode = document.querySelector(
+										`div[data-favedeck-id="${info.id}"]`,
+									) as HTMLElement | null;
+									if (rootNode) rootNode.style.display = "none";
+									setSortedTweets((cur) => [...cur, info.id]);
+									setHiddenTweets((cur) => [...cur, info]);
 								} catch (err) {
 									console.error(`failed to drop ${tweet} into ${target}`, err);
 								}
@@ -315,9 +319,14 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 							</div>
 						</div>
 						<tweetComponents.ContextBridge>
-							{currentTweets.map((id, idx) => (
-								<DraggableTweetCard id={id} key={id} index={idx} />
-							))}
+							{allTweets
+								.slice(0, 5)
+								.map(
+									({ id }, idx) =>
+										!sortedTweets.includes(id) && (
+											<DraggableTweetCard id={id} key={id} index={idx} />
+										),
+								)}
 						</tweetComponents.ContextBridge>
 					</DragDropProvider>
 				</div>
@@ -326,11 +335,9 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 				<CreateDeckModal
 					onClose={(cancelled) => {
 						if (cancelled) {
-							setCurrentTweets([
-								...currentTweets.slice(0, pendingNewDeckTweet.index),
-								pendingNewDeckTweet.id,
-								...currentTweets.slice(pendingNewDeckTweet.index),
-							]);
+							setSortedTweets((cur) =>
+								cur.filter((t) => t !== pendingNewDeckTweet.id),
+							);
 							const info = allTweets.find(
 								(t) => t.id === pendingNewDeckTweet.id,
 							);
