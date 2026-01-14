@@ -259,8 +259,13 @@ export const SelectDeckPopup = (() => {
 		if (!initiatorElement || !container) return;
 		// if the initiator got removed in the process (e.g. in a masonry cell),
 		// use the last available information
-		if (initiatorElement.isConnected)
+		if (initiatorElement.isConnected && initiatorElement.checkVisibility())
 			lastKnownInitiatorRect = initiatorElement.getBoundingClientRect();
+		console.log(
+			initiatorElement,
+			initiatorElement.isConnected,
+			lastKnownInitiatorRect,
+		);
 		const containerRect = container.getBoundingClientRect();
 		let top =
 			lastKnownInitiatorRect.top +

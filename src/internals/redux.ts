@@ -3,6 +3,7 @@ import { mergician } from "mergician";
 import { wipeTweet } from "../features/storage/decks";
 import type { DatabaseTweet } from "../features/storage/definition";
 import {
+	getTweetEntityIds,
 	getTweetEntityPayload,
 	updateEntitiesFromPayload,
 } from "../features/storage/entities";
@@ -102,6 +103,10 @@ export const unbookmarkTweet = async (id: string) => {
 // fetches the tweets, updates entities in the database
 // if the tweet got unbookmarked, delete it entirely
 export const checkDatabaseTweets = async (tweets: DatabaseTweet[]) => {
+	const ids = (
+		await Promise.all(tweets.map((t) => getTweetEntityIds(t.id)))
+	).flat();
+	console.log(ids);
 	try {
 		if (!reduxStore) throw new Error("redux store is undefined");
 		const payloads = await Promise.resolve(
@@ -110,11 +115,7 @@ export const checkDatabaseTweets = async (tweets: DatabaseTweet[]) => {
 					entities: AddEntitiesPayload;
 					result: string;
 				}[]
-			>(
-				webpack.common.redux.api.tweets.fetchMultipleIfNeeded(
-					tweets.map((t) => t.id),
-				),
-			),
+			>(webpack.common.redux.api.tweets.fetchMultipleIfNeeded(ids)),
 		);
 		if (!payloads) return tweets;
 		console.log(payloads);

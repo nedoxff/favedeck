@@ -10,7 +10,7 @@ const ReactProxy = new Proxy(
 	{
 		get: (_, prop) => {
 			const instance = get();
-			// @ts-expect-error - Dynamic access
+			// @ts-expect-error
 			const value = instance[prop];
 			return typeof value === "function" ? value.bind(instance) : value;
 		},

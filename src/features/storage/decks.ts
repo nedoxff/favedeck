@@ -2,6 +2,7 @@ import { v6 } from "uuid";
 import { getUserId } from "@/src/internals/foolproof";
 import { getThumbnailUrl } from "@/src/internals/goodies";
 import { getTweetEntity, getUserEntity } from "@/src/internals/redux";
+import type { RawTweet } from "@/src/types/tweet";
 import { decksEventTarget } from "../events/decks";
 import { tweetsEventTarget } from "../events/tweets";
 import { type DatabaseDeck, db } from "./definition";
@@ -75,26 +76,35 @@ export const getDeckThumbnails = async (id: string, limit = 1) =>
 		.map((t) => t.thumbnail!);
 
 export const addTweetToDeck = async (deck: string, tweet: string) => {
-	const tweetEntity = getTweetEntity(tweet);
-	const quotedTweetEntity = tweetEntity.quoted_status
-		? getTweetEntity(tweetEntity.quoted_status)
-		: undefined;
+	const putTweetEntityRecursive = async (
+		entity: RawTweet,
+		quoteOf?: string,
+	) => {
+		await putTweetEntity(entity, getUserEntity(entity.user), quoteOf);
+		if (entity.quoted_status) {
+			const quotedEntity = getTweetEntity(entity.quoted_status);
+			await putTweetEntityRecursive(quotedEntity, entity.id_str);
+		}
+	};
 
-	await putTweetEntity(tweetEntity, getUserEntity(tweetEntity.user));
-	if (quotedTweetEntity)
-		await putTweetEntity(
-			quotedTweetEntity,
-			getUserEntity(quotedTweetEntity.user),
-			tweet,
-		);
+	const getThumbnailUrlRecursive = async (entity: RawTweet) => {
+		const thumbnailUrl = getThumbnailUrl(entity);
+		if (thumbnailUrl) return thumbnailUrl;
+		const quotedEntity = entity.quoted_status
+			? getTweetEntity(entity.quoted_status)
+			: undefined;
+		return getThumbnailUrl(quotedEntity);
+	};
+
+	const tweetEntity = getTweetEntity(tweet);
+	await putTweetEntityRecursive(tweetEntity);
 	await db.tweets.put({
 		dateAdded: new Date(),
 		deck,
 		id: tweet,
 		user: (await getUserId()) ?? "",
 		author: tweetEntity.user,
-		thumbnail:
-			getThumbnailUrl(tweetEntity) ?? getThumbnailUrl(quotedTweetEntity),
+		thumbnail: await getThumbnailUrlRecursive(tweetEntity),
 	});
 	tweetsEventTarget.dispatchTweetDecked(tweet, deck);
 };

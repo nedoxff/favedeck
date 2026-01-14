@@ -1,7 +1,7 @@
+import { mergician } from "mergician";
 import { compressObject, decompressObject } from "@/src/helpers/compression";
 import type { AddEntitiesPayload } from "@/src/internals/redux";
 import type { RawTweet, RawTweetUser } from "@/src/types/tweet";
-import { mergician } from "mergician";
 import { db } from "./definition";
 
 export type TweetEntityMeta = {
@@ -34,6 +34,12 @@ export const removeTweetEntityAndRelatives = async (id: string) => {
 	const tweetEntity = await db.entities.get(`tweet-${id}`);
 	if (!tweetEntity || !tweetEntity.meta) return;
 
+	const removeUserEntityIfPossible = async (user: string) => {
+		// this should be called after already removing the tweet entity
+		if ((await db.entities.where({ meta: { user } }).count()) > 0) return;
+		await db.entities.delete(`user-${user}`);
+	};
+
 	const meta = tweetEntity.meta as TweetEntityMeta;
 	if (meta.quoteOf) {
 		const canSafelyRemoveQuoteTweet =
@@ -45,13 +51,13 @@ export const removeTweetEntityAndRelatives = async (id: string) => {
 		const quotedTweetEntity = await db.entities.get(`tweet-${meta.quoteOf}`);
 		if (!quotedTweetEntity || !quotedTweetEntity.meta) return;
 		await db.entities.delete(`tweet-${meta.quoteOf}`);
-		await db.entities.delete(
-			`user-${(quotedTweetEntity.meta as TweetEntityMeta).user}`,
+		await removeUserEntityIfPossible(
+			(quotedTweetEntity.meta as TweetEntityMeta).user,
 		);
 	}
 
 	await db.entities.delete(`tweet-${id}`);
-	await db.entities.delete(`user-${meta.user}`);
+	await removeUserEntityIfPossible(meta.user);
 };
 
 export const updateEntitiesFromPayload = async (
@@ -61,6 +67,15 @@ export const updateEntitiesFromPayload = async (
 		await db.entities.update(`tweet-${k}`, { data: await compressObject(v) });
 	for (const [k, v] of Object.entries(payload.users ?? {}))
 		await db.entities.update(`user-${k}`, { data: await compressObject(v) });
+};
+
+export const getTweetEntityIds = async (id: string) => {
+	const rawTweetEntity = await db.entities.get(`tweet-${id}`);
+	if (rawTweetEntity) {
+		const quoteOf = (rawTweetEntity.meta as TweetEntityMeta).quoteOf;
+		return quoteOf ? [id, quoteOf] : [id];
+	}
+	return [id];
 };
 
 export const getTweetEntityPayload = async (

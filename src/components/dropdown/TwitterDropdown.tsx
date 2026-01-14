@@ -53,7 +53,7 @@ export function TwitterDropdown<T extends HTMLElement>(props: {
 
 	const lastKnownTriggerRect = useRef<DOMRect>(null);
 	const layoutCallback = useCallback(() => {
-		if (triggerRef.current)
+		if (triggerRef.current?.isConnected && triggerRef.current.checkVisibility())
 			lastKnownTriggerRect.current = triggerRef.current.getBoundingClientRect();
 		if (!containerRef.current || !lastKnownTriggerRect.current) return;
 		const containerRect = containerRef.current.getBoundingClientRect();

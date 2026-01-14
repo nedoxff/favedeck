@@ -38,13 +38,14 @@ export const createTweetObserver = (callback: (node: HTMLElement) => void) => {
 						callback(tweetNode as HTMLElement);
 				}
 			} else if (mutation.type === "attributes") {
-				if (mutation.oldValue === "display: none") {
-					console.log(getComputedStyle(mutation.target as HTMLElement).display);
-					const tweetNode = (mutation.target as HTMLElement).querySelector(
-						matchers.tweet.querySelector,
-					);
-					if (tweetNode) callback(tweetNode as HTMLElement);
-				}
+				const tweetNode = (mutation.target as HTMLElement).querySelector(
+					matchers.tweet.querySelector,
+				);
+				if (
+					tweetNode &&
+					getComputedStyle(mutation.target as HTMLElement).display === "flex"
+				)
+					callback(tweetNode as HTMLElement);
 			}
 		}
 	});

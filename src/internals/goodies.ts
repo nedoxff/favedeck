@@ -5,7 +5,7 @@ import type { RawTweet } from "../types/tweet";
 import { findParentNode, matchers } from "./matchers";
 import { getTweetEntity, getUserEntity } from "./redux";
 
-type MediaInfo = {
+export type MediaInfo = {
 	url: string;
 	thumbnail: string;
 	width: number;

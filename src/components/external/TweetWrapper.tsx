@@ -53,20 +53,30 @@ const patchTweetProps = (
 	return copy;
 };
 
-export const TweetWrapper = React.memo(function TweetWrapper(props: {
-	data: { id: string };
-	patchOptions?: PatchTweetOptions;
-	className?: string;
-}) {
-	return (
-		<div className={cn("*:static! fd-tweet-wrapper", props.className)}>
-			<tweetComponents.Tweet
-				{...patchTweetProps(
-					props.data.id,
-					tweetComponents.meta.defaultTweetProps,
-					props.patchOptions,
-				)}
-			/>
-		</div>
-	);
-});
+export const TweetWrapper = React.memo(
+	React.forwardRef<
+		HTMLDivElement,
+		React.ComponentPropsWithoutRef<"div"> & {
+			id: string;
+			patchOptions?: PatchTweetOptions;
+			className?: string;
+		}
+	>(function TweetWrapper(props, ref) {
+		const { id, patchOptions, className, ...rest } = props;
+		return (
+			<div
+				ref={ref}
+				className={cn("*:static! fd-tweet-wrapper", className)}
+				{...rest}
+			>
+				<tweetComponents.Tweet
+					{...patchTweetProps(
+						id,
+						tweetComponents.meta.defaultTweetProps,
+						patchOptions,
+					)}
+				/>
+			</div>
+		);
+	}),
+);

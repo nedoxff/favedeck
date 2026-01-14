@@ -1,15 +1,17 @@
+import type { Draggable } from "@dnd-kit/dom";
+import { move } from "@dnd-kit/helpers";
+import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
+import { useSortable } from "@dnd-kit/react/sortable";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Masonry, type MasonryProps, useInfiniteLoader } from "masonic";
-import { mergician } from "mergician";
-import React from "react";
+import React, { memo } from "react";
 import { tweetsEventTarget } from "@/src/features/events/tweets";
 import { getDeckSize, getDeckTweets } from "@/src/features/storage/decks";
-import type {
-	DatabaseDeck,
-	DatabaseTweet,
-} from "@/src/features/storage/definition";
+import type { DatabaseDeck } from "@/src/features/storage/definition";
+import { cn } from "@/src/helpers/cn";
 import {
 	convertDatabaseTweetToMasonryInfos,
+	type MediaInfo,
 	type TweetMasonryInfo,
 } from "@/src/internals/goodies";
 import {
@@ -18,9 +20,9 @@ import {
 } from "@/src/internals/redux";
 import { webpack } from "@/src/internals/webpack";
 import BookmarkIcon from "~icons/mdi/bookmark";
+import DragVerticalIcon from "~icons/mdi/drag-vertical";
 import SadSmileyIcon from "~icons/mdi/emoticon-sad-outline";
 import { IconButton } from "../common/IconButton";
-import { tweetComponents } from "../external/Tweet";
 import { TweetWrapper } from "../external/TweetWrapper";
 import { components } from "../wrapper";
 
@@ -31,6 +33,9 @@ function GenericTweetMasonry<T extends { id: string }>(
 	props: {
 		deck: DatabaseDeck;
 		fetcher: (start: number, stop: number) => Promise<T[]>;
+		overlayRenderer: React.ComponentType<{
+			draggable: Draggable<MasonrySortableData | RegularSortableData>;
+		}>;
 	} & Omit<MasonryProps<T>, "items">,
 ) {
 	const deckSize = useLiveQuery(() => getDeckSize(props.deck.id), [], 0);
@@ -95,14 +100,159 @@ function GenericTweetMasonry<T extends { id: string }>(
 			<p className="text-xl font-medium">This deck is empty</p>
 		</div>
 	) : (
-		<Masonry<T>
-			{...props}
-			items={tweets}
-			onRender={maybeLoadMore}
-			key={removedTweetsCount}
-		/>
+		<DragDropProvider
+			onDragEnd={(ev) => {
+				setTweets((tweets) => move(tweets, ev));
+				queueMicrotask(() => setRemovedTweetsCount((r) => r + 1));
+			}}
+			onDragOver={(ev) => {
+				setTweets((tweets) => move(tweets, ev));
+			}}
+		>
+			<Masonry<T>
+				{...props}
+				items={tweets}
+				onRender={maybeLoadMore}
+				key={removedTweetsCount}
+				itemKey={(it) => it.id}
+			/>
+
+			<DragOverlay>
+				{(source) =>
+					!source.isDropping && <props.overlayRenderer draggable={source} />
+				}
+			</DragOverlay>
+		</DragDropProvider>
 	);
 }
+
+type RegularSortableData = {
+	type: "regular";
+	width: number;
+};
+
+type MasonrySortableData = {
+	type: "masonry";
+	width: number;
+	info: TweetMasonryInfo;
+};
+
+const DeckMasonryListItem = memo(function DeckMasonryListItem(props: {
+	width: number;
+	data: TweetMasonryInfo;
+	index: number;
+}) {
+	const { ref, handleRef, isDragging } = useSortable({
+		id: props.data.id,
+		index: props.index,
+		data: {
+			type: "masonry",
+			info: props.data,
+			width: props.width,
+		} satisfies MasonrySortableData,
+	});
+	const url = `/${props.data.author.name}/status/${props.data.id}${props.data.info.type === "photo" ? `/photo/${props.data.info.index}` : ""}`;
+	return (
+		<article
+			ref={ref}
+			style={{ width: `${props.width}px` }}
+			className={cn(
+				"rounded-2xl overflow-hidden relative group transition-opacity",
+				isDragging ? "opacity-25" : "opacity-100",
+			)}
+			onMouseEnter={(ev) => {
+				const video = ev.currentTarget.querySelector("video");
+				if (video) video.play();
+			}}
+			onMouseLeave={(ev) => {
+				const video = ev.currentTarget.querySelector("video");
+				if (video) {
+					video.pause();
+					video.currentTime = 0;
+				}
+			}}
+		>
+			<a
+				href={url}
+				onClick={(ev) => {
+					ev.preventDefault();
+					webpack.common.history.push(url);
+				}}
+			>
+				<img
+					key={`${props.data.id}-${props.index}`}
+					src={
+						props.data.info.type !== "photo"
+							? props.data.info.thumbnail
+							: props.data.info.url
+					}
+					width={props.data.info.width}
+					height={props.data.info.height}
+					alt="meow"
+				/>
+				{props.data.info.type !== "photo" && (
+					<video
+						src={props.data.info.url}
+						width={props.data.info.width}
+						height={props.data.info.height}
+						className="absolute top-0 left-0 w-full h-full hidden group-hover:flex!"
+						loop
+						muted
+					/>
+				)}
+			</a>
+			<div className="absolute w-full h-full top-0 left-0 group-hover:flex! pointer-events-none rounded-2xl hidden bg-black/25"></div>
+			<div className="absolute top-2 left-2 group-hover:flex! hidden flex-row justify-end items-center z-1">
+				<IconButton
+					className="hover:shadow-darken! bg-white w-9 h-9"
+					ref={handleRef}
+				>
+					<DragVerticalIcon
+						className="text-fd-primary"
+						width={24}
+						height={24}
+					/>
+				</IconButton>
+			</div>
+			<a
+				href={`/${props.data.author.name}`}
+				onClick={(ev) => {
+					ev.preventDefault();
+					webpack.common.history.push(`/${props.data.author.name}`);
+				}}
+				className="absolute bottom-2 left-2 z-1"
+			>
+				<img
+					className="rounded-full aspect-square w-9"
+					src={props.data.author.profileImage}
+					alt="pfp"
+					style={{
+						filter: "drop-shadow(rgba(0, 0, 0, 0.35) 0 0 10px)",
+					}}
+				/>
+			</a>
+			<div className="absolute bottom-2 right-2 group-hover:flex! hidden flex-row justify-end items-center z-1">
+				<IconButton
+					className="hover:shadow-darken! bg-white w-9 h-9"
+					data-favedeck-tweet-id={props.data.id}
+					onClick={(ev) => {
+						ev.stopPropagation();
+						ev.preventDefault();
+
+						components.SelectDeckPopup.initiator === ev.currentTarget
+							? components.SelectDeckPopup.hide()
+							: components.SelectDeckPopup.show(
+									ev.currentTarget,
+									"masonry-cell",
+								);
+					}}
+				>
+					<BookmarkIcon className="text-fd-primary" width={24} height={24} />
+				</IconButton>
+			</div>
+		</article>
+	);
+});
 
 export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 	// note: thank your past self for implementing react proxies.
@@ -111,105 +261,42 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 			<GenericTweetMasonry<TweetMasonryInfo>
 				deck={props.deck}
 				fetcher={async (start, stop) => {
-					const newTweets = await checkDatabaseTweets(
-						await getDeckTweets(props.deck.id, start, stop - start + 1),
+					// TODO: checkDatabaseTweets probably not needed here?
+					const newTweets = await getDeckTweets(
+						props.deck.id,
+						start,
+						stop - start + 1,
 					);
 					await addEntitiesFromDatabaseTweets(newTweets);
 					return newTweets.flatMap((t) =>
 						convertDatabaseTweetToMasonryInfos(t),
 					);
 				}}
-				render={({ index, width, data }) => {
-					const url = `/${data.author.name}/status/${data.id}${data.info.type === "photo" ? `/photo/${data.info.index}` : ""}`;
-					return (
-						<article
-							style={{ width: `${width}px` }}
-							className="rounded-2xl overflow-hidden relative group"
-							onMouseEnter={(ev) => {
-								const video = ev.currentTarget.querySelector("video");
-								if (video) video.play();
-							}}
-							onMouseLeave={(ev) => {
-								const video = ev.currentTarget.querySelector("video");
-								if (video) {
-									video.pause();
-									video.currentTime = 0;
-								}
-							}}
-						>
-							<a
-								href={url}
-								onClick={(ev) => {
-									ev.preventDefault();
-									webpack.common.history.push(url);
-								}}
-							>
+				render={DeckMasonryListItem}
+				overlayRenderer={React.memo(
+					({ draggable }) => {
+						const mediaInfo: MediaInfo = draggable.data.info.info;
+						return (
+							draggable.data.type === "masonry" &&
+							!draggable.isDropping && (
 								<img
-									key={`${data.id}-${index}`}
 									src={
-										data.info.type !== "photo"
-											? data.info.thumbnail
-											: data.info.url
+										mediaInfo.type !== "photo"
+											? mediaInfo.thumbnail
+											: mediaInfo.url
 									}
-									width={data.info.width}
-									height={data.info.height}
+									width={draggable.data.width}
+									height={
+										mediaInfo.height * (draggable.data.width / mediaInfo.width)
+									}
 									alt="meow"
+									className="rounded-2xl"
 								/>
-								{data.info.type !== "photo" && (
-									<video
-										src={data.info.url}
-										width={data.info.width}
-										height={data.info.height}
-										className="absolute top-0 left-0 w-full h-full hidden group-hover:flex!"
-										loop
-										muted
-									/>
-								)}
-							</a>
-							<div className="absolute w-full h-full top-0 left-0 group-hover:flex! pointer-events-none rounded-2xl hidden bg-black/25"></div>
-							<a
-								href={`/${data.author.name}`}
-								onClick={(ev) => {
-									ev.preventDefault();
-									webpack.common.history.push(`/${data.author.name}`);
-								}}
-								className="absolute bottom-2 left-2 z-1"
-							>
-								<img
-									className="rounded-full aspect-square w-9"
-									src={data.author.profileImage}
-									alt="pfp"
-									style={{
-										filter: "drop-shadow(rgba(0, 0, 0, 0.35) 0 0 10px)",
-									}}
-								/>
-							</a>
-							<div className="absolute bottom-2 right-2 group-hover:flex! hidden flex-row justify-end items-center z-1">
-								<IconButton
-									className="hover:shadow-darken! bg-white w-9 h-9"
-									data-favedeck-tweet-id={data.id}
-									onClick={(ev) => {
-										ev.stopPropagation();
-										ev.preventDefault();
-
-										components.SelectDeckPopup.initiator === ev.currentTarget
-											? components.SelectDeckPopup.hide()
-											: components.SelectDeckPopup.show(
-													ev.currentTarget,
-													"masonry-cell",
-												);
-									}}
-								>
-									<BookmarkIcon
-										className="text-fd-primary"
-										width={24}
-										height={24}
-									/>
-								</IconButton>
-							</div>
-						</article>
-					);
-				}}
+							)
+						);
+					},
+					(prev, next) => prev.draggable.id === next.draggable.id,
+				)}
 				columnGutter={8}
 				rowGutter={8}
 				columnCount={2}
@@ -217,6 +304,31 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 		</div>
 	);
 }
+
+const ScrollableTweetWrapper = memo(function ScrollableTweetWrapper(props: {
+	data: { id: string };
+	index: number;
+	width: number;
+}) {
+	const { ref, isDragging } = useSortable({
+		id: props.data.id,
+		index: props.index,
+		data: {
+			type: "regular",
+			width: props.width,
+		} satisfies RegularSortableData,
+	});
+	return (
+		<TweetWrapper
+			ref={ref}
+			id={props.data.id}
+			className={cn(
+				"transition-opacity",
+				isDragging ? "opacity-25" : "opacity-100",
+			)}
+		/>
+	);
+});
 
 export function DeckTweetList(props: { deck: DatabaseDeck }) {
 	// note: thank your past self for implementing react proxies.
@@ -231,7 +343,19 @@ export function DeckTweetList(props: { deck: DatabaseDeck }) {
 					await addEntitiesFromDatabaseTweets(tweets);
 					return tweets.map((t) => ({ id: t.id }));
 				}}
-				render={TweetWrapper}
+				render={ScrollableTweetWrapper}
+				overlayRenderer={React.memo(
+					({ draggable }) =>
+						draggable.data.type === "regular" &&
+						typeof draggable.id === "string" && (
+							<TweetWrapper
+								style={{ width: `${draggable.data.width}px` }}
+								className="bg-fd-bg/50"
+								id={draggable.id}
+							/>
+						),
+					(prev, next) => prev.draggable.id === next.draggable.id,
+				)}
 				columnCount={1}
 			/>
 		</div>
