@@ -6,7 +6,11 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Masonry, type MasonryProps, useInfiniteLoader } from "masonic";
 import React, { memo } from "react";
 import { tweetsEventTarget } from "@/src/features/events/tweets";
-import { getDeckSize, getDeckTweets } from "@/src/features/storage/decks";
+import {
+	getDeckSize,
+	getDeckTweets,
+	updateTweetsOrder,
+} from "@/src/features/storage/decks";
 import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { cn } from "@/src/helpers/cn";
 import {
@@ -102,7 +106,14 @@ function GenericTweetMasonry<T extends { id: string }>(
 	) : (
 		<DragDropProvider
 			onDragEnd={(ev) => {
-				setTweets((tweets) => move(tweets, ev));
+				setTweets((tweets) => {
+					const newTweets = move(tweets, ev);
+					updateTweetsOrder(
+						props.deck.id,
+						newTweets.map((t) => t.id),
+					);
+					return newTweets;
+				});
 				queueMicrotask(() => setRemovedTweetsCount((r) => r + 1));
 			}}
 			onDragOver={(ev) => {

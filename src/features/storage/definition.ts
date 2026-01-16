@@ -7,6 +7,7 @@ export interface DatabaseTweet {
 	author: string;
 	dateAdded: Date;
 	thumbnail?: string;
+	order: number;
 }
 
 export interface DatabaseDeck {
@@ -33,7 +34,8 @@ export const db = new Dexie("favedeck") as Dexie & {
 };
 
 db.version(1).stores({
-	tweets: "++, id, user, author, deck, dateAdded, thumbnail",
+	tweets:
+		"++, id, user, author, deck, [order+dateAdded], [deck+order+dateAdded], dateAdded, thumbnail, order",
 	decks: "&id, user, name, secret, dateModified, viewMode",
 	kv: "&key, value",
 	entities: "&key, type, meta.quoteOf, meta.user",

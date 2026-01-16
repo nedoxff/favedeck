@@ -1,3 +1,4 @@
+import Dexie from "dexie";
 import { v6 } from "uuid";
 import { getUserId } from "@/src/internals/foolproof";
 import { getThumbnailUrl } from "@/src/internals/goodies";
@@ -51,11 +52,17 @@ export const getDeckSize = (deckId: string) =>
 	db.tweets.where("deck").equals(deckId).count();
 export const getAllDeckTweets = async (deckId: string) =>
 	db.tweets.where("deck").equals(deckId);
+// TODO: broken
 export const getDeckTweets = async (deckId: string, skip = 0, count = -1) => {
-	let collection = db.tweets.where("deck").equals(deckId);
+	let collection = db.tweets
+		.where("[deck+order+dateAdded]")
+		.between(
+			[deckId, Dexie.minKey, Dexie.minKey],
+			[deckId, Dexie.maxKey, Dexie.maxKey],
+		);
 	if (skip !== 0) collection = collection.offset(skip);
 	if (count !== -1) collection = collection.limit(count);
-	return await collection.reverse().sortBy("added");
+	return await collection.reverse().toArray();
 };
 export const isTweetInDeck = async (id: string) =>
 	(await db.tweets.where("id").equals(id).count()) !== 0;
@@ -105,6 +112,7 @@ export const addTweetToDeck = async (deck: string, tweet: string) => {
 		user: (await getUserId()) ?? "",
 		author: tweetEntity.user,
 		thumbnail: await getThumbnailUrlRecursive(tweetEntity),
+		order: Dexie.minKey,
 	});
 	tweetsEventTarget.dispatchTweetDecked(tweet, deck);
 };
@@ -112,4 +120,20 @@ export const addTweetToDeck = async (deck: string, tweet: string) => {
 export const wipeTweet = async (id: string) => {
 	await db.tweets.where({ id, user: await getUserId() }).delete();
 	await removeTweetEntityAndRelatives(id);
+};
+
+export const updateTweetsOrder = async (deck: string, tweets: string[]) => {
+	const user = await getUserId();
+	const orderMap = new Map(
+		tweets.map((id, index) => [id, tweets.length - index]),
+	);
+
+	await db.tweets
+		.where("id")
+		.anyOf(tweets)
+		.filter((tweet) => tweet.user === user && tweet.deck === deck)
+		.modify((tweet) => {
+			const newOrder = orderMap.get(tweet.id);
+			if (newOrder !== tweet.order) tweet.order = tweets.indexOf(tweet.id);
+		});
 };
