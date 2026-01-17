@@ -70,8 +70,8 @@ export const convertDatabaseTweetToMasonryInfos = (
 	tweet: DatabaseTweet,
 	quality = "small",
 ): TweetMasonryInfo[] => {
-	const authorEntity = getUserEntity(tweet.author);
 	const tweetEntity = getTweetEntity(tweet.id);
+	const authorEntity = getUserEntity(tweetEntity.user);
 	const infos = [
 		...getMediaInfo(tweetEntity, quality),
 		...(tweetEntity.quoted_status
@@ -80,7 +80,7 @@ export const convertDatabaseTweetToMasonryInfos = (
 	];
 	return infos.map((i) => ({
 		author: {
-			id: tweet.author,
+			id: tweetEntity.user,
 			name: authorEntity.screen_name,
 			profileImage: authorEntity.profile_image_url_https,
 		},

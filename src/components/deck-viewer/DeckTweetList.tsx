@@ -278,6 +278,7 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 						start,
 						stop - start + 1,
 					);
+					console.log(newTweets);
 					await addEntitiesFromDatabaseTweets(newTweets);
 					return newTweets.flatMap((t) =>
 						convertDatabaseTweetToMasonryInfos(t),

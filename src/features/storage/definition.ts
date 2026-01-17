@@ -1,10 +1,9 @@
-import { Dexie, type EntityTable } from "dexie";
+import { Dexie, type EntityTable, type Table } from "dexie";
 
 export interface DatabaseTweet {
 	user: string;
 	deck: string;
 	id: string;
-	author: string;
 	dateAdded: Date;
 	thumbnail?: string;
 	order: number;
@@ -27,15 +26,14 @@ export interface DatabaseCompressedEntity {
 }
 
 export const db = new Dexie("favedeck") as Dexie & {
-	tweets: EntityTable<DatabaseTweet>;
+	tweets: Table<DatabaseTweet, [string, string, string]>;
 	decks: EntityTable<DatabaseDeck, "id">;
 	kv: EntityTable<{ key: string; value: unknown }, "key">;
 	entities: EntityTable<DatabaseCompressedEntity, "key">;
 };
 
 db.version(1).stores({
-	tweets:
-		"++, id, user, author, deck, [order+dateAdded], [deck+order+dateAdded], dateAdded, thumbnail, order",
+	tweets: "[id+user+deck], id, user, [deck+order+dateAdded], thumbnail",
 	decks: "&id, user, name, secret, dateModified, viewMode",
 	kv: "&key, value",
 	entities: "&key, type, meta.quoteOf, meta.user",

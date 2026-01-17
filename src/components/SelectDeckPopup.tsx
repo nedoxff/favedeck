@@ -261,11 +261,6 @@ export const SelectDeckPopup = (() => {
 		// use the last available information
 		if (initiatorElement.isConnected && initiatorElement.checkVisibility())
 			lastKnownInitiatorRect = initiatorElement.getBoundingClientRect();
-		console.log(
-			initiatorElement,
-			initiatorElement.isConnected,
-			lastKnownInitiatorRect,
-		);
 		const containerRect = container.getBoundingClientRect();
 		let top =
 			lastKnownInitiatorRect.top +

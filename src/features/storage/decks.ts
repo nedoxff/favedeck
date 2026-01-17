@@ -49,25 +49,25 @@ export const getUserDecksAutomatically = async () =>
 	await getUserDecks((await getUserId()) ?? "");
 
 export const getDeckSize = (deckId: string) =>
-	db.tweets.where("deck").equals(deckId).count();
-export const getAllDeckTweets = async (deckId: string) =>
-	db.tweets.where("deck").equals(deckId);
-// TODO: broken
+	db.tweets.where({ deck: deckId }).count();
+export const getAllDeckTweets = (deckId: string) =>
+	db.tweets.where({ deck: deckId });
 export const getDeckTweets = async (deckId: string, skip = 0, count = -1) => {
 	let collection = db.tweets
 		.where("[deck+order+dateAdded]")
 		.between(
 			[deckId, Dexie.minKey, Dexie.minKey],
 			[deckId, Dexie.maxKey, Dexie.maxKey],
-		);
+		)
+		.reverse();
 	if (skip !== 0) collection = collection.offset(skip);
 	if (count !== -1) collection = collection.limit(count);
-	return await collection.reverse().toArray();
+	return await collection.toArray();
 };
 export const isTweetInDeck = async (id: string) =>
-	(await db.tweets.where("id").equals(id).count()) !== 0;
+	(await db.tweets.where({ id, user: await getUserId() }).count()) !== 0;
 export const isTweetInSpecificDeck = async (id: string, deck: string) =>
-	(await db.tweets.where({ id, deck }).count()) !== 0;
+	(await db.tweets.get([id, await getUserId(), deck])) !== undefined;
 
 export const getDeckThumbnails = async (id: string, limit = 1) =>
 	(
@@ -110,7 +110,6 @@ export const addTweetToDeck = async (deck: string, tweet: string) => {
 		deck,
 		id: tweet,
 		user: (await getUserId()) ?? "",
-		author: tweetEntity.user,
 		thumbnail: await getThumbnailUrlRecursive(tweetEntity),
 		order: Dexie.minKey,
 	});
@@ -124,16 +123,15 @@ export const wipeTweet = async (id: string) => {
 
 export const updateTweetsOrder = async (deck: string, tweets: string[]) => {
 	const user = await getUserId();
-	const orderMap = new Map(
-		tweets.map((id, index) => [id, tweets.length - index]),
-	);
-
-	await db.tweets
-		.where("id")
-		.anyOf(tweets)
-		.filter((tweet) => tweet.user === user && tweet.deck === deck)
-		.modify((tweet) => {
-			const newOrder = orderMap.get(tweet.id);
-			if (newOrder !== tweet.order) tweet.order = tweets.indexOf(tweet.id);
-		});
+	if (!user) return;
+	await db.transaction("rw", db.tweets, async () => {
+		await db.tweets.bulkUpdate(
+			tweets.map((id, index) => ({
+				key: [id, user, deck],
+				changes: {
+					order: tweets.length - index,
+				},
+			})),
+		);
+	});
 };
