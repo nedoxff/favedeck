@@ -2,7 +2,11 @@ import Dexie from "dexie";
 import { v6 } from "uuid";
 import { getUserId } from "@/src/internals/foolproof";
 import { getThumbnailUrl } from "@/src/internals/goodies";
-import { getTweetEntity, getUserEntity } from "@/src/internals/redux";
+import {
+	getTweetEntity,
+	getUserEntity,
+	tweetEntityLoaded,
+} from "@/src/internals/redux";
 import type { RawTweet } from "@/src/types/tweet";
 import { decksEventTarget } from "../events/decks";
 import { tweetsEventTarget } from "../events/tweets";
@@ -38,9 +42,9 @@ export const createDeck = async (name: string, secret: boolean) => {
 };
 
 export const deleteDeck = async (deckId: string) => {
-	const tweets = await (await getAllDeckTweets(deckId)).toArray();
+	const tweets = await getAllDeckTweets(deckId).toArray();
 	await db.decks.delete(deckId);
-	await Promise.all(tweets.map((t) => wipeTweet(t.id)));
+	await Promise.all(tweets.map((tweet) => wipeTweet(tweet.id, deckId)));
 };
 
 export const getUserDecks = (userId: string) =>
@@ -88,7 +92,7 @@ export const addTweetToDeck = async (deck: string, tweet: string) => {
 		quoteOf?: string,
 	) => {
 		await putTweetEntity(entity, getUserEntity(entity.user), quoteOf);
-		if (entity.quoted_status) {
+		if (entity.quoted_status && tweetEntityLoaded(entity.quoted_status)) {
 			const quotedEntity = getTweetEntity(entity.quoted_status);
 			await putTweetEntityRecursive(quotedEntity, entity.id_str);
 		}
@@ -116,20 +120,27 @@ export const addTweetToDeck = async (deck: string, tweet: string) => {
 	tweetsEventTarget.dispatchTweetDecked(tweet, deck);
 };
 
-export const wipeTweet = async (id: string) => {
-	await db.tweets.where({ id, user: await getUserId() }).delete();
-	await removeTweetEntityAndRelatives(id);
+export const wipeTweet = async (id: string, deck?: string) => {
+	const user = await getUserId();
+	// deck here is optional so don't use .get
+	await db.tweets
+		.where(["id", "user", "deck"])
+		.between([id, user, deck ?? Dexie.minKey], [id, user, deck ?? Dexie.maxKey])
+		.delete();
+	const similarTweetsLeft = await db.tweets.where({ id, user }).count();
+	if (similarTweetsLeft === 0) await removeTweetEntityAndRelatives(id);
 };
 
 export const updateTweetsOrder = async (deck: string, tweets: string[]) => {
 	const user = await getUserId();
 	if (!user) return;
 	await db.transaction("rw", db.tweets, async () => {
+		const deckSize = await getDeckSize(deck);
 		await db.tweets.bulkUpdate(
 			tweets.map((id, index) => ({
 				key: [id, user, deck],
 				changes: {
-					order: tweets.length - index,
+					order: deckSize - index,
 				},
 			})),
 		);

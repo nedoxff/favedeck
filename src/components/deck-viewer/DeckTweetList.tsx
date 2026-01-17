@@ -46,21 +46,17 @@ function GenericTweetMasonry<T extends { id: string }>(
 	const [tweets, setTweets] = useState<T[]>([]);
 	const [initialFetchDone, setInitialFetchDone] = useState(false);
 
-	const [removedTweetsCount, setRemovedTweetsCount] = useState(0);
+	const [changesCount, setChangesCount] = useState(0);
 	useEffect(() => {
-		const removeTweet = (tweet: string) => {
-			const newTweets = tweets.filter((t) => t.id !== tweet);
-			if (newTweets.length < tweets.length)
-				setRemovedTweetsCount((cur) => cur + 1);
-			setTweets(newTweets);
-		};
-
 		const unbookmarkedListener = (ev: CustomEvent<string>) =>
-			removeTweet(ev.detail);
+			setTweets((tweets) => tweets.filter((tweet) => tweet.id !== ev.detail));
 		const undeckedListener = (
 			ev: CustomEvent<{ deck: string; tweet: string }>,
 		) => {
-			if (props.deck.id === ev.detail.deck) removeTweet(ev.detail.tweet);
+			if (props.deck.id === ev.detail.deck)
+				setTweets((tweets) =>
+					tweets.filter((tweet) => tweet.id !== ev.detail.tweet),
+				);
 		};
 
 		tweetsEventTarget.addEventListener(
@@ -114,18 +110,18 @@ function GenericTweetMasonry<T extends { id: string }>(
 					);
 					return newTweets;
 				});
-				queueMicrotask(() => setRemovedTweetsCount((r) => r + 1));
+				setChangesCount((c) => c + 1);
 			}}
 			onDragOver={(ev) => {
-				setTweets((tweets) => move(tweets, ev));
+				ev.preventDefault();
 			}}
 		>
-			<Masonry<T>
+			<Masonry
+				onRender={maybeLoadMore}
+				itemKey={(it) => it.id}
+				key={changesCount}
 				{...props}
 				items={tweets}
-				onRender={maybeLoadMore}
-				key={removedTweetsCount}
-				itemKey={(it) => it.id}
 			/>
 
 			<DragOverlay>
@@ -153,7 +149,7 @@ const DeckMasonryListItem = memo(function DeckMasonryListItem(props: {
 	data: TweetMasonryInfo;
 	index: number;
 }) {
-	const { ref, handleRef, isDragging } = useSortable({
+	const { ref, handleRef, isDragging, isDropTarget } = useSortable({
 		id: props.data.id,
 		index: props.index,
 		data: {
@@ -168,8 +164,9 @@ const DeckMasonryListItem = memo(function DeckMasonryListItem(props: {
 			ref={ref}
 			style={{ width: `${props.width}px` }}
 			className={cn(
-				"rounded-2xl overflow-hidden relative group transition-opacity",
+				"rounded-2xl overflow-hidden relative group transition-all",
 				isDragging ? "opacity-25" : "opacity-100",
+				isDropTarget ? "ring-4! ring-fd-primary!" : "ring-0",
 			)}
 			onMouseEnter={(ev) => {
 				const video = ev.currentTarget.querySelector("video");

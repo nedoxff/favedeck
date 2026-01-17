@@ -66,6 +66,13 @@ export const getTweetEntity = (id: string): RawTweet => {
 	return tweets[id] as RawTweet;
 };
 
+export const tweetEntityLoaded = (id: string) => {
+	if (!reduxStore) return false;
+	// @ts-expect-error
+	const tweets = reduxStore.getState()?.entities?.tweets?.entities;
+	return tweets && id in tweets;
+};
+
 export const getUserEntity = (id: string): RawTweetUser => {
 	if (!reduxStore) throw new Error("redux store is undefined");
 	// @ts-expect-error

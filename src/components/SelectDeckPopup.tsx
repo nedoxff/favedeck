@@ -104,6 +104,16 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 		isTweetInSpecificDeck(props.tweet, props.deck.id).then((v) => {
 			if (v) setState(DeckCardState.SAVED);
 		});
+
+		const deckedListener = (
+			ev: CustomEvent<{ tweet: string; deck: string }>,
+		) => {
+			if (ev.detail.deck === props.deck.id && ev.detail.tweet === props.tweet)
+				setState(DeckCardState.SAVED);
+		};
+		tweetsEventTarget.addEventListener("tweet-decked", deckedListener);
+		return () =>
+			tweetsEventTarget.removeEventListener("tweet-decked", deckedListener);
 	}, [props.tweet]);
 
 	useEffect(() => {

@@ -1,14 +1,8 @@
-import clsx from "clsx";
 import { forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { decksEventTarget } from "@/src/features/events/decks";
-import {
-	deleteDeck,
-	getAllDeckTweets,
-	getDeckTweets,
-	isTweetInDeck,
-} from "@/src/features/storage/decks";
-import { type DatabaseDeck, db } from "@/src/features/storage/definition";
+import { deleteDeck, getAllDeckTweets } from "@/src/features/storage/decks";
+import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { getRootNodeFromTweetElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
 import VerticalMoreIcon from "~icons/mdi/dots-vertical";

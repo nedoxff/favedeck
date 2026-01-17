@@ -36,14 +36,14 @@ export const removeTweetEntityAndRelatives = async (id: string) => {
 
 	const removeUserEntityIfPossible = async (user: string) => {
 		// this should be called after already removing the tweet entity
-		if ((await db.entities.where({ meta: { user } }).count()) > 0) return;
+		if ((await db.entities.where("meta.user").equals(user).count()) > 0) return;
 		await db.entities.delete(`user-${user}`);
 	};
 
 	const meta = tweetEntity.meta as TweetEntityMeta;
 	if (meta.quoteOf) {
 		const canSafelyRemoveQuoteTweet =
-			(await db.entities.where({ meta: { quoteOf: meta.quoteOf } }).count()) <=
+			(await db.entities.where("meta.quoteOf").equals(meta.quoteOf).count()) <=
 			1;
 		console.log("can safely remove quote tweet", canSafelyRemoveQuoteTweet);
 		if (!canSafelyRemoveQuoteTweet) return;
@@ -82,14 +82,19 @@ export const getTweetEntityPayload = async (
 	id: string,
 ): Promise<AddEntitiesPayload> => {
 	const rawTweetEntity = await db.entities.get(`tweet-${id}`);
-	if (!rawTweetEntity) throw new Error(`entity tweet-${id} not found`);
+	if (!rawTweetEntity) {
+		console.warn(`entity tweet-${id} not found`);
+		return {};
+	}
 	const tweetEntity: RawTweet = await decompressObject(rawTweetEntity.data);
 
 	const rawUserEntity = await db.entities.get(`user-${tweetEntity.user}`);
-	if (!rawUserEntity)
-		throw new Error(
+	if (!rawUserEntity) {
+		console.warn(
 			`entity user-${tweetEntity.user} not found (needed for tweet-${id})`,
 		);
+		return {};
+	}
 	const userEntity: RawTweetUser = await decompressObject(rawUserEntity.data);
 
 	const payload = {

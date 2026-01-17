@@ -6,8 +6,7 @@ import {
 	useDroppable,
 } from "@dnd-kit/react";
 import { useLiveQuery } from "dexie-react-hooks";
-import React, { type ReactNode } from "react";
-import { decksEventTarget } from "@/src/features/events/decks";
+import type { ReactNode } from "react";
 import {
 	addTweetToDeck,
 	getDeckSize,
@@ -18,21 +17,14 @@ import {
 import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { cn } from "@/src/helpers/cn";
 import { createTweetObserver } from "@/src/helpers/observer";
-import {
-	getRootNodeFromTweetElement,
-	type RootNodeInfo,
-} from "@/src/internals/goodies";
-import { findParentNode, matchers } from "@/src/internals/matchers";
+import { getRootNodeFromTweetElement } from "@/src/internals/goodies";
+import { matchers } from "@/src/internals/matchers";
 import { unbookmarkTweet } from "@/src/internals/redux";
-import { webpack } from "@/src/internals/webpack";
-import ArrowDownIcon from "~icons/mdi/arrow-down";
-import ArrowUpIcon from "~icons/mdi/arrow-up";
 import BookmarkIcon from "~icons/mdi/bookmark";
 import CloseIcon from "~icons/mdi/close";
 import LockIcon from "~icons/mdi/lock-outline";
 import PlusIcon from "~icons/mdi/plus";
 import { IconButton } from "../common/IconButton";
-import DeckDropdown from "../dropdown/DeckDropdown";
 import { tweetComponents } from "../external/Tweet";
 import { TweetWrapper } from "../external/TweetWrapper";
 import { components } from "../wrapper";

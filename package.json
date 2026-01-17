@@ -37,6 +37,7 @@
 		"tailwind-merge": "^3.4.0",
 		"tailwindcss": "^4.1.17",
 		"typescript-event-target": "^1.1.1",
+		"use-debounce": "^10.1.0",
 		"uuid": "^13.0.0"
 	},
 	"devDependencies": {
@@ -53,5 +54,10 @@
 		"vite-plugin-svgr": "^4.5.0",
 		"vite-plugin-top-level-await": "^1.6.0",
 		"wxt": "^0.20.6"
+	},
+	"pnpm": {
+		"patchedDependencies": {
+			"masonic": "patches/masonic.patch"
+		}
 	}
 }
