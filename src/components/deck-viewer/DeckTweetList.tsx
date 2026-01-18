@@ -106,7 +106,9 @@ function GenericTweetMasonry<T extends { id: string }>(
 					const newTweets = move(tweets, ev);
 					updateTweetsOrder(
 						props.deck.id,
-						newTweets.map((t) => t.id),
+						ev.operation.source?.data.type === "masonry"
+							? newTweets.map((t) => t.id.split("-")[0])
+							: newTweets.map((t) => t.id),
 					);
 					return newTweets;
 				});
@@ -158,7 +160,7 @@ const DeckMasonryListItem = memo(function DeckMasonryListItem(props: {
 			width: props.width,
 		} satisfies MasonrySortableData,
 	});
-	const url = `/${props.data.author.name}/status/${props.data.id}${props.data.info.type === "photo" ? `/photo/${props.data.info.index}` : ""}`;
+	const url = `/${props.data.author.name}/status/${props.data.tweet}${props.data.info.type === "photo" ? `/photo/${props.data.info.index}` : ""}`;
 	return (
 		<article
 			ref={ref}
@@ -188,7 +190,7 @@ const DeckMasonryListItem = memo(function DeckMasonryListItem(props: {
 				}}
 			>
 				<img
-					key={`${props.data.id}-${props.index}`}
+					key={props.data.id}
 					src={
 						props.data.info.type !== "photo"
 							? props.data.info.thumbnail
@@ -242,7 +244,7 @@ const DeckMasonryListItem = memo(function DeckMasonryListItem(props: {
 			<div className="absolute bottom-2 right-2 group-hover:flex! hidden flex-row justify-end items-center z-1">
 				<IconButton
 					className="hover:shadow-darken! bg-white w-9 h-9"
-					data-favedeck-tweet-id={props.data.id}
+					data-favedeck-tweet-id={props.data.tweet}
 					onClick={(ev) => {
 						ev.stopPropagation();
 						ev.preventDefault();
@@ -275,7 +277,6 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 						start,
 						stop - start + 1,
 					);
-					console.log(newTweets);
 					await addEntitiesFromDatabaseTweets(newTweets);
 					return newTweets.flatMap((t) =>
 						convertDatabaseTweetToMasonryInfos(t),
@@ -319,7 +320,7 @@ const ScrollableTweetWrapper = memo(function ScrollableTweetWrapper(props: {
 	index: number;
 	width: number;
 }) {
-	const { ref, isDragging } = useSortable({
+	const { ref, isDragging, isDropTarget } = useSortable({
 		id: props.data.id,
 		index: props.index,
 		data: {
@@ -334,6 +335,7 @@ const ScrollableTweetWrapper = memo(function ScrollableTweetWrapper(props: {
 			className={cn(
 				"transition-opacity",
 				isDragging ? "opacity-25" : "opacity-100",
+				isDropTarget ? "ring-4! ring-fd-primary!" : "ring-0",
 			)}
 		/>
 	);
@@ -359,8 +361,12 @@ export function DeckTweetList(props: { deck: DatabaseDeck }) {
 						typeof draggable.id === "string" && (
 							<TweetWrapper
 								style={{ width: `${draggable.data.width}px` }}
-								className="bg-fd-bg/50"
+								className="bg-fd-bg/50 rounded-2xl overflow-hidden"
 								id={draggable.id}
+								patchOptions={{
+									shouldDisplayBorder: false,
+									isClickable: false,
+								}}
 							/>
 						),
 					(prev, next) => prev.draggable.id === next.draggable.id,

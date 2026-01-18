@@ -16,6 +16,7 @@ export interface DatabaseDeck {
 	secret: boolean;
 	dateModified: Date;
 	viewMode: "regular" | "masonry";
+	order: number;
 }
 
 export interface DatabaseCompressedEntity {
@@ -34,7 +35,7 @@ export const db = new Dexie("favedeck") as Dexie & {
 
 db.version(1).stores({
 	tweets: "[id+user+deck], id, user, deck, [deck+order+dateAdded], thumbnail",
-	decks: "&id, user, name, secret, dateModified, viewMode",
+	decks: "&id, user, name, secret, viewMode, dateModified, order",
 	kv: "&key, value",
 	entities: "&key, type, meta.quoteOf, meta.user",
 });

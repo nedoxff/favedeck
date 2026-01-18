@@ -20,6 +20,7 @@ export const ALL_BOOKMARKS_DECK: DatabaseDeck = {
 	user: "",
 	dateModified: new Date(),
 	viewMode: "regular",
+	order: Dexie.minKey,
 };
 
 export const getDeck = async (id: string) => {
@@ -35,6 +36,7 @@ export const createDeck = async (name: string, secret: boolean) => {
 		user: (await getUserId()) ?? "",
 		dateModified: new Date(),
 		viewMode: "regular",
+		order: Dexie.minKey,
 	};
 	await db.decks.put(deck);
 	decksEventTarget.dispatchDeckCreated(deck);
@@ -48,7 +50,7 @@ export const deleteDeck = async (deckId: string) => {
 };
 
 export const getUserDecks = (userId: string) =>
-	db.decks.where("user").equals(userId).toArray();
+	db.decks.where("user").equals(userId).sortBy("order");
 export const getUserDecksAutomatically = async () =>
 	await getUserDecks((await getUserId()) ?? "");
 
@@ -76,12 +78,15 @@ export const isTweetInSpecificDeck = async (id: string, deck: string) =>
 export const getDeckThumbnails = async (id: string, limit = 1) =>
 	(
 		await db.tweets
-			.where("deck")
-			.equals(id)
+			.where("[deck+order+dateAdded]")
+			.between(
+				[id, Dexie.minKey, Dexie.minKey],
+				[id, Dexie.maxKey, Dexie.maxKey],
+			)
+			.reverse()
 			.filter((t) => t.thumbnail !== undefined)
 			.limit(limit)
-			.reverse()
-			.sortBy("added")
+			.toArray()
 	)
 		// biome-ignore lint/style/noNonNullAssertion: filtered
 		.map((t) => t.thumbnail!);
@@ -141,6 +146,19 @@ export const updateTweetsOrder = async (deck: string, tweets: string[]) => {
 				key: [id, user, deck],
 				changes: {
 					order: deckSize - index,
+				},
+			})),
+		);
+	});
+};
+
+export const updateDecksOrder = async (ids: string[]) => {
+	await db.transaction("rw", db.decks, async () => {
+		await db.decks.bulkUpdate(
+			ids.map((id, index) => ({
+				key: id,
+				changes: {
+					order: index,
 				},
 			})),
 		);

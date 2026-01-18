@@ -2,7 +2,9 @@
 /** biome-ignore-all lint/a11y/useFocusableInteractive: TODO */
 /** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
 
-import clsx from "clsx";
+import { move } from "@dnd-kit/helpers";
+import { DragDropProvider } from "@dnd-kit/react";
+import { useSortable } from "@dnd-kit/react/sortable";
 import { useLiveQuery } from "dexie-react-hooks";
 import { createPortal } from "react-dom";
 import { decksEventTarget } from "@/src/features/events/decks";
@@ -10,6 +12,7 @@ import {
 	getDeckSize,
 	getDeckThumbnails,
 	getUserDecksAutomatically,
+	updateDecksOrder,
 } from "@/src/features/storage/decks";
 import { type DatabaseDeck, db } from "@/src/features/storage/definition";
 import { cn } from "@/src/helpers/cn";
@@ -45,12 +48,17 @@ function DeckBoardItemPreview(props: {
 	);
 }
 
-function DeckBoardItem(props: { deck: DatabaseDeck }) {
+function DeckBoardItem(props: { deck: DatabaseDeck; index: number }) {
 	const thumbnails = useLiveQuery(() => getDeckThumbnails(props.deck.id, 3));
 	const size = useLiveQuery(() => getDeckSize(props.deck.id));
+	const { ref } = useSortable({
+		id: props.deck.id,
+		index: props.index,
+	});
 
 	return (
 		<div
+			ref={ref}
 			role="button"
 			onClick={(ev) => {
 				ev.preventDefault();
@@ -61,7 +69,7 @@ function DeckBoardItem(props: { deck: DatabaseDeck }) {
 					state: "from-deck-view",
 				});
 			}}
-			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
+			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl bg-fd-bg"
 		>
 			<div className="grow rounded-xl overflow-hidden relative grid grid-cols-4 grid-rows-2 gap-1">
 				<DeckBoardItemPreview
@@ -152,13 +160,24 @@ function AllBookmarksDeckBoardItem() {
 }
 
 export function DeckBoard() {
-	const userDecks = useLiveQuery(getUserDecksAutomatically);
+	const userDecks = useLiveQuery(
+		getUserDecksAutomatically,
+		[],
+		[] as DatabaseDeck[],
+	);
+	const [tempDecks, setTempDecks] = useState(userDecks);
 
 	return (
 		<div className="p-4 gap-2 flex flex-row flex-wrap">
-			{(userDecks ?? []).map((d) => (
-				<DeckBoardItem key={d.id} deck={d} />
-			))}
+			<DragDropProvider
+				onBeforeDragStart={() => setTempDecks(userDecks)}
+				onDragEnd={() => updateDecksOrder(tempDecks.map((deck) => deck.id))}
+				onDragOver={(ev) => setTempDecks(move(tempDecks, ev))}
+			>
+				{(userDecks ?? []).map((deck, index) => (
+					<DeckBoardItem key={deck.id} deck={deck} index={index} />
+				))}
+			</DragDropProvider>
 			<AllBookmarksDeckBoardItem />
 			<NewDeckBoardItem />
 		</div>

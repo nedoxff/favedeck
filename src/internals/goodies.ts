@@ -63,6 +63,7 @@ export type TweetMasonryInfo = {
 		name: string;
 		profileImage: string;
 	};
+	tweet: string;
 	info: MediaInfo;
 };
 // this must be called AFTER adding the entities
@@ -84,7 +85,8 @@ export const convertDatabaseTweetToMasonryInfos = (
 			name: authorEntity.screen_name,
 			profileImage: authorEntity.profile_image_url_https,
 		},
-		id: tweet.id,
+		id: `${tweet.id}-${i.index}`,
+		tweet: tweet.id,
 		info: i,
 	}));
 };
