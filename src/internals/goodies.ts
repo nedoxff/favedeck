@@ -3,7 +3,7 @@ import { memoize } from "micro-memoize";
 import type { DatabaseTweet } from "../features/storage/definition";
 import type { RawTweet } from "../types/tweet";
 import { findParentNode, matchers } from "./matchers";
-import { getTweetEntity, getUserEntity } from "./redux";
+import { getTweetEntity, getUserEntity, tweetEntityLoaded } from "./redux";
 
 export type MediaInfo = {
 	url: string;
@@ -71,15 +71,10 @@ export const convertDatabaseTweetToMasonryInfos = (
 	tweet: DatabaseTweet,
 	quality = "small",
 ): TweetMasonryInfo[] => {
+	if (!tweetEntityLoaded(tweet.id)) return [];
 	const tweetEntity = getTweetEntity(tweet.id);
 	const authorEntity = getUserEntity(tweetEntity.user);
-	const infos = [
-		...getMediaInfo(tweetEntity, quality),
-		...(tweetEntity.quoted_status
-			? getMediaInfo(getTweetEntity(tweetEntity.quoted_status), quality)
-			: []),
-	];
-	return infos.map((i) => ({
+	return getMediaInfo(tweetEntity, quality).map((i) => ({
 		author: {
 			id: tweetEntity.user,
 			name: authorEntity.screen_name,

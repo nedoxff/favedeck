@@ -1,4 +1,5 @@
 import { db } from "./definition";
+import type { FavedeckSettings } from "./settings";
 
 const kvGet =
 	<T>(key: string) =>
@@ -18,6 +19,5 @@ const createGettersSetters = <T>(key: string) => ({
 
 export const kv = {
 	reloaded: createGettersSetters<string>("reloaded"),
-	tweets: {},
-	decks: {},
+	settings: createGettersSetters<FavedeckSettings>("settings"),
 };

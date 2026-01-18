@@ -3,6 +3,7 @@ import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
 import { components, initializeComponents } from "@/src/components/wrapper";
 import { decksEventTarget } from "@/src/features/events/decks";
 import { kv } from "@/src/features/storage/kv";
+import { DEFAULT_SETTINGS } from "@/src/features/storage/settings";
 import {
 	type ForwarderMessagePayload,
 	isFromPostMessage,
@@ -164,14 +165,11 @@ const injectTweetObserver = () => {
 	};
 
 	createTweetObserver((tweet) => {
-		const computedDisplay = getComputedStyle(tweet).display;
-		if (computedDisplay === "flex") {
-			injectTweetCallbacks(tweet as HTMLElement);
-			if (components.DeckViewer.isMounted) {
-				const info = getRootNodeFromTweetElement(tweet);
-				if (!info) return;
-				components.DeckViewer.checkTweet(info.rootNode, info.id);
-			}
+		injectTweetCallbacks(tweet as HTMLElement);
+		if (components.DeckViewer.isMounted) {
+			const info = getRootNodeFromTweetElement(tweet);
+			if (!info) return;
+			components.DeckViewer.checkTweet(info.rootNode, info.id);
 		}
 	});
 };
@@ -237,6 +235,9 @@ console.log("hello from esm content script!");
 		await kv.reloaded.set(undefined);
 		window.location.reload();
 	}
+
+	const settings = await kv.settings.get();
+	if (!settings) await kv.settings.set(DEFAULT_SETTINGS);
 })();
 
 const inject = async () => {

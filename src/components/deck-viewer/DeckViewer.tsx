@@ -6,7 +6,6 @@ import { tweetsEventTarget } from "@/src/features/events/tweets";
 import { getDeck, isTweetInDeck } from "@/src/features/storage/decks";
 import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { waitForSelector } from "@/src/helpers/observer";
-import { matchers } from "@/src/internals/matchers";
 import { webpack } from "@/src/internals/webpack";
 import BackIcon from "~icons/mdi/arrow-left";
 import SettingsIcon from "~icons/mdi/cog-outline";

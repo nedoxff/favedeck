@@ -1,0 +1,27 @@
+import { getProperty, setProperty } from "dot-prop";
+import type { Get, Paths } from "type-fest";
+import { kv } from "./kv";
+
+export type FavedeckSettings = {
+	updateStatistics: boolean;
+	includeQuoteTweets: boolean;
+};
+
+export const DEFAULT_SETTINGS: FavedeckSettings = {
+	includeQuoteTweets: true,
+	updateStatistics: true,
+};
+
+export const getSetting = async (path: Paths<FavedeckSettings>) =>
+	getProperty((await kv.settings.get()) ?? DEFAULT_SETTINGS, path);
+
+export const setSetting = async <T extends Paths<FavedeckSettings>>(
+	path: T,
+	value: Get<FavedeckSettings, T>,
+) => {
+	const settings = structuredClone(
+		(await kv.settings.get()) ?? DEFAULT_SETTINGS,
+	);
+	setProperty(settings, path, value);
+	await kv.settings.set(settings);
+};
