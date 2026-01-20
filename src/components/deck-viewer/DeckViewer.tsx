@@ -96,6 +96,18 @@ function InternalDeckViewer() {
 		}
 	}, [currentSection, currentDeck, currentDeckLoaded]);
 
+	const viewerTitle = useMemo(() => {
+		if (currentDeck) return currentDeck.name;
+		switch (currentSection) {
+			case "about":
+				return "About favedeck";
+			case "settings":
+				return "Settings";
+			default:
+				return "Decks";
+		}
+	}, [currentDeck, currentSection]);
+
 	return (
 		<div className="flex flex-col">
 			<div className="h-14 px-4 flex flex-row justify-between items-center w-full sticky top-0 z-10 bg-fd-bg/75 backdrop-blur-xl">
@@ -120,9 +132,7 @@ function InternalDeckViewer() {
 							<BackIcon width={24} height={24} />
 						</div>
 					</a>
-					<p className="font-bold text-2xl">
-						{currentDeck ? currentDeck.name : "Decks"}
-					</p>
+					<p className="font-bold text-2xl">{viewerTitle}</p>
 				</div>
 
 				{currentDeck ? (

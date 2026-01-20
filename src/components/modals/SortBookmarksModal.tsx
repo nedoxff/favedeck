@@ -16,7 +16,11 @@ import {
 import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { kv } from "@/src/features/storage/kv";
 import { getPotentiallyUngroupedTweets } from "@/src/features/storage/potentially-ungrouped";
-import { addTweetToDeck, splitTweets } from "@/src/features/storage/tweets";
+import {
+	addTweetToDeck,
+	getLatestSortedTweet,
+	splitTweets,
+} from "@/src/features/storage/tweets";
 import { cn } from "@/src/helpers/cn";
 import {
 	addEntities,
@@ -179,22 +183,36 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		});
 	}, []); */
 
-	const lastCursorUsedRef = useRef(false);
+	const stateCursorUsedRef = useRef(false);
 	const refetchTweetEntries = async () => {
-		const [unsortedEntries, sortedEntries] = await splitTweets(
-			getBookmarksTimelineEntries().filter((entry) => entry.type === "tweet"),
+		const rawEntries = getBookmarksTimelineEntries().filter(
+			(entry) => entry.type === "tweet",
 		);
+		const [unsortedEntries, sortedEntries] = await splitTweets(rawEntries);
+		const state = await kv.sortBookmarksState.get();
 
-		// todo: they don't want for each other
+		// while i'm not asleep...
+		// the "cursor" is the last api call where the user stopped sorting bookmarks.
+		// however, after closing the dialog and opening it again they might have bookmarked
+		// more stuff, or unbookmarked something IN THE MIDDLE of sorted tweets, or even after the cursor. so:
+
+		// - we already skipped to the cursor => fetch from bottom
+		// - we started from the top and haven't reached "the latest sorted tweet" (state.latestSortedTweet) => fetch from bottom
+		// - we already fetched so far that state.latestSortedTweet is included in the list => fetch from cursor, as
+		// the stuff between the state.latestSortedTweet and the cursor is guaranteed to either be completely unbookmarked (we don't care),
+		// ungrouped (would end up in db.potentiallyUngrouped and get caught) or grouped (we don't need it)
 		if (unsortedEntries.length === 0) {
-			const lastCursor = await kv.lastBookmarksTimelineCursor.get();
-			if (lastCursor && !lastCursorUsedRef.current) {
+			const shouldUseCursor =
+				state &&
+				(rawEntries.at(-1)?.sortIndex ?? "") <=
+					state.latestSortedTweet.sortIndex;
+			if (shouldUseCursor && state.cursor && !stateCursorUsedRef.current) {
 				console.log(
 					"no unsorted entries, using last recorded cursor",
-					lastCursor,
+					state.cursor,
 				);
-				lastCursorUsedRef.current = true;
-				await fetchBookmarksTimelineFromCursor(lastCursor);
+				stateCursorUsedRef.current = true;
+				await fetchBookmarksTimelineFromCursor(state.cursor);
 			} else {
 				console.log("no unsorted entries, fetching from bottom");
 				const bottomCursor = getBottomBookmarksTimelineCursor();
@@ -314,10 +332,13 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 
 		// remember last cursor (don't ask)
 		const cursor = getBottomBookmarksTimelineCursor(-3);
-		if (cursor) {
-			console.log("saving bookmarks timeline cursor", cursor);
-			kv.lastBookmarksTimelineCursor.set(cursor);
-		}
+		getLatestSortedTweet().then((latestSortedTweet) => {
+			console.log("cursor", cursor, "latestSortedTweet", latestSortedTweet);
+			if (latestSortedTweet && cursor) {
+				console.log("saving new state");
+				kv.sortBookmarksState.set({ cursor, latestSortedTweet });
+			}
+		});
 
 		props.onClose();
 	}, [hiddenTweets]);

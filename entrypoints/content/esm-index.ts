@@ -110,19 +110,21 @@ const initializeWebpack = async () => {
 		});
 	};
 
-	for (const key of [
-		"fetchBottom",
-		"fetchCursor",
-		"fetchTop",
-		"fetchInitialOrTop",
-	])
-		overrideReduxAction(
-			webpack.common.redux.api.bookmarksTimeline,
-			key as keyof ReduxBookmarksTimelineAPIType,
-			{
-				after: () => internalsEventTarget.dispatchBookmarksTimelineFetched(),
-			},
-		);
+	if (webpack.common.redux.api.bookmarksTimeline) {
+		for (const key of [
+			"fetchBottom",
+			"fetchCursor",
+			"fetchTop",
+			"fetchInitialOrTop",
+		])
+			overrideReduxAction(
+				webpack.common.redux.api.bookmarksTimeline,
+				key as keyof ReduxBookmarksTimelineAPIType,
+				{
+					after: () => internalsEventTarget.dispatchBookmarksTimelineFetched(),
+				},
+			);
+	}
 
 	const themeModule = webpack.findByProperty("_activeTheme", {
 		maxDepth: 1,

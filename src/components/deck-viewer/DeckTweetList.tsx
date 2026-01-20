@@ -48,15 +48,19 @@ function GenericTweetMasonry<T extends { id: string }>(
 
 	const [changesCount, setChangesCount] = useState(0);
 	useEffect(() => {
-		const unbookmarkedListener = (ev: CustomEvent<string>) =>
+		const unbookmarkedListener = (ev: CustomEvent<string>) => {
 			setTweets((tweets) => tweets.filter((tweet) => tweet.id !== ev.detail));
+			setChangesCount((c) => c + 1);
+		};
 		const undeckedListener = (
 			ev: CustomEvent<{ deck: string; tweet: string }>,
 		) => {
-			if (props.deck.id === ev.detail.deck)
+			if (props.deck.id === ev.detail.deck) {
 				setTweets((tweets) =>
 					tweets.filter((tweet) => tweet.id !== ev.detail.tweet),
 				);
+				setChangesCount((c) => c + 1);
+			}
 		};
 
 		tweetsEventTarget.addEventListener(

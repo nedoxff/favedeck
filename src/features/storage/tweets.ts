@@ -1,7 +1,11 @@
 import Dexie from "dexie";
 import { getUserId } from "@/src/internals/foolproof";
 import { getThumbnailUrl } from "@/src/internals/goodies";
-import { type AddEntitiesPayload, getTweetEntity } from "@/src/internals/redux";
+import {
+	type AddEntitiesPayload,
+	getBookmarksTimelineEntries,
+	getTweetEntity,
+} from "@/src/internals/redux";
 import type { TweetTimelineEntry } from "@/src/types/timeline";
 import type { RawTweet } from "@/src/types/tweet";
 import { tweetsEventTarget } from "../events/tweets";
@@ -106,5 +110,26 @@ export const splitTweets = async (
 			(e) => !unsorted.some((e1) => e.entryId === e1.entryId),
 		);
 		return [unsorted, sorted];
+	});
+};
+
+export const getLatestSortedTweet = async (): Promise<
+	TweetTimelineEntry | undefined
+> => {
+	const tweets = getBookmarksTimelineEntries().filter(
+		(entry) => entry.type === "tweet",
+	);
+	return await db.transaction("r", db.tweets, async () => {
+		return (
+			await Promise.all(
+				tweets.map(async (entry) => ({
+					value: entry,
+					include: await isTweetInDeck(entry.content.id),
+				})),
+			)
+		)
+			.filter((obj) => obj.include)
+			.map((obj) => obj.value)
+			.at(0);
 	});
 };

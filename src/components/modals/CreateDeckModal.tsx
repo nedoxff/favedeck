@@ -1,4 +1,5 @@
 import { createDeck } from "@/src/features/storage/decks";
+import Checkbox from "../common/Checkbox";
 import { TwitterModal } from "./TwitterModal";
 
 export default function CreateDeckModal(props: {
@@ -19,17 +20,13 @@ export default function CreateDeckModal(props: {
 				value={deckName}
 				onInput={(ev) => setDeckName((ev.target as HTMLInputElement).value)}
 			/>
-			<div>
-				<input
-					id="favedeck-select-deck-popup-secret"
-					className="accent-fd-primary"
-					type="checkbox"
+			<div className="flex flex-row gap-2 items-end">
+				<Checkbox
+					className="scale-75"
 					checked={deckSecret}
-					onChange={(ev) => setDeckSecret(ev.target.checked)}
+					onChecked={setDeckSecret}
 				/>
-				<label className="ml-2" htmlFor="favedeck-select-deck-popup-secret">
-					Secret (hide thumbnails)
-				</label>
+				<p>Secret (hide thumbnails)</p>
 			</div>
 			<button
 				onClick={async () => {

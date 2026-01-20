@@ -1,4 +1,7 @@
-import type { CursorTimelineEntry } from "@/src/types/timeline";
+import type {
+	CursorTimelineEntry,
+	TweetTimelineEntry,
+} from "@/src/types/timeline";
 import { db } from "./definition";
 import type { FavedeckSettings } from "./settings";
 
@@ -22,7 +25,8 @@ export const kv = {
 	reloaded: createGettersSetters<string>("reloaded"),
 	settings: createGettersSetters<FavedeckSettings>("settings"),
 
-	lastBookmarksTimelineCursor: createGettersSetters<CursorTimelineEntry>(
-		"lastBookmarksTimelineCursor",
-	),
+	sortBookmarksState: createGettersSetters<{
+		cursor: CursorTimelineEntry;
+		latestSortedTweet: TweetTimelineEntry;
+	}>("sortBookmarksState"),
 };

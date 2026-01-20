@@ -1,6 +1,7 @@
 import MasonryViewGraphic from "@/public/img/masonry-view.svg?react";
 import RegularViewGraphic from "@/public/img/regular-view.svg?react";
 import { type DatabaseDeck, db } from "@/src/features/storage/definition";
+import Checkbox from "../common/Checkbox";
 import { TwitterModal } from "./TwitterModal";
 
 export default function EditDeckModal(props: {
@@ -24,17 +25,13 @@ export default function EditDeckModal(props: {
 				value={deckName}
 				onInput={(ev) => setDeckName((ev.target as HTMLInputElement).value)}
 			/>
-			<div>
-				<input
-					id="favedeck-edit-deck-popup-secret"
-					className="accent-fd-primary"
-					type="checkbox"
+			<div className="flex flex-row gap-2 items-end">
+				<Checkbox
+					className="scale-75"
 					checked={deckSecret}
-					onChange={(ev) => setDeckSecret(ev.target.checked)}
+					onChecked={setDeckSecret}
 				/>
-				<label className="ml-2" htmlFor="favedeck-edit-deck-popup-secret">
-					Secret (hide thumbnails)
-				</label>
+				<p>Secret (hide thumbnails)</p>
 			</div>
 			<p className="opacity-75">View mode</p>
 			<div className="flex flex-row gap-2 w-full">

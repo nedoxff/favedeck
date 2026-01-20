@@ -75,6 +75,43 @@ export type FindByPropertyOptions = {
 	value?: unknown;
 };
 
+function verboseFindByProperty<T>(
+	key: string,
+	name: string,
+	fatal?: true,
+	options?: FindByPropertyOptions,
+): T;
+function verboseFindByProperty<T>(
+	key: string,
+	name: string,
+	fatal: false,
+	options?: FindByPropertyOptions,
+): T | undefined;
+function verboseFindByProperty<T>(
+	key: string,
+	name: string,
+	fatal: boolean = true,
+	options: FindByPropertyOptions = { maxDepth: 1 },
+): T | undefined {
+	const start = performance.now();
+	const result = webpack.findByProperty(key, options);
+	if (!result) {
+		if (fatal) throw new Error(`webpack: failed to find ${name}`);
+		console.warn(`webpack: failed to find ${name}`);
+		return undefined;
+	}
+	console.log(
+		`webpack: found`,
+		name,
+		"in",
+		Math.round(performance.now() - start),
+		"ms (",
+		result.id,
+		")",
+	);
+	return result.module as T;
+}
+
 export type WebpackHelper = {
 	rawModules: Record<string, () => unknown>;
 	cache: WebpackCache;
@@ -96,7 +133,7 @@ export type WebpackHelper = {
 		redux: {
 			api: {
 				tweets: ReduxTweetsAPIType;
-				bookmarksTimeline: ReduxBookmarksTimelineAPIType;
+				bookmarksTimeline?: ReduxBookmarksTimelineAPIType;
 			};
 		};
 	};
@@ -115,39 +152,29 @@ export const webpack: WebpackHelper = {
 		this.rawModules = require.m;
 		this.cache = require.c;
 
-		const findOrThrowByProperty = <T>(
-			key: string,
-			name: string,
-			options: FindByPropertyOptions = { maxDepth: 1 },
-		) => {
-			const result = this.findByProperty(key, options);
-			if (!result) throw new Error(`webpack: failed to find ${name}`);
-			console.log(`webpack: found ${name}`);
-			return result.module as T;
-		};
-
 		this.common = {
 			react: {
-				React: findOrThrowByProperty<ReactType>("useState", "React"),
-				ReactDOM: findOrThrowByProperty<ReactDOMType & ReactDOMClientType>(
+				React: verboseFindByProperty<ReactType>("useState", "React"),
+				ReactDOM: verboseFindByProperty<ReactDOMType & ReactDOMClientType>(
 					"createPortal",
 					"ReactDOM",
 				),
-				JSXRuntime: findOrThrowByProperty<ReactJSXRuntimeType>(
+				JSXRuntime: verboseFindByProperty<ReactJSXRuntimeType>(
 					"jsx",
 					"react/jsx-runtime",
 				),
 			},
-			history: findOrThrowByProperty("goBack", "the history (router?) module"),
+			history: verboseFindByProperty("goBack", "the history (router?) module"),
 			redux: {
 				api: {
-					tweets: findOrThrowByProperty(
+					tweets: verboseFindByProperty(
 						"unbookmark",
 						"tweets api actions store (redux)",
 					),
-					bookmarksTimeline: findOrThrowByProperty(
+					bookmarksTimeline: verboseFindByProperty(
 						"timelineId",
 						"bookmarks timeline urt store (redux)",
+						false,
 						{ maxDepth: 1, value: "bookmarks" },
 					),
 				},

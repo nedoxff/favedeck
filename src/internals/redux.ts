@@ -182,7 +182,8 @@ export const fetchBookmarksTimelineFromCursor = async (
 			newTweets: number;
 	  }
 > => {
-	if (!reduxStore) return { performed: false };
+	if (!reduxStore || !webpack.common.redux.api.bookmarksTimeline)
+		return { performed: false };
 	return await reduxStore.dispatch(
 		webpack.common.redux.api.bookmarksTimeline.fetchCursor(cursor, { count }),
 	);

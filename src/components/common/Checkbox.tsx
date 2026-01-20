@@ -7,7 +7,7 @@ export default function Checkbox(props: {
 	className?: string;
 }) {
 	return (
-		<label className="flex items-center relative">
+		<label className={cn("flex items-center relative", props.className)}>
 			<input
 				type="checkbox"
 				className="appearance-none absolute opacity-0 w-full h-full cursor-pointer"
