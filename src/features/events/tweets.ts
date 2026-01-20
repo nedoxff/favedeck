@@ -1,5 +1,5 @@
-import { tweetComponents } from "@/src/components/external/Tweet";
 import { TypedEventTarget } from "typescript-event-target";
+import { tweetComponents } from "@/src/components/external/Tweet";
 
 interface TweetsEventMap {
 	"components-available": Event;

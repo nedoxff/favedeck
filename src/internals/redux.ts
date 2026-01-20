@@ -1,18 +1,24 @@
 import type { Fiber } from "bippy";
+import { getProperty } from "dot-prop";
 import { mergician } from "mergician";
-import { wipeTweet } from "../features/storage/decks";
 import type { DatabaseTweet } from "../features/storage/definition";
 import {
 	getTweetEntityIds,
-	getTweetEntityPayload,
+	getTweetEntityPayloadFromDatabase,
 	updateEntitiesFromPayload,
 } from "../features/storage/entities";
+import { getSetting } from "../features/storage/settings";
+import { removeTweet } from "../features/storage/tweets";
+import type { CursorTimelineEntry, TimelineEntry } from "../types/timeline";
 import type { RawTweet, RawTweetUser } from "../types/tweet";
 import { webpack } from "./webpack";
 
 export type AddEntitiesPayload = {
 	tweets?: Record<string, RawTweet>;
 	users?: Record<string, RawTweetUser>;
+	favedeck?: {
+		quoteOf: Record<string, string>;
+	};
 };
 
 export type ReduxDispatchAction =
@@ -54,31 +60,42 @@ export const addEntitiesFromDatabaseTweets = async (
 ) => {
 	let payload: AddEntitiesPayload = {};
 	for (const tweet of tweets)
-		payload = mergician(payload, await getTweetEntityPayload(tweet.id));
+		payload = mergician(
+			payload,
+			await getTweetEntityPayloadFromDatabase(tweet.id),
+		);
 	addEntities(payload);
 };
 
 export const getTweetEntity = (id: string): RawTweet => {
-	if (!reduxStore) throw new Error("redux store is undefined");
-	// @ts-expect-error
-	const tweets = reduxStore.getState()?.entities?.tweets?.entities;
-	if (!tweets) throw new Error("state.entities.tweets is undefined");
-	return tweets[id] as RawTweet;
+	const tweet = getProperty(
+		reduxStore?.getState(),
+		`entities.tweets.entities[${id}]`,
+	) as RawTweet | undefined;
+	if (!tweet)
+		throw new Error(
+			`reduxStore.getState.entities.tweets.entities[${id}] is undefined`,
+		);
+	return tweet;
 };
 
 export const tweetEntityLoaded = (id: string) => {
-	if (!reduxStore) return false;
-	// @ts-expect-error
-	const tweets = reduxStore.getState()?.entities?.tweets?.entities;
-	return tweets && id in tweets;
+	return (
+		getProperty(reduxStore?.getState(), `entities.tweets.entities[${id}]`) !==
+		undefined
+	);
 };
 
 export const getUserEntity = (id: string): RawTweetUser => {
-	if (!reduxStore) throw new Error("redux store is undefined");
-	// @ts-expect-error
-	const users = reduxStore.getState()?.entities?.users?.entities;
-	if (!users) throw new Error("state.entities.users is undefined");
-	return users[id] as RawTweetUser;
+	const user = getProperty(
+		reduxStore?.getState(),
+		`entities.users.entities[${id}]`,
+	) as RawTweetUser | undefined;
+	if (!user)
+		throw new Error(
+			`reduxStore.getState.entities.users.entities[${id}] is undefined`,
+		);
+	return user;
 };
 
 export const unbookmarkTweet = async (id: string) => {
@@ -106,14 +123,14 @@ export const unbookmarkTweet = async (id: string) => {
 	}
 };
 
-// TODO: hide this behind a setting
 // fetches the tweets, updates entities in the database
 // if the tweet got unbookmarked, delete it entirely
 export const checkDatabaseTweets = async (tweets: DatabaseTweet[]) => {
+	if ((await getSetting("updateStatistics")) === false) return tweets;
 	const ids = (
 		await Promise.all(tweets.map((t) => getTweetEntityIds(t.id)))
 	).flat();
-	console.log(ids);
+
 	try {
 		if (!reduxStore) throw new Error("redux store is undefined");
 		const payloads = await Promise.resolve(
@@ -139,7 +156,7 @@ export const checkDatabaseTweets = async (tweets: DatabaseTweet[]) => {
 					"since it became unbookmarked (and favedeck didn't notice)",
 				);
 				newTweets = newTweets.filter((nt) => nt.id !== payload.result);
-				await wipeTweet(payload.result);
+				await removeTweet(payload.result);
 			} else {
 				console.log("updating entities for tweet", payload.result);
 				await updateEntitiesFromPayload(payload.entities);
@@ -150,4 +167,46 @@ export const checkDatabaseTweets = async (tweets: DatabaseTweet[]) => {
 		console.error("failed to check database tweets", ex);
 		return tweets;
 	}
+};
+
+export const fetchBookmarksTimelineFromCursor = async (
+	cursor: CursorTimelineEntry,
+	count: number = 20,
+): Promise<
+	| {
+			performed: false;
+	  }
+	| {
+			performed: true;
+			newEntries: number;
+			newTweets: number;
+	  }
+> => {
+	if (!reduxStore) return { performed: false };
+	return await reduxStore.dispatch(
+		webpack.common.redux.api.bookmarksTimeline.fetchCursor(cursor, { count }),
+	);
+};
+
+export const getBookmarksTimelineEntries = (): TimelineEntry[] => {
+	return (
+		(getProperty(reduxStore?.getState(), "urt.bookmarks.entries") as
+			| TimelineEntry[]
+			| undefined) ?? []
+	);
+};
+
+// this is a really specific function but it returns
+// the last suitable cursor to use for the "sort bookmarks" modal,
+// that is the last "top" cursor present in the timeline's entries.
+// note: using the "bottom" cursor would meaning skipping the 20 tweets that
+// come before the cursor, so we would basically unnecessarily skip tweets. don't use that
+export const getBottomBookmarksTimelineCursor = (
+	distance = -1,
+): CursorTimelineEntry | undefined => {
+	return getBookmarksTimelineEntries()
+		.filter(
+			(e) => e.type === "timelineCursor" && e.content.cursorType === "Bottom",
+		)
+		.at(distance) as CursorTimelineEntry | undefined;
 };

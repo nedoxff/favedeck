@@ -7,19 +7,24 @@ import {
 } from "@dnd-kit/react";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { ReactNode } from "react";
+import { internalsEventTarget } from "@/src/features/events/internals";
 import {
-	addTweetToDeck,
 	getDeckSize,
 	getDeckThumbnails,
 	getUserDecksAutomatically,
-	isTweetInDeck,
 } from "@/src/features/storage/decks";
 import type { DatabaseDeck } from "@/src/features/storage/definition";
+import { kv } from "@/src/features/storage/kv";
+import { getPotentiallyUngroupedTweets } from "@/src/features/storage/potentially-ungrouped";
+import { addTweetToDeck, splitTweets } from "@/src/features/storage/tweets";
 import { cn } from "@/src/helpers/cn";
-import { createTweetObserver } from "@/src/helpers/observer";
-import { getRootNodeFromTweetElement } from "@/src/internals/goodies";
-import { matchers } from "@/src/internals/matchers";
-import { unbookmarkTweet } from "@/src/internals/redux";
+import {
+	addEntities,
+	fetchBookmarksTimelineFromCursor,
+	getBookmarksTimelineEntries,
+	getBottomBookmarksTimelineCursor,
+	unbookmarkTweet,
+} from "@/src/internals/redux";
 import BookmarkIcon from "~icons/mdi/bookmark";
 import CloseIcon from "~icons/mdi/close";
 import LockIcon from "~icons/mdi/lock-outline";
@@ -27,7 +32,6 @@ import PlusIcon from "~icons/mdi/plus";
 import { IconButton } from "../common/IconButton";
 import { tweetComponents } from "../external/Tweet";
 import { TweetWrapper } from "../external/TweetWrapper";
-import { components } from "../wrapper";
 import CreateDeckModal from "./CreateDeckModal";
 import { TwitterModal } from "./TwitterModal";
 
@@ -151,10 +155,7 @@ function CustomDropCard(props: { id: string; children: ReactNode }) {
 	);
 }
 
-export default function SortDeckModal(props: { onClose: () => void }) {
-	const allowedToRender =
-		components.DeckViewer.isMounted &&
-		(components.DeckViewer.originalContainer.value?.isConnected ?? false);
+export default function SortBookmarksModal(props: { onClose: () => void }) {
 	const userDecks = useLiveQuery(getUserDecksAutomatically, [], []);
 	const deckContainerRef = useRef<HTMLDivElement>(null);
 
@@ -171,7 +172,86 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 		| undefined
 	>(undefined);
 
+	/* useEffect(() => {
+		kv.lastBookmarksTimelineCursor.get().then((cursor) => {
+			console.log(cursor);
+			if (cursor) fetchBookmarksTimeline(cursor);
+		});
+	}, []); */
+
+	const lastCursorUsedRef = useRef(false);
+	const refetchTweetEntries = async () => {
+		const [unsortedEntries, sortedEntries] = await splitTweets(
+			getBookmarksTimelineEntries().filter((entry) => entry.type === "tweet"),
+		);
+
+		// todo: they don't want for each other
+		if (unsortedEntries.length === 0) {
+			const lastCursor = await kv.lastBookmarksTimelineCursor.get();
+			if (lastCursor && !lastCursorUsedRef.current) {
+				console.log(
+					"no unsorted entries, using last recorded cursor",
+					lastCursor,
+				);
+				lastCursorUsedRef.current = true;
+				await fetchBookmarksTimelineFromCursor(lastCursor);
+			} else {
+				console.log("no unsorted entries, fetching from bottom");
+				const bottomCursor = getBottomBookmarksTimelineCursor();
+				if (bottomCursor) await fetchBookmarksTimelineFromCursor(bottomCursor);
+			}
+			return;
+		}
+
+		setAllTweets((current) => {
+			const newEntries = unsortedEntries.filter(
+				(item) => !current.includes(item.content.id),
+			);
+			console.log(
+				"fetched timeline entries, sorted:",
+				sortedEntries.length,
+				"unsorted:",
+				unsortedEntries.length,
+				"new:",
+				newEntries.length,
+			);
+			return [...current, ...newEntries.map((item) => item.content.id)];
+		});
+	};
+
 	useEffect(() => {
+		// not sure if we can just blindly believe database entries like that
+		// but probably yeah
+		getPotentiallyUngroupedTweets().then((ungroupedTweets) => {
+			setAllTweets((current) => {
+				const toAdd = ungroupedTweets
+					.filter(
+						(t) =>
+							!(t.id in (t.payload.favedeck?.quoteOf ?? {})) &&
+							!current.includes(t.id),
+					)
+					.map((t) => {
+						addEntities(t.payload);
+						return t.id;
+					});
+				return [...current, ...toAdd];
+			});
+		});
+	}, []);
+
+	useEffect(() => {
+		internalsEventTarget.addEventListener(
+			"bookmarks-timeline-fetched",
+			refetchTweetEntries,
+		);
+		return () =>
+			internalsEventTarget.removeEventListener(
+				"bookmarks-timeline-fetched",
+				refetchTweetEntries,
+			);
+	}, []);
+
+	/* useEffect(() => {
 		if (!allowedToRender) return;
 
 		queueMicrotask(() => {
@@ -213,7 +293,7 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 				);
 		});
 		return () => tweetObserver.disconnect();
-	}, []);
+	}, []); */
 
 	const handleTweetOpacity = (
 		operation: Parameters<DragDropEvents["dragend"]>["0"]["operation"],
@@ -225,10 +305,20 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 
 	const onClose = useCallback(() => {
 		closingRef.current = true;
+
+		/* 		// show hidden tweets
 		for (const tweet of hiddenTweets) {
 			const node = document.querySelector(`div[data-favedeck-id="${tweet}"]`);
 			if (node) (node as HTMLElement).style.display = "flex";
+		} */
+
+		// remember last cursor (don't ask)
+		const cursor = getBottomBookmarksTimelineCursor(-3);
+		if (cursor) {
+			console.log("saving bookmarks timeline cursor", cursor);
+			kv.lastBookmarksTimelineCursor.set(cursor);
 		}
+
 		props.onClose();
 	}, [hiddenTweets]);
 
@@ -236,7 +326,8 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 		if (sortedTweets.length === 5) {
 			setAllTweets((cur) => cur.slice(5));
 			setSortedTweets([]);
-		}
+		} else if (sortedTweets.length === allTweets.length)
+			queueMicrotask(refetchTweetEntries);
 	}, [allTweets, sortedTweets]);
 
 	return (
@@ -280,11 +371,11 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 											break;
 										}
 									}
-
+									/* 
 									const rootNode = document.querySelector(
 										`div[data-favedeck-id="${tweet}"]`,
 									) as HTMLElement | null;
-									if (rootNode) rootNode.style.display = "none";
+									if (rootNode) rootNode.style.display = "none"; */
 									setSortedTweets((cur) => [...cur, tweet]);
 									setHiddenTweets((cur) => [...cur, tweet]);
 								} catch (err) {
@@ -335,10 +426,10 @@ export default function SortDeckModal(props: { onClose: () => void }) {
 							setSortedTweets((cur) =>
 								cur.filter((t) => t !== pendingNewDeckTweet.id),
 							);
-							const node = document.querySelector(
+							/* 							const node = document.querySelector(
 								`div[data-favedeck-id="${pendingNewDeckTweet.id}"]`,
 							);
-							if (node) (node as HTMLElement).style.display = "flex";
+							if (node) (node as HTMLElement).style.display = "flex"; */
 						}
 						setPendingNewDeckTweet(undefined);
 					}}

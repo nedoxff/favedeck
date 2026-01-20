@@ -5,7 +5,7 @@ export const waitForSelector = (
 	selector: string,
 	timeout = -1,
 ): Promise<HTMLElement | undefined> =>
-	new Promise((resolve, reject) => {
+	new Promise((resolve) => {
 		const existing = Array.from(el.querySelectorAll(selector)).at(0);
 		if (existing && existing instanceof HTMLElement) return resolve(existing);
 

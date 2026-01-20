@@ -1,3 +1,4 @@
+import type { CursorTimelineEntry } from "../types/timeline";
 import type { ReduxDispatchAction } from "./redux";
 
 type ReactType = typeof import("react");
@@ -57,6 +58,23 @@ export type ReduxTweetsAPIType = {
 	fetchMultipleIfNeeded: (ids: string[]) => ReduxDispatchAction;
 };
 
+export type ReduxBookmarksTimelineAPIType = {
+	fetchCursor: (
+		cursor: CursorTimelineEntry,
+		options: {
+			count: number;
+		},
+	) => ReduxDispatchAction;
+	fetchBottom: () => ReduxDispatchAction;
+	fetchTop: () => ReduxDispatchAction;
+	fetchInitialOrTop: () => ReduxDispatchAction;
+};
+
+export type FindByPropertyOptions = {
+	maxDepth: number;
+	value?: unknown;
+};
+
 export type WebpackHelper = {
 	rawModules: Record<string, () => unknown>;
 	cache: WebpackCache;
@@ -64,10 +82,7 @@ export type WebpackHelper = {
 	load: () => void;
 	findByProperty: (
 		key: string,
-		opts?: {
-			maxDepth: number;
-			value?: unknown;
-		},
+		opts?: FindByPropertyOptions,
 	) => WebpackSearchResult;
 	findByCode: (code: string) => WebpackSearchResult;
 
@@ -81,6 +96,7 @@ export type WebpackHelper = {
 		redux: {
 			api: {
 				tweets: ReduxTweetsAPIType;
+				bookmarksTimeline: ReduxBookmarksTimelineAPIType;
 			};
 		};
 	};
@@ -102,9 +118,9 @@ export const webpack: WebpackHelper = {
 		const findOrThrowByProperty = <T>(
 			key: string,
 			name: string,
-			maxDepth = 0,
+			options: FindByPropertyOptions = { maxDepth: 1 },
 		) => {
-			const result = this.findByProperty(key, { maxDepth });
+			const result = this.findByProperty(key, options);
 			if (!result) throw new Error(`webpack: failed to find ${name}`);
 			console.log(`webpack: found ${name}`);
 			return result.module as T;
@@ -122,17 +138,17 @@ export const webpack: WebpackHelper = {
 					"react/jsx-runtime",
 				),
 			},
-			history: findOrThrowByProperty(
-				"goBack",
-				"the history (router?) module",
-				1,
-			),
+			history: findOrThrowByProperty("goBack", "the history (router?) module"),
 			redux: {
 				api: {
 					tweets: findOrThrowByProperty(
 						"unbookmark",
 						"tweets api actions store (redux)",
-						1,
+					),
+					bookmarksTimeline: findOrThrowByProperty(
+						"timelineId",
+						"bookmarks timeline urt store (redux)",
+						{ maxDepth: 1, value: "bookmarks" },
 					),
 				},
 			},

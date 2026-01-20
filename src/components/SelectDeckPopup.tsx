@@ -12,15 +12,16 @@ import PlusIcon from "~icons/mdi/plus";
 import { decksEventTarget } from "../features/events/decks";
 import { tweetsEventTarget } from "../features/events/tweets";
 import {
-	addTweetToDeck,
 	getDeckThumbnails,
 	getUserDecksAutomatically,
+} from "../features/storage/decks";
+import type { DatabaseDeck } from "../features/storage/definition";
+import {
+	addTweetToDeck,
 	isTweetInDeck,
 	isTweetInSpecificDeck,
-	wipeTweet,
-} from "../features/storage/decks";
-import { type DatabaseDeck, db } from "../features/storage/definition";
-import { getUserId } from "../internals/foolproof";
+	removeTweet,
+} from "../features/storage/tweets";
 import {
 	findTweetFiber,
 	getRootNodeFromTweetElement,
@@ -75,8 +76,7 @@ function ActionsCard(props: { tweet: string }) {
 					onClick={async () => {
 						components.SelectDeckPopup.hide();
 						await unbookmarkTweet(props.tweet);
-						await wipeTweet(props.tweet);
-						tweetsEventTarget.dispatchTweetUnbookmarked(props.tweet);
+						await removeTweet(props.tweet, undefined, { markUngrouped: false });
 					}}
 				>
 					<BookmarkIcon width={24} height={24} />
@@ -148,14 +148,7 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 	}, [setState]);
 
 	const remove = useCallback(async () => {
-		await db.tweets
-			.where({
-				id: props.tweet,
-				user: await getUserId(),
-				deck: props.deck.id,
-			})
-			.delete();
-		tweetsEventTarget.dispatchTweetUndecked(props.tweet, props.deck.id);
+		await removeTweet(props.tweet, props.deck.id);
 		setState(DeckCardState.REMOVED);
 
 		// if we're currently viewing this deck

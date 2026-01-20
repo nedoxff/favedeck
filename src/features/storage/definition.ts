@@ -26,11 +26,21 @@ export interface DatabaseCompressedEntity {
 	meta?: object;
 }
 
+export interface DatabasePotentiallyUngroupedTweet {
+	id: string;
+	user: string;
+	payload: Blob;
+}
+
 export const db = new Dexie("favedeck") as Dexie & {
 	tweets: Table<DatabaseTweet, [string, string, string]>;
 	decks: EntityTable<DatabaseDeck, "id">;
 	kv: EntityTable<{ key: string; value: unknown }, "key">;
 	entities: EntityTable<DatabaseCompressedEntity, "key">;
+	potentiallyUngrouped: Table<
+		DatabasePotentiallyUngroupedTweet,
+		[string, string]
+	>;
 };
 
 db.version(1).stores({
@@ -38,4 +48,5 @@ db.version(1).stores({
 	decks: "&id, user, name, secret, viewMode, dateModified, order",
 	kv: "&key, value",
 	entities: "&key, type, meta.quoteOf, meta.user",
+	potentiallyUngrouped: "[id+user]",
 });

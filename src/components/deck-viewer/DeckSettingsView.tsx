@@ -9,7 +9,7 @@ export default function DeckSettingsView() {
 
 	return (
 		settings && (
-			<div className="flex flex-col pt-2">
+			<div className="flex flex-col">
 				<ListTile
 					title="Update statistics when browsing decks"
 					description={
@@ -29,6 +29,9 @@ export default function DeckSettingsView() {
 							onChecked={(ch) => setSetting("updateStatistics", ch)}
 						/>
 					}
+					onClick={() =>
+						setSetting("updateStatistics", !settings.updateStatistics)
+					}
 				/>
 
 				<ListTile
@@ -39,6 +42,9 @@ export default function DeckSettingsView() {
 							checked={settings.includeQuoteTweets}
 							onChecked={(ch) => setSetting("includeQuoteTweets", ch)}
 						/>
+					}
+					onClick={() =>
+						setSetting("includeQuoteTweets", !settings.includeQuoteTweets)
 					}
 				/>
 			</div>

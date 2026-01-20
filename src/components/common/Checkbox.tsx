@@ -14,6 +14,7 @@ export default function Checkbox(props: {
 				checked={props.checked ?? false}
 				onChange={() => props.onChecked?.(!props.checked)}
 			/>
+			<span className="absolute w-[175%] h-[175%] left-1/2 -translate-x-1/2! rounded-full hover:shadow-lighten!" />
 			<span
 				className={cn(
 					"flex justify-center items-center w-6 h-6 rounded-md",

@@ -2,6 +2,7 @@ import * as bippy from "bippy";
 import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
 import { components, initializeComponents } from "@/src/components/wrapper";
 import { decksEventTarget } from "@/src/features/events/decks";
+import { internalsEventTarget } from "@/src/features/events/internals";
 import { kv } from "@/src/features/storage/kv";
 import { DEFAULT_SETTINGS } from "@/src/features/storage/settings";
 import {
@@ -12,8 +13,14 @@ import {
 import { createTweetObserver, waitForSelector } from "@/src/helpers/observer";
 import { getRootNodeFromTweetElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
-import { setReduxStoreFromFiber } from "@/src/internals/redux";
-import { webpack } from "@/src/internals/webpack";
+import {
+	type ReduxDispatchAction,
+	setReduxStoreFromFiber,
+} from "@/src/internals/redux";
+import {
+	type ReduxBookmarksTimelineAPIType,
+	webpack,
+} from "@/src/internals/webpack";
 
 const initializeMessageListener = () => {
 	window.addEventListener("message", (ev) => {
@@ -80,6 +87,42 @@ const initializeWebpack = async () => {
 	console.log("loading webpack");
 	webpack.load();
 	await initializeComponents();
+
+	const overrideReduxAction = <T extends Record<string, unknown>>(
+		obj: T,
+		path: keyof T,
+		options?: {
+			before?: () => void;
+			after?: (value: unknown) => void;
+		},
+	) => {
+		if (!obj[path] || typeof obj[path] !== "function") return;
+		obj[path] = new Proxy(obj[path], {
+			apply(target, that, args) {
+				const originalAction = Reflect.apply(target, that, args);
+				return ((dispatch, getState) => {
+					options?.before?.();
+					const value = originalAction(dispatch, getState);
+					Promise.resolve(value).then(options?.after);
+					return value;
+				}) as ReduxDispatchAction;
+			},
+		});
+	};
+
+	for (const key of [
+		"fetchBottom",
+		"fetchCursor",
+		"fetchTop",
+		"fetchInitialOrTop",
+	])
+		overrideReduxAction(
+			webpack.common.redux.api.bookmarksTimeline,
+			key as keyof ReduxBookmarksTimelineAPIType,
+			{
+				after: () => internalsEventTarget.dispatchBookmarksTimelineFetched(),
+			},
+		);
 
 	const themeModule = webpack.findByProperty("_activeTheme", {
 		maxDepth: 1,

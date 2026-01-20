@@ -1,13 +1,27 @@
+/** biome-ignore-all lint/a11y/useFocusableInteractive: TODO */
+/** biome-ignore-all lint/a11y/useSemanticElements: TODO */
+/** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
 import type { ReactNode } from "react";
+import { cn } from "@/src/helpers/cn";
 
 export default function ListTile(props: {
 	startContent?: ReactNode;
 	endContent?: ReactNode;
 	title?: ReactNode;
 	description?: ReactNode;
+	onClick?: () => void;
+	className?: string;
 }) {
 	return (
-		<div className="flex flex-row gap-4 items-center py-2 px-6">
+		<div
+			className={cn(
+				"flex flex-row gap-4 items-center py-4 px-6",
+				props.className,
+				props.onClick && "hover:shadow-lighten! hover:cursor-pointer",
+			)}
+			role="button"
+			onClick={props.onClick}
+		>
 			{props.startContent}
 			<div className="flex flex-col grow">
 				{props.title && <p className="font-bold text-lg">{props.title}</p>}

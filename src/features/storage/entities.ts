@@ -1,6 +1,10 @@
 import { mergician } from "mergician";
 import { compressObject, decompressObject } from "@/src/helpers/compression";
-import type { AddEntitiesPayload } from "@/src/internals/redux";
+import {
+	type AddEntitiesPayload,
+	getTweetEntity,
+	getUserEntity,
+} from "@/src/internals/redux";
 import type { RawTweet, RawTweetUser } from "@/src/types/tweet";
 import { db } from "./definition";
 
@@ -78,7 +82,34 @@ export const getTweetEntityIds = async (id: string) => {
 	return [id];
 };
 
-export const getTweetEntityPayload = async (
+export const getTweetEntityPayloadFromReduxStore = async (
+	tweet: string,
+): Promise<AddEntitiesPayload> => {
+	const payload: AddEntitiesPayload = {
+		tweets: {},
+		users: {},
+		favedeck: { quoteOf: {} },
+	};
+	const addTweet = (id: string) => {
+		if (!payload.tweets || !payload.users || !payload.favedeck) return;
+		try {
+			const tweetEntity = getTweetEntity(id);
+			payload.tweets[tweetEntity.id_str] = tweetEntity;
+			payload.users[tweetEntity.user] = getUserEntity(tweetEntity.user);
+			if (tweetEntity.quoted_status) {
+				addTweet(tweetEntity.quoted_status);
+				payload.favedeck.quoteOf[tweetEntity.quoted_status] =
+					tweetEntity.id_str;
+			}
+		} catch (err) {
+			console.warn("failed to add tweet", tweet, "to AddEntitiesPayload", err);
+		}
+	};
+	addTweet(tweet);
+	return payload;
+};
+
+export const getTweetEntityPayloadFromDatabase = async (
 	id: string,
 ): Promise<AddEntitiesPayload> => {
 	const rawTweetEntity = await db.entities.get(`tweet-${id}`);
@@ -102,6 +133,9 @@ export const getTweetEntityPayload = async (
 		users: { [tweetEntity.user]: userEntity },
 	};
 	return tweetEntity.quoted_status
-		? mergician(payload, await getTweetEntityPayload(tweetEntity.quoted_status))
+		? mergician(
+				payload,
+				await getTweetEntityPayloadFromDatabase(tweetEntity.quoted_status),
+			)
 		: payload;
 };

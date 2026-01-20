@@ -1,3 +1,4 @@
+import type { CursorTimelineEntry } from "@/src/types/timeline";
 import { db } from "./definition";
 import type { FavedeckSettings } from "./settings";
 
@@ -20,4 +21,8 @@ const createGettersSetters = <T>(key: string) => ({
 export const kv = {
 	reloaded: createGettersSetters<string>("reloaded"),
 	settings: createGettersSetters<FavedeckSettings>("settings"),
+
+	lastBookmarksTimelineCursor: createGettersSetters<CursorTimelineEntry>(
+		"lastBookmarksTimelineCursor",
+	),
 };

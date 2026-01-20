@@ -1,6 +1,6 @@
 import * as bippy from "bippy";
 import { memoize } from "micro-memoize";
-import type { DatabaseTweet } from "../features/storage/definition";
+import { getSetting } from "../features/storage/settings";
 import type { RawTweet } from "../types/tweet";
 import { findParentNode, matchers } from "./matchers";
 import { getTweetEntity, getUserEntity, tweetEntityLoaded } from "./redux";
@@ -21,20 +21,20 @@ export const getMediaInfo = (
 	const eligibleEntities = tweet.entities.media.filter((m) =>
 		["photo", "video", "animated_gif"].includes(m.type),
 	);
-	return eligibleEntities.map((ee, idx) =>
-		ee.type === "photo"
+	return eligibleEntities.map((entity, idx) =>
+		entity.type === "photo"
 			? {
-					url: `${ee.media_url_https}?name=${quality}`,
-					thumbnail: `${ee.media_url_https}?name=thumb`,
-					width: ee.sizes[quality].w,
-					height: ee.sizes[quality].h,
+					url: `${entity.media_url_https}?name=${quality}`,
+					thumbnail: `${entity.media_url_https}?name=thumb`,
+					width: entity.sizes[quality].w,
+					height: entity.sizes[quality].h,
 					index: idx + 1,
-					type: ee.type,
+					type: entity.type,
 				}
 			: {
 					url:
 						// biome-ignore lint/style/noNonNullAssertion: nuh uh
-						ee
+						entity
 							.video_info!.variants.filter(
 								(v) =>
 									v.bitrate !== undefined &&
@@ -42,11 +42,11 @@ export const getMediaInfo = (
 							)
 							.sort((a, b) => (a.bitrate ?? 0) - (b.bitrate ?? 0))
 							.at(0)?.url ?? "",
-					thumbnail: `${ee.media_url_https}?name=thumb`,
-					width: ee.original_info.width,
-					height: ee.original_info.height,
+					thumbnail: `${entity.media_url_https}?name=thumb`,
+					width: entity.original_info.width,
+					height: entity.original_info.height,
 					index: idx + 1,
-					type: ee.type,
+					type: entity.type,
 				},
 	);
 };
@@ -67,23 +67,30 @@ export type TweetMasonryInfo = {
 	info: MediaInfo;
 };
 // this must be called AFTER adding the entities
-export const convertDatabaseTweetToMasonryInfos = (
-	tweet: DatabaseTweet,
+export const convertDatabaseTweetToMasonryInfos = async (
+	tweet: string,
 	quality = "small",
-): TweetMasonryInfo[] => {
-	if (!tweetEntityLoaded(tweet.id)) return [];
-	const tweetEntity = getTweetEntity(tweet.id);
-	const authorEntity = getUserEntity(tweetEntity.user);
-	return getMediaInfo(tweetEntity, quality).map((i) => ({
-		author: {
-			id: tweetEntity.user,
-			name: authorEntity.screen_name,
-			profileImage: authorEntity.profile_image_url_https,
-		},
-		id: `${tweet.id}-${i.index}`,
-		tweet: tweet.id,
-		info: i,
-	}));
+): Promise<TweetMasonryInfo[]> => {
+	const includeQuoteTweets = await getSetting("includeQuoteTweets");
+	const convertEntity = (id?: string): TweetMasonryInfo[] => {
+		if (!id || !tweetEntityLoaded(id)) return [];
+		const tweetEntity = getTweetEntity(id);
+		const authorEntity = getUserEntity(tweetEntity.user);
+		return [
+			...getMediaInfo(tweetEntity, quality).map((i) => ({
+				author: {
+					id: tweetEntity.user,
+					name: authorEntity.screen_name,
+					profileImage: authorEntity.profile_image_url_https,
+				},
+				id: `${id}-${i.index}`,
+				tweet: id,
+				info: i,
+			})),
+			...(includeQuoteTweets ? convertEntity(tweetEntity.quoted_status) : []),
+		];
+	};
+	return convertEntity(tweet);
 };
 
 export const findTweetFiber = (anyFiber: bippy.Fiber) =>

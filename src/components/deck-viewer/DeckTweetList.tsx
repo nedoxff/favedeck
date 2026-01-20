@@ -31,7 +31,7 @@ import { TweetWrapper } from "../external/TweetWrapper";
 import { components } from "../wrapper";
 
 const TWEET_LIST_FETCH_COUNT = 20;
-const TWEET_LIST_FETCH_THRESHOLD = 5;
+const TWEET_LIST_FETCH_THRESHOLD = 10;
 
 function GenericTweetMasonry<T extends { id: string }>(
 	props: {
@@ -77,7 +77,10 @@ function GenericTweetMasonry<T extends { id: string }>(
 		async (start, stop) => {
 			console.log(start, stop);
 			const newTweets = await props.fetcher(start, stop);
-			setTweets((current) => [...current, ...newTweets]);
+			setTweets((current) => [
+				...current,
+				...newTweets.filter((t) => !current.includes(t)),
+			]);
 		},
 		{
 			isItemLoaded: (index, items) => !!items[index],
@@ -278,9 +281,11 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 						stop - start + 1,
 					);
 					await addEntitiesFromDatabaseTweets(newTweets);
-					return newTweets.flatMap((t) =>
-						convertDatabaseTweetToMasonryInfos(t),
-					);
+					return (
+						await Promise.all(
+							newTweets.map((t) => convertDatabaseTweetToMasonryInfos(t.id)),
+						)
+					).flat();
 				}}
 				render={DeckMasonryListItem}
 				overlayRenderer={React.memo(

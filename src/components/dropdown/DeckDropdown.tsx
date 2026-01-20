@@ -12,7 +12,7 @@ import DeleteIcon from "~icons/mdi/trash-can-outline";
 import { IconButton } from "../common/IconButton";
 import ConfirmModal from "../modals/ConfirmModal";
 import EditDeckModal from "../modals/EditDeckModal";
-import SortDeckModal from "../modals/SortDeckModal";
+import SortBookmarksModal from "../modals/SortBookmarksModal";
 import { components } from "../wrapper";
 import { TwitterDropdown, TwitterDropdownItem } from "./TwitterDropdown";
 
@@ -54,7 +54,7 @@ export default function DeckDropdown(props: {
 			</TwitterDropdown>
 			{showSortModal &&
 				createPortal(
-					<SortDeckModal onClose={() => setShowSortModal(false)} />,
+					<SortBookmarksModal onClose={() => setShowSortModal(false)} />,
 					document.body,
 				)}
 		</>
