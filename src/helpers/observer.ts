@@ -37,24 +37,12 @@ export const createTweetObserver = (callback: (node: HTMLElement) => void) => {
 					))
 						callback(tweetNode as HTMLElement);
 				}
-			} else if (mutation.type === "attributes") {
-				const tweetNode = (mutation.target as HTMLElement).querySelector(
-					matchers.tweet.querySelector,
-				);
-				if (
-					tweetNode &&
-					getComputedStyle(mutation.target as HTMLElement).display === "flex"
-				)
-					callback(tweetNode as HTMLElement);
 			}
 		}
 	});
 	tweetObserver.observe(document.body, {
 		childList: true,
 		subtree: true,
-		attributes: true,
-		attributeOldValue: true,
-		attributeFilter: ["style"],
 	});
 	return tweetObserver;
 };
