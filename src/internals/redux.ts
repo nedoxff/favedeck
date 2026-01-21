@@ -156,7 +156,7 @@ export const checkDatabaseTweets = async (tweets: DatabaseTweet[]) => {
 					"since it became unbookmarked (and favedeck didn't notice)",
 				);
 				newTweets = newTweets.filter((nt) => nt.id !== payload.result);
-				await removeTweet(payload.result);
+				await removeTweet(payload.result, undefined, { markUngrouped: false });
 			} else {
 				console.log("updating entities for tweet", payload.result);
 				await updateEntitiesFromPayload(payload.entities);

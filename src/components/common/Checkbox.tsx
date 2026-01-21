@@ -7,10 +7,15 @@ export default function Checkbox(props: {
 	className?: string;
 }) {
 	return (
-		<label className={cn("flex items-center relative", props.className)}>
+		<label
+			className={cn(
+				"flex items-center relative cursor-pointer",
+				props.className,
+			)}
+		>
 			<input
 				type="checkbox"
-				className="appearance-none absolute opacity-0 w-full h-full cursor-pointer"
+				className="appearance-none absolute opacity-0 w-full h-full"
 				checked={props.checked ?? false}
 				onChange={() => props.onChecked?.(!props.checked)}
 			/>

@@ -154,7 +154,7 @@ export const webpack: WebpackHelper = {
 
 		this.common = {
 			react: {
-				React: verboseFindByProperty<ReactType>("useState", "React"),
+				React: verboseFindByProperty<ReactType>("useMemo", "React"),
 				ReactDOM: verboseFindByProperty<ReactDOMType & ReactDOMClientType>(
 					"createPortal",
 					"ReactDOM",

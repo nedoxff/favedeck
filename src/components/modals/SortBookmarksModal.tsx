@@ -34,6 +34,7 @@ import CloseIcon from "~icons/mdi/close";
 import LockIcon from "~icons/mdi/lock-outline";
 import PlusIcon from "~icons/mdi/plus";
 import { IconButton } from "../common/IconButton";
+import Spinner from "../common/Spinner";
 import { tweetComponents } from "../external/Tweet";
 import { TweetWrapper } from "../external/TweetWrapper";
 import CreateDeckModal from "./CreateDeckModal";
@@ -166,8 +167,10 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 	const [hiddenTweets, setHiddenTweets] = useState<string[]>([]);
 	const [allTweets, setAllTweets] = useState<string[]>([]);
 	const [sortedTweets, setSortedTweets] = useState<string[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
 
 	const closingRef = useRef(false);
+	const stateCursorUsedRef = useRef(false);
 	const [pendingNewDeckTweet, setPendingNewDeckTweet] = useState<
 		| {
 				id: string;
@@ -183,7 +186,6 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		});
 	}, []); */
 
-	const stateCursorUsedRef = useRef(false);
 	const refetchTweetEntries = async () => {
 		const rawEntries = getBookmarksTimelineEntries().filter(
 			(entry) => entry.type === "tweet",
@@ -202,6 +204,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		// the stuff between the state.latestSortedTweet and the cursor is guaranteed to either be completely unbookmarked (we don't care),
 		// ungrouped (would end up in db.potentiallyUngrouped and get caught) or grouped (we don't need it)
 		if (unsortedEntries.length === 0) {
+			setIsLoading(true);
 			const shouldUseCursor =
 				state &&
 				(rawEntries.at(-1)?.sortIndex ?? "") <=
@@ -235,6 +238,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 			);
 			return [...current, ...newEntries.map((item) => item.content.id)];
 		});
+		setIsLoading(false);
 	};
 
 	useEffect(() => {
@@ -428,14 +432,21 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 							</div>
 						</div>
 						<tweetComponents.ContextBridge>
-							{allTweets
-								.slice(0, 5)
-								.map(
-									(id, idx) =>
-										!sortedTweets.includes(id) && (
-											<DraggableTweetCard id={id} key={id} index={idx} />
-										),
-								)}
+							{isLoading ? (
+								<div className="h-[40%] w-full flex flex-col justify-center items-center gap-2">
+									<Spinner size="large" />
+									<p className="text-lg">Loading more bookmarks</p>
+								</div>
+							) : (
+								allTweets
+									.slice(0, 5)
+									.map(
+										(id, idx) =>
+											!sortedTweets.includes(id) && (
+												<DraggableTweetCard id={id} key={id} index={idx} />
+											),
+									)
+							)}
 						</tweetComponents.ContextBridge>
 					</DragDropProvider>
 				</div>

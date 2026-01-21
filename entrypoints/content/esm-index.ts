@@ -121,7 +121,16 @@ const initializeWebpack = async () => {
 				webpack.common.redux.api.bookmarksTimeline,
 				key as keyof ReduxBookmarksTimelineAPIType,
 				{
-					after: () => internalsEventTarget.dispatchBookmarksTimelineFetched(),
+					after: (value) => {
+						// only notify if it actually happened
+						if (
+							value &&
+							typeof value === "object" &&
+							"performed" in value &&
+							value.performed === true
+						)
+							internalsEventTarget.dispatchBookmarksTimelineFetched();
+					},
 				},
 			);
 	}
