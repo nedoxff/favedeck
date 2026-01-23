@@ -41,7 +41,6 @@ export const setReduxStoreFromFiber = (fiber: Fiber) => {
 		throw new Error("fiber doesn't have the 'store' prop");
 	// @ts-expect-error
 	reduxStore = fiber.memoizedProps.store;
-	setTimeout(() => console.log(reduxStore?.getState()), 10000);
 };
 
 export const addEntities = (payload: AddEntitiesPayload) => {

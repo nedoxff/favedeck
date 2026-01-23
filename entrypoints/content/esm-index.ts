@@ -42,6 +42,7 @@ const initializeMessageListener = () => {
 const injectUrlObserver = () => {
 	console.log("injecting url observer");
 	webpack.common.history.listen((location, _action) => {
+		overrideBookmarksTimelineActions();
 		if (
 			location.pathname.endsWith("bookmarks") &&
 			components.DeckViewer.isMounted
@@ -81,59 +82,69 @@ const injectUrlObserver = () => {
 		);
 		queueMicrotask(components.DeckViewer.create);
 	}
+
+	overrideBookmarksTimelineActions();
 };
+
+const overrideBookmarksTimelineActions = (() => {
+	let overridden = false;
+	return () => {
+		if (overridden || !webpack.common.redux.api.bookmarksTimeline) return;
+		overridden = true;
+
+		const overrideReduxAction = <T extends Record<string, unknown>>(
+			obj: T,
+			path: keyof T,
+			options?: {
+				before?: () => void;
+				after?: (value: unknown) => void;
+			},
+		) => {
+			if (!obj[path] || typeof obj[path] !== "function") return;
+			obj[path] = new Proxy(obj[path], {
+				apply(target, that, args) {
+					const originalAction = Reflect.apply(target, that, args);
+					return ((dispatch, getState) => {
+						options?.before?.();
+						const value = originalAction(dispatch, getState);
+						Promise.resolve(value).then(options?.after);
+						return value;
+					}) as ReduxDispatchAction;
+				},
+			});
+		};
+
+		if (webpack.common.redux.api.bookmarksTimeline) {
+			for (const key of [
+				"fetchBottom",
+				"fetchCursor",
+				"fetchTop",
+				"fetchInitialOrTop",
+			])
+				overrideReduxAction(
+					webpack.common.redux.api.bookmarksTimeline,
+					key as keyof ReduxBookmarksTimelineAPIType,
+					{
+						after: (value) => {
+							// only notify if it actually happened
+							if (
+								value &&
+								typeof value === "object" &&
+								"performed" in value &&
+								value.performed === true
+							)
+								internalsEventTarget.dispatchBookmarksTimelineFetched();
+						},
+					},
+				);
+		}
+	};
+})();
 
 const initializeWebpack = async () => {
 	console.log("loading webpack");
 	webpack.load();
 	await initializeComponents();
-
-	const overrideReduxAction = <T extends Record<string, unknown>>(
-		obj: T,
-		path: keyof T,
-		options?: {
-			before?: () => void;
-			after?: (value: unknown) => void;
-		},
-	) => {
-		if (!obj[path] || typeof obj[path] !== "function") return;
-		obj[path] = new Proxy(obj[path], {
-			apply(target, that, args) {
-				const originalAction = Reflect.apply(target, that, args);
-				return ((dispatch, getState) => {
-					options?.before?.();
-					const value = originalAction(dispatch, getState);
-					Promise.resolve(value).then(options?.after);
-					return value;
-				}) as ReduxDispatchAction;
-			},
-		});
-	};
-
-	if (webpack.common.redux.api.bookmarksTimeline) {
-		for (const key of [
-			"fetchBottom",
-			"fetchCursor",
-			"fetchTop",
-			"fetchInitialOrTop",
-		])
-			overrideReduxAction(
-				webpack.common.redux.api.bookmarksTimeline,
-				key as keyof ReduxBookmarksTimelineAPIType,
-				{
-					after: (value) => {
-						// only notify if it actually happened
-						if (
-							value &&
-							typeof value === "object" &&
-							"performed" in value &&
-							value.performed === true
-						)
-							internalsEventTarget.dispatchBookmarksTimelineFetched();
-					},
-				},
-			);
-	}
 
 	const themeModule = webpack.findByProperty("_activeTheme", {
 		maxDepth: 1,
@@ -226,6 +237,29 @@ const injectTweetObserver = () => {
 			components.DeckViewer.checkTweet(info.rootNode, info.id);
 		}
 	});
+
+	// the fiber observer might not always find the primary column, especially
+	// if loading the page without cache. so, if it's too late, we just find it in the DOM
+	// and do the same checks
+	const primaryColumn = document.querySelector<HTMLDivElement>(
+		"div[data-testid='primaryColumn']",
+	);
+	if (primaryColumn) checkPrimaryColumn(primaryColumn);
+};
+
+const checkPrimaryColumn = (el: HTMLElement) => {
+	if (
+		!webpack.common.history._history.location.pathname.endsWith("bookmarks") ||
+		document.querySelector("#favedeck-viewer") !== null
+	)
+		return;
+	el.style.position = "relative";
+	components.DeckViewer.originalContainer.value = el
+		.childNodes[0] as HTMLElement;
+
+	const div = document.createElement("div");
+	div.id = "favedeck-viewer";
+	el.prepend(div);
 };
 
 const injectFiberObserver = () => {
@@ -253,24 +287,10 @@ const injectFiberObserver = () => {
 					typeof fiber.memoizedProps === "object" &&
 					fiber.memoizedProps !== null &&
 					"data-testid" in fiber.memoizedProps &&
-					fiber.memoizedProps["data-testid"] === "primaryColumn"
-				) {
-					if (
-						webpack.common.history._history.location.pathname.endsWith(
-							"bookmarks",
-						) &&
-						fiber.stateNode instanceof HTMLElement &&
-						document.querySelector("#favedeck-viewer") === null
-					) {
-						fiber.stateNode.style.position = "relative";
-						components.DeckViewer.originalContainer.value = fiber.stateNode
-							.childNodes[0] as HTMLElement;
-
-						const div = document.createElement("div");
-						div.id = "favedeck-viewer";
-						fiber.stateNode.prepend(div);
-					}
-				}
+					fiber.memoizedProps["data-testid"] === "primaryColumn" &&
+					fiber.stateNode instanceof HTMLElement
+				)
+					checkPrimaryColumn(fiber.stateNode as HTMLElement);
 
 				if (fiber.key?.startsWith("tweet") && !found) {
 					found = true;

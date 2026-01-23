@@ -52,6 +52,9 @@ importers:
       dot-prop:
         specifier: ^10.1.0
         version: 10.1.0
+      fast-equals:
+        specifier: ^6.0.0
+        version: 6.0.0
       masonic:
         specifier: ^4.1.0
         version: 4.1.0(patch_hash=7ab9cef883705664fbd5963c88fd92afdf37e81eb80866241d9706856727dede)(react@19.2.0)
@@ -1619,6 +1622,10 @@ packages:
 
   fast-equals@5.4.0:
     resolution: {integrity: sha512-jt2DW/aNFNwke7AUd+Z+e6pz39KO5rzdbbFCg2sGafS4mk13MI7Z8O5z9cADNn5lhGODIgLwug6TZO2ctf7kcw==}
+    engines: {node: '>=6.0.0'}
+
+  fast-equals@6.0.0:
+    resolution: {integrity: sha512-PFhhIGgdM79r5Uztdj9Zb6Tt1zKafqVfdMGwVca1z5z6fbX7DmsySSuJd8HiP6I1j505DCS83cLxo5rmSNeVEA==}
     engines: {node: '>=6.0.0'}
 
   fast-glob@3.3.3:
@@ -4063,6 +4070,8 @@ snapshots:
   exsolve@1.0.8: {}
 
   fast-equals@5.4.0: {}
+
+  fast-equals@6.0.0: {}
 
   fast-glob@3.3.3:
     dependencies:

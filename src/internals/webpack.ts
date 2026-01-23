@@ -1,3 +1,4 @@
+import { memoize } from "micro-memoize";
 import type { CursorTimelineEntry } from "../types/timeline";
 import type { ReduxDispatchAction } from "./redux";
 
@@ -75,42 +76,45 @@ export type FindByPropertyOptions = {
 	value?: unknown;
 };
 
-function verboseFindByProperty<T>(
+const verboseFindByPropertyRequired = <T>(
 	key: string,
 	name: string,
-	fatal?: true,
-	options?: FindByPropertyOptions,
-): T;
-function verboseFindByProperty<T>(
-	key: string,
-	name: string,
-	fatal: false,
-	options?: FindByPropertyOptions,
-): T | undefined;
-function verboseFindByProperty<T>(
-	key: string,
-	name: string,
-	fatal: boolean = true,
 	options: FindByPropertyOptions = { maxDepth: 1 },
-): T | undefined {
-	const start = performance.now();
-	const result = webpack.findByProperty(key, options);
-	if (!result) {
-		if (fatal) throw new Error(`webpack: failed to find ${name}`);
-		console.warn(`webpack: failed to find ${name}`);
-		return undefined;
-	}
-	console.log(
-		`webpack: found`,
-		name,
-		"in",
-		Math.round(performance.now() - start),
-		"ms (",
-		result.id,
-		")",
-	);
-	return result.module as T;
-}
+) => {
+	const result = verboseFindByProperty<T>(key, name, options);
+	if (!result) throw new Error(`webpack: failed to find ${name}`);
+	return result;
+};
+
+const verboseFindByProperty = memoize(
+	<T>(
+		key: string,
+		name: string,
+		options: FindByPropertyOptions = { maxDepth: 1 },
+	): T | undefined => {
+		const start = performance.now();
+		const result = webpack.findByProperty(key, options);
+		if (!result) {
+			console.warn(`webpack: failed to find ${name}`);
+			return undefined;
+		}
+		console.log(
+			`webpack: found`,
+			name,
+			"in",
+			Math.round(performance.now() - start),
+			"ms (",
+			result.id,
+			")",
+		);
+		return result.module as T;
+	},
+	{
+		forceUpdate: (args): boolean =>
+			verboseFindByProperty.cache.g(args)?.v === undefined,
+		isKeyItemEqual: "deep",
+	},
+);
 
 export type WebpackHelper = {
 	rawModules: Record<string, () => unknown>;
@@ -154,29 +158,32 @@ export const webpack: WebpackHelper = {
 
 		this.common = {
 			react: {
-				React: verboseFindByProperty<ReactType>("useMemo", "React"),
-				ReactDOM: verboseFindByProperty<ReactDOMType & ReactDOMClientType>(
-					"createPortal",
-					"ReactDOM",
-				),
-				JSXRuntime: verboseFindByProperty<ReactJSXRuntimeType>(
+				React: verboseFindByPropertyRequired<ReactType>("useMemo", "React"),
+				ReactDOM: verboseFindByPropertyRequired<
+					ReactDOMType & ReactDOMClientType
+				>("createPortal", "ReactDOM"),
+				JSXRuntime: verboseFindByPropertyRequired<ReactJSXRuntimeType>(
 					"jsx",
 					"react/jsx-runtime",
 				),
 			},
-			history: verboseFindByProperty("goBack", "the history (router?) module"),
+			history: verboseFindByPropertyRequired(
+				"goBack",
+				"the history (router?) module",
+			),
 			redux: {
 				api: {
-					tweets: verboseFindByProperty(
+					tweets: verboseFindByPropertyRequired(
 						"unbookmark",
 						"tweets api actions store (redux)",
 					),
-					bookmarksTimeline: verboseFindByProperty(
-						"timelineId",
-						"bookmarks timeline urt store (redux)",
-						false,
-						{ maxDepth: 1, value: "bookmarks" },
-					),
+					get bookmarksTimeline() {
+						return verboseFindByProperty<ReduxBookmarksTimelineAPIType>(
+							"timelineId",
+							"bookmarks timeline urt store (redux)",
+							{ maxDepth: 1, value: "bookmarks" },
+						);
+					},
 				},
 			},
 		};

@@ -6,7 +6,7 @@ import {
 	useDroppable,
 } from "@dnd-kit/react";
 import { useLiveQuery } from "dexie-react-hooks";
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { internalsEventTarget } from "@/src/features/events/internals";
 import {
 	getDeckSize,
@@ -65,25 +65,14 @@ function DeckItemPreview(props: {
 	);
 }
 
-function DeckItem(props: { deck: DatabaseDeck }) {
-	const { ref, isDropTarget } = useDroppable({
-		id: props.deck.id,
-		collisionDetector: pointerIntersection,
-	});
+const InternalDeckItem = memo(function InternalDeckItem(props: {
+	deck: DatabaseDeck;
+}) {
 	const thumbnails = useLiveQuery(() => getDeckThumbnails(props.deck.id, 3));
 	const size = useLiveQuery(() => getDeckSize(props.deck.id));
-
 	return (
-		<div
-			ref={ref}
-			className="w-[calc(25%-16px)] h-60 p-2 flex flex-col gap-2 rounded-2xl"
-		>
-			<div
-				className={cn(
-					"grow rounded-xl overflow-hidden relative grid grid-cols-4 grid-rows-2 gap-1 transition-all",
-					isDropTarget ? "ring-4! ring-fd-primary!" : "ring-0",
-				)}
-			>
+		<>
+			<div className="grow rounded-xl overflow-hidden relative grid grid-cols-4 grid-rows-2 gap-1 transition-all">
 				<DeckItemPreview
 					className="col-span-2 row-span-2"
 					deck={props.deck}
@@ -108,6 +97,25 @@ function DeckItem(props: { deck: DatabaseDeck }) {
 					</p>
 				</div>
 			</div>
+		</>
+	);
+});
+
+function DeckItem(props: { deck: DatabaseDeck }) {
+	const { ref, isDropTarget } = useDroppable({
+		id: props.deck.id,
+		collisionDetector: pointerIntersection,
+	});
+
+	return (
+		<div
+			ref={ref}
+			className={cn(
+				"w-[calc(25%-16px)] h-60 p-2 flex flex-col gap-2 rounded-2xl",
+				isDropTarget ? "*:first:ring-4! *:first:ring-fd-primary!" : "",
+			)}
+		>
+			<InternalDeckItem deck={props.deck} />
 		</div>
 	);
 }
@@ -167,7 +175,9 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 	const [hiddenTweets, setHiddenTweets] = useState<string[]>([]);
 	const [allTweets, setAllTweets] = useState<string[]>([]);
 	const [sortedTweets, setSortedTweets] = useState<string[]>([]);
-	const [isLoading, setIsLoading] = useState(true);
+	const [isLoading, setIsLoading] = useState(false);
+
+	const [sortedCount, setSortedCount] = useState(0);
 
 	const closingRef = useRef(false);
 	const stateCursorUsedRef = useRef(false);
@@ -179,14 +189,9 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		| undefined
 	>(undefined);
 
-	/* useEffect(() => {
-		kv.lastBookmarksTimelineCursor.get().then((cursor) => {
-			console.log(cursor);
-			if (cursor) fetchBookmarksTimeline(cursor);
-		});
-	}, []); */
-
 	const refetchTweetEntries = async () => {
+		setIsLoading(true);
+		console.log(getBookmarksTimelineEntries());
 		const rawEntries = getBookmarksTimelineEntries().filter(
 			(entry) => entry.type === "tweet",
 		);
@@ -204,21 +209,24 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		// the stuff between the state.latestSortedTweet and the cursor is guaranteed to either be completely unbookmarked (we don't care),
 		// ungrouped (would end up in db.potentiallyUngrouped and get caught) or grouped (we don't need it)
 		if (unsortedEntries.length === 0) {
-			setIsLoading(true);
 			const shouldUseCursor =
 				state &&
 				(rawEntries.at(-1)?.sortIndex ?? "") <=
 					state.latestSortedTweet.sortIndex;
-			if (shouldUseCursor && state.cursor && !stateCursorUsedRef.current) {
+			if (
+				shouldUseCursor &&
+				state.previousCursor &&
+				!stateCursorUsedRef.current
+			) {
 				console.log(
 					"no unsorted entries, using last recorded cursor",
-					state.cursor,
+					state.previousCursor,
 				);
 				stateCursorUsedRef.current = true;
-				await fetchBookmarksTimelineFromCursor(state.cursor);
+				await fetchBookmarksTimelineFromCursor(state.previousCursor);
 			} else {
-				console.log("no unsorted entries, fetching from bottom");
 				const bottomCursor = getBottomBookmarksTimelineCursor();
+				console.log("no unsorted entries, fetching from bottom", bottomCursor);
 				if (bottomCursor) await fetchBookmarksTimelineFromCursor(bottomCursor);
 			}
 			return;
@@ -273,50 +281,6 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 			);
 	}, []);
 
-	/* useEffect(() => {
-		if (!allowedToRender) return;
-
-		queueMicrotask(() => {
-			const tweets = Array.from(
-				(components.DeckViewer.originalContainer.value?.querySelectorAll(
-					matchers.tweet.querySelector,
-				) ?? []) as HTMLElement[],
-			);
-			setAllTweets(() =>
-				tweets
-					.map(getRootNodeFromTweetElement)
-					.filter((i) => i !== null)
-					.filter((i) => {
-						const isDecked = i.rootNode.dataset.favedeckDecked === "yes";
-						if (isDecked) {
-							i.rootNode.style.display = "none";
-							setHiddenTweets((cur) => [...cur, i.id]);
-						}
-						return !isDecked;
-					})
-					.map((i) => i.id),
-			);
-		});
-
-		const tweetObserver = createTweetObserver(async (tweet) => {
-			if (closingRef.current) return;
-			const info = getRootNodeFromTweetElement(tweet);
-			const isFromWrapper =
-				info?.rootNode.parentElement?.classList.contains("fd-tweet-wrapper") ??
-				false;
-			if (!info || isFromWrapper) return;
-			const isDecked = await isTweetInDeck(info.id);
-			if (isDecked) {
-				info.rootNode.style.display = "none";
-				setHiddenTweets((cur) => [...cur, info.id]);
-			} else
-				setAllTweets((cur) =>
-					cur.includes(info.id) ? cur : [...cur, info.id],
-				);
-		});
-		return () => tweetObserver.disconnect();
-	}, []); */
-
 	const handleTweetOpacity = (
 		operation: Parameters<DragDropEvents["dragend"]>["0"]["operation"],
 	) => {
@@ -327,42 +291,56 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 
 	const onClose = useCallback(() => {
 		closingRef.current = true;
+		// remember last cursor
+		(async () => {
+			const state = await kv.sortBookmarksState.get();
+			const latestSortedTweet = await getLatestSortedTweet();
 
-		/* 		// show hidden tweets
-		for (const tweet of hiddenTweets) {
-			const node = document.querySelector(`div[data-favedeck-id="${tweet}"]`);
-			if (node) (node as HTMLElement).style.display = "flex";
-		} */
+			const previousCursor = getBottomBookmarksTimelineCursor(-2);
+			const currentCursor = getBottomBookmarksTimelineCursor(-1);
 
-		// remember last cursor (don't ask)
-		const cursor = getBottomBookmarksTimelineCursor(-3);
-		getLatestSortedTweet().then((latestSortedTweet) => {
-			console.log("cursor", cursor, "latestSortedTweet", latestSortedTweet);
-			if (latestSortedTweet && cursor) {
-				console.log("saving new state");
-				kv.sortBookmarksState.set({ cursor, latestSortedTweet });
+			if (
+				latestSortedTweet &&
+				previousCursor &&
+				currentCursor &&
+				getBottomBookmarksTimelineCursor()?.entryId !==
+					state?.currentCursor.entryId
+			) {
+				console.log(
+					"saving new state",
+					previousCursor,
+					currentCursor,
+					latestSortedTweet,
+				);
+				await kv.sortBookmarksState.set({
+					previousCursor,
+					currentCursor,
+					latestSortedTweet,
+				});
 			}
-		});
-
-		props.onClose();
+			props.onClose();
+		})();
 	}, [hiddenTweets]);
 
 	useEffect(() => {
 		if (sortedTweets.length === 5) {
 			setAllTweets((cur) => cur.slice(5));
 			setSortedTweets([]);
-		} else if (sortedTweets.length === allTweets.length)
+		} else if (sortedTweets.length === allTweets.length && !isLoading)
 			queueMicrotask(refetchTweetEntries);
-	}, [allTweets, sortedTweets]);
+	}, [allTweets, sortedTweets, isLoading]);
 
 	return (
 		<>
 			<TwitterModal className="p-0 w-[95%] h-[95%]" onClose={onClose}>
-				<div className="flex flex-row gap-4 items-center pt-8 px-8">
-					<IconButton onClick={onClose}>
-						<CloseIcon width={24} height={24} />
-					</IconButton>
-					<p className="font-bold text-2xl">Sort bookmarks</p>
+				<div className="flex flex-row justify-between items-center pt-8 px-8">
+					<div className="flex flex-row gap-4 items-center">
+						<IconButton onClick={onClose}>
+							<CloseIcon width={24} height={24} />
+						</IconButton>
+						<p className="font-bold text-2xl">Sort bookmarks</p>
+					</div>
+					<p className="opacity-75">Sorted: {sortedCount}</p>
 				</div>
 				<div className="grow relative overflow-hidden px-8">
 					<DragDropProvider
@@ -396,13 +374,10 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 											break;
 										}
 									}
-									/* 
-									const rootNode = document.querySelector(
-										`div[data-favedeck-id="${tweet}"]`,
-									) as HTMLElement | null;
-									if (rootNode) rootNode.style.display = "none"; */
+
 									setSortedTweets((cur) => [...cur, tweet]);
 									setHiddenTweets((cur) => [...cur, tweet]);
+									setSortedCount((c) => c + 1);
 								} catch (err) {
 									console.error(`failed to drop ${tweet} into ${target}`, err);
 								}
@@ -454,15 +429,10 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 			{pendingNewDeckTweet && (
 				<CreateDeckModal
 					onClose={(cancelled) => {
-						if (cancelled) {
+						if (cancelled)
 							setSortedTweets((cur) =>
 								cur.filter((t) => t !== pendingNewDeckTweet.id),
 							);
-							/* 							const node = document.querySelector(
-								`div[data-favedeck-id="${pendingNewDeckTweet.id}"]`,
-							);
-							if (node) (node as HTMLElement).style.display = "flex"; */
-						}
 						setPendingNewDeckTweet(undefined);
 					}}
 					onCreated={(id) => addTweetToDeck(id, pendingNewDeckTweet.id)}

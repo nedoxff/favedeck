@@ -28,6 +28,7 @@
 		"dexie": "^4.2.1",
 		"dexie-react-hooks": "^4.2.0",
 		"dot-prop": "^10.1.0",
+		"fast-equals": "^6.0.0",
 		"masonic": "^4.1.0",
 		"mergician": "^2.0.2",
 		"micro-memoize": "^5.1.1",

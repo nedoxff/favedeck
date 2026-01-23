@@ -26,7 +26,8 @@ export const kv = {
 	settings: createGettersSetters<FavedeckSettings>("settings"),
 
 	sortBookmarksState: createGettersSetters<{
-		cursor: CursorTimelineEntry;
+		previousCursor: CursorTimelineEntry;
+		currentCursor: CursorTimelineEntry;
 		latestSortedTweet: TweetTimelineEntry;
 	}>("sortBookmarksState"),
 };

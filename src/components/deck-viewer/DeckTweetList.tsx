@@ -3,6 +3,7 @@ import { move } from "@dnd-kit/helpers";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { useLiveQuery } from "dexie-react-hooks";
+import { deepEqual } from "fast-equals";
 import { Masonry, type MasonryProps, useInfiniteLoader } from "masonic";
 import React, { memo } from "react";
 import { tweetsEventTarget } from "@/src/features/events/tweets";
@@ -83,7 +84,7 @@ function GenericTweetMasonry<T extends { id: string }>(
 			const newTweets = await props.fetcher(start, stop);
 			setTweets((current) => [
 				...current,
-				...newTweets.filter((t) => !current.includes(t)),
+				...newTweets.filter((t) => !current.some((t1) => deepEqual(t, t1))),
 			]);
 		},
 		{
