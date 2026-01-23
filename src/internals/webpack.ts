@@ -55,8 +55,8 @@ export type ReduxTweetsAPIType = {
 	unbookmark: (id: string) => ReduxDispatchAction;
 	fetchOne: (id: string) => ReduxDispatchAction;
 	fetchOneIfNeeded: (id: string) => ReduxDispatchAction;
-	fetchMultiple: (ids: string[]) => ReduxDispatchAction;
-	fetchMultipleIfNeeded: (ids: string[]) => ReduxDispatchAction;
+	fetchMany: (ids: string[]) => ReduxDispatchAction;
+	fetchManyIfNeeded: (ids: string[]) => ReduxDispatchAction;
 };
 
 export type ReduxBookmarksTimelineAPIType = {

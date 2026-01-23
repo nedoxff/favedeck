@@ -132,33 +132,29 @@ export const checkDatabaseTweets = async (tweets: DatabaseTweet[]) => {
 
 	try {
 		if (!reduxStore) throw new Error("redux store is undefined");
-		const payloads = await Promise.resolve(
-			reduxStore.dispatch<
-				{
-					entities: AddEntitiesPayload;
-					result: string;
-				}[]
-			>(webpack.common.redux.api.tweets.fetchMultipleIfNeeded(ids)),
+		const payload = await Promise.resolve(
+			reduxStore.dispatch<{
+				entities: AddEntitiesPayload;
+				result: string[];
+			}>(webpack.common.redux.api.tweets.fetchManyIfNeeded(ids)),
 		);
-		if (!payloads) return tweets;
-		console.log(payloads);
+		if (!payload) return tweets;
+		await updateEntitiesFromPayload(payload.entities);
+		console.log(payload);
 
 		let newTweets = tweets;
-		for (const payload of payloads) {
-			const payloadTweets = payload.entities.tweets ?? {};
-			if (!(payload.result in payloadTweets)) continue;
+		const tweetEntities = payload.entities.tweets ?? {};
+		for (const tweet of payload.result) {
+			if (!(tweet in tweetEntities)) continue;
 			// TODO: this is potentially undesired?
-			if (!payloadTweets[payload.result].bookmarked) {
+			if (!tweetEntities[tweet].bookmarked) {
 				console.log(
 					"wiping tweet",
 					payload.result,
 					"since it became unbookmarked (and favedeck didn't notice)",
 				);
-				newTweets = newTweets.filter((nt) => nt.id !== payload.result);
-				await removeTweet(payload.result, undefined, { markUngrouped: false });
-			} else {
-				console.log("updating entities for tweet", payload.result);
-				await updateEntitiesFromPayload(payload.entities);
+				newTweets = newTweets.filter((nt) => nt.id !== tweet);
+				await removeTweet(tweet, undefined, { markUngrouped: false });
 			}
 		}
 		return newTweets;

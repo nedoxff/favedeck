@@ -1,6 +1,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { forwardRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { TypedEventTarget } from "typescript-event-target";
 import { decksEventTarget } from "@/src/features/events/decks";
 import { tweetsEventTarget } from "@/src/features/events/tweets";
 import { getDeck } from "@/src/features/storage/decks";
@@ -194,6 +195,19 @@ function InternalDeckViewer() {
 	);
 }
 
+class DeckViewerEventTarget extends TypedEventTarget<{
+	mounted: Event;
+	unmounted: Event;
+}> {
+	dispatchMounted() {
+		this.dispatchTypedEvent("mounted", new Event("mounted"));
+	}
+
+	dispatchUnmounted() {
+		this.dispatchTypedEvent("unmounted", new Event("unmounted"));
+	}
+}
+
 export const DeckViewer: {
 	create: () => void;
 	hide: () => void;
@@ -204,10 +218,12 @@ export const DeckViewer: {
 		show: () => void;
 		hide: () => void;
 	};
+	on: DeckViewerEventTarget["addEventListener"];
 } = (() => {
 	let root: Root | undefined;
 	let originalContainer: HTMLElement | undefined;
 	let container: HTMLElement | undefined;
+	const eventTarget: DeckViewerEventTarget = new DeckViewerEventTarget();
 
 	return {
 		async create() {
@@ -225,6 +241,7 @@ export const DeckViewer: {
 			console.log("mounting new DeckViewer");
 			root = createRoot(container);
 			root.render(<InternalDeckViewer />);
+			eventTarget.dispatchMounted();
 		},
 		hide() {
 			console.log("unmounting DeckViewer");
@@ -233,6 +250,7 @@ export const DeckViewer: {
 			if (container?.isConnected) container.remove();
 			container = undefined;
 			decksEventTarget.setCurrentDeck(null);
+			eventTarget.dispatchUnmounted();
 		},
 		get isMounted() {
 			return root !== undefined && (container?.isConnected ?? false);
@@ -283,5 +301,7 @@ export const DeckViewer: {
 				this.hide();
 			},
 		},
+		on: (type, listener, options) =>
+			eventTarget.addEventListener(type, listener, options),
 	};
 })();

@@ -56,6 +56,12 @@ const injectUrlObserver = () => {
 		}
 
 		const previousRoute = webpack.common.history._locationsHistory.at(-1);
+		console.log(location, components.DeckViewer, previousRoute);
+		console.log(
+			location.pathname.endsWith("bookmarks"),
+			!components.DeckViewer.isMounted,
+			!(previousRoute?.isModalRoute ?? false),
+		);
 		const shouldCreateViewer =
 			location.pathname.endsWith("bookmarks") &&
 			!components.DeckViewer.isMounted &&
@@ -229,13 +235,22 @@ const injectTweetObserver = () => {
 		);
 	};
 
-	createTweetObserver((tweet) => {
+	const handleTweet = (tweet: HTMLElement) => {
 		injectTweetCallbacks(tweet as HTMLElement);
 		if (components.DeckViewer.isMounted) {
 			const info = getRootNodeFromTweetElement(tweet);
 			if (!info) return;
 			components.DeckViewer.checkTweet(info.rootNode, info.id);
 		}
+	};
+
+	createTweetObserver(handleTweet);
+	components.DeckViewer.on("mounted", () => {
+		console.log("DeckViewer mounted, rechecking tweets");
+		for (const tweet of document.querySelectorAll<HTMLElement>(
+			matchers.tweet.querySelector,
+		))
+			handleTweet(tweet);
 	});
 
 	// the fiber observer might not always find the primary column, especially
