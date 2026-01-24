@@ -1,3 +1,4 @@
+import * as child from "node:child_process";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import icons from "unplugin-icons/vite";
@@ -56,6 +57,14 @@ export default defineConfig({
 			icons({ compiler: "jsx", jsx: "react" }),
 			svgr(),
 		],
+		define: {
+			"import.meta.env.VITE_APP_HASH": JSON.stringify(
+				child.execSync("git log -1 --pretty=%h").toString().trim(),
+			),
+			"import.meta.env.VITE_APP_VERSION": JSON.stringify(
+				process.env.npm_package_version,
+			),
+		},
 	}),
 	manifest: {
 		host_permissions: ["*://*.x.com/*", "*://*.twitter.com/*"],
