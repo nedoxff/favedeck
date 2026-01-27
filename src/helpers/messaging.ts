@@ -36,12 +36,16 @@ export const isFromPostMessage = (obj: unknown) => {
 	);
 };
 
-export const sendContentToForwarder = (payload: ContentMessagePayload) => {
+export const sendContentToForwarder = (
+	payload: Omit<ContentMessagePayload, "source">,
+) => {
 	console.log(`[content -> forwarder] ${payload.type}`);
-	window.postMessage(payload, "*");
+	window.postMessage({ ...payload, source: "favedeck" }, "*");
 };
 
-export const sendForwarderToContent = (payload: ForwarderMessagePayload) => {
+export const sendForwarderToContent = (
+	payload: Omit<ForwarderMessagePayload, "source">,
+) => {
 	console.log(`[forwarder -> content] ${payload.type}`);
-	window.postMessage(payload, "*");
+	window.postMessage({ ...payload, source: "favedeck" }, "*");
 };

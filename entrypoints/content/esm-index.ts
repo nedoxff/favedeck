@@ -34,7 +34,6 @@ const initializeMessageListener = () => {
 		}
 	});
 	sendContentToForwarder({
-		source: "favedeck",
 		type: "hello",
 	});
 };

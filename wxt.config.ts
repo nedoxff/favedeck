@@ -1,6 +1,6 @@
 import * as child from "node:child_process";
+import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
-import path from "path";
 import icons from "unplugin-icons/vite";
 import type { Plugin } from "vite";
 import svgr from "vite-plugin-svgr";
@@ -12,11 +12,13 @@ const twitterReactHijacker = (): Plugin => {
 		enforce: "pre",
 		resolveId(source, importer) {
 			if (
-				source !== "react" &&
-				source !== "react-dom" &&
-				source !== "react-dom/client" &&
-				source !== "react/jsx-runtime" &&
-				source !== "react/jsx-dev-runtime"
+				![
+					"react",
+					"react-dom",
+					"react-dom/client",
+					"react/jsx-runtime",
+					"react/jsx-dev-runtime",
+				].includes(source)
 			)
 				return null;
 
@@ -64,6 +66,9 @@ export default defineConfig({
 			"import.meta.env.VITE_APP_VERSION": JSON.stringify(
 				process.env.npm_package_version,
 			),
+		},
+		build: {
+			sourcemap: true,
 		},
 	}),
 	manifest: {

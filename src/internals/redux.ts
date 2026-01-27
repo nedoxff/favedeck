@@ -150,7 +150,7 @@ export const checkDatabaseTweets = async (tweets: DatabaseTweet[]) => {
 			if (!tweetEntities[tweet].bookmarked) {
 				console.log(
 					"wiping tweet",
-					payload.result,
+					tweet,
 					"since it became unbookmarked (and favedeck didn't notice)",
 				);
 				newTweets = newTweets.filter((nt) => nt.id !== tweet);

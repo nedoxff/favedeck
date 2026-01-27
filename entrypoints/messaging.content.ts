@@ -14,7 +14,6 @@ export default defineContentScript({
 			switch (payload.type) {
 				case "hello":
 					sendForwarderToContent({
-						source: "favedeck",
 						type: "hello-acknowledge",
 					});
 					break;

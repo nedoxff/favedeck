@@ -191,7 +191,6 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 
 	const refetchTweetEntries = async () => {
 		setIsLoading(true);
-		console.log(getBookmarksTimelineEntries());
 		const rawEntries = getBookmarksTimelineEntries().filter(
 			(entry) => entry.type === "tweet",
 		);

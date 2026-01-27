@@ -9,7 +9,7 @@ export type FavedeckSettings = {
 
 export const DEFAULT_SETTINGS: FavedeckSettings = {
 	includeQuoteTweets: true,
-	updateStatistics: true,
+	updateStatistics: false,
 };
 
 export const getSetting = async (path: Paths<FavedeckSettings>) =>
