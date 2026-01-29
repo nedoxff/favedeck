@@ -5,11 +5,7 @@ import { decksEventTarget } from "@/src/features/events/decks";
 import { internalsEventTarget } from "@/src/features/events/internals";
 import { kv } from "@/src/features/storage/kv";
 import { DEFAULT_SETTINGS } from "@/src/features/storage/settings";
-import {
-	type ForwarderMessagePayload,
-	isFromPostMessage,
-	sendContentToForwarder,
-} from "@/src/helpers/messaging";
+import { websiteMessenger } from "@/src/helpers/messaging-content";
 import { createTweetObserver, waitForSelector } from "@/src/helpers/observer";
 import { getRootNodeFromTweetElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
@@ -23,19 +19,7 @@ import {
 } from "@/src/internals/webpack";
 
 const initializeMessageListener = () => {
-	window.addEventListener("message", (ev) => {
-		if (!isFromPostMessage(ev.data)) return;
-		const payload = ev.data as ForwarderMessagePayload;
-		switch (payload.type) {
-			case "hello-acknowledge":
-				break;
-			case "request-state":
-				break;
-		}
-	});
-	sendContentToForwarder({
-		type: "hello",
-	});
+	// todo: nothing needed for now
 };
 
 const injectUrlObserver = () => {
@@ -182,6 +166,8 @@ const initializeWebpack = async () => {
 			th.colors.maskColor,
 		);
 		document.documentElement.style.setProperty("--fd-danger", th.colors.red500);
+
+		websiteMessenger.sendMessage("syncIcon", th.colors[th.primaryColorName]);
 	});
 
 	const primaryColor =
@@ -201,6 +187,8 @@ const initializeWebpack = async () => {
 	console.log(`bg color: ${bgColor}`);
 	console.log(`mask (modal) color: ${maskColor}`);
 	console.log(`danger color: ${dangerColor}`);
+
+	websiteMessenger.sendMessage("syncIcon", primaryColor);
 };
 
 const injectTweetObserver = () => {

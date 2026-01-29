@@ -73,6 +73,7 @@ export default defineConfig({
 	}),
 	manifest: {
 		host_permissions: ["*://*.x.com/*", "*://*.twitter.com/*"],
+		web_accessible_resources: [{ resources: ["img/**"], matches: ["*://*/*"] }],
 	},
 	manifestVersion: 3,
 });

@@ -1,25 +1,16 @@
-import {
-	type ContentMessagePayload,
-	isFromPostMessage,
-	sendForwarderToContent,
-} from "@/src/helpers/messaging";
+import { websiteMessenger } from "@/src/helpers/messaging-content";
+import { messenger } from "@/src/helpers/messaging-extension";
+import { generateColoredIconBundle } from "@/src/isolated-or-background/icon-generator";
 
 export default defineContentScript({
 	matches: ["*://*.x.com/*", "*://*.twitter.com/*"],
 	runAt: "document_start",
 	async main(ctx) {
-		window.addEventListener("message", (ev) => {
-			if (!isFromPostMessage(ev.data)) return;
-			const payload = ev.data as ContentMessagePayload;
-			switch (payload.type) {
-				case "hello":
-					sendForwarderToContent({
-						type: "hello-acknowledge",
-					});
-					break;
-				case "sync-theme":
-					break;
-			}
-		});
+		websiteMessenger.onMessage("syncIcon", async (message) =>
+			messenger.sendMessage(
+				"setIcon",
+				await generateColoredIconBundle(message.data),
+			),
+		);
 	},
 });

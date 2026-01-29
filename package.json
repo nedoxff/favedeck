@@ -20,6 +20,9 @@
 		"@dnd-kit/helpers": "^0.2.3",
 		"@dnd-kit/react": "^0.2.3",
 		"@tailwindcss/vite": "^4.1.18",
+		"@types/pica": "^9.0.5",
+		"@webext-core/messaging": "^2.3.0",
+		"better-result": "^2.6.0",
 		"bippy": "^0.5.28",
 		"buffer": "^6.0.3",
 		"clsx": "^2.1.1",
@@ -30,6 +33,7 @@
 		"masonic": "^4.1.0",
 		"mergician": "^2.0.2",
 		"micro-memoize": "^5.1.1",
+		"pica": "^9.0.1",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4",
 		"react-error-boundary": "^6.1.0",
@@ -58,6 +62,11 @@
 	"pnpm": {
 		"patchedDependencies": {
 			"masonic": "patches/masonic.patch"
-		}
+		},
+		"onlyBuiltDependencies": [
+			"esbuild",
+			"sharp",
+			"spawn-sync"
+		]
 	}
 }
