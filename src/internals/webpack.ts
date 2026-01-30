@@ -1,4 +1,6 @@
-import { memoize } from "micro-memoize";
+import { Result, type UnhandledException } from "better-result";
+import { type Memoized, memoize } from "micro-memoize";
+import { WebpackNotFoundError } from "../helpers/errors";
 import type { CursorTimelineEntry } from "../types/timeline";
 import type { ReduxDispatchAction } from "./redux";
 
@@ -39,12 +41,10 @@ export type HistoryType = {
 // @ts-expect-error
 const WEBPACK_SOURCE: unknown[] = window.webpackChunk_twitter_responsive_web;
 
-export type WebpackSearchResult =
-	| {
-			id: string;
-			module: unknown;
-	  }
-	| undefined;
+export type WebpackSearchResult<T> = {
+	id: string;
+	module: T;
+};
 
 type WebpackCacheEntry = { id: number; loaded: boolean; exports: unknown };
 type WebpackCache = Record<string, WebpackCacheEntry>;
@@ -76,56 +76,23 @@ export type FindByPropertyOptions = {
 	value?: unknown;
 };
 
-const verboseFindByPropertyRequired = <T>(
-	key: string,
-	name: string,
-	options: FindByPropertyOptions = { maxDepth: 1 },
-) => {
-	const result = verboseFindByProperty<T>(key, name, options);
-	if (!result) throw new Error(`webpack: failed to find ${name}`);
-	return result;
-};
-
-const verboseFindByProperty = memoize(
-	<T>(
-		key: string,
-		name: string,
-		options: FindByPropertyOptions = { maxDepth: 1 },
-	): T | undefined => {
-		const start = performance.now();
-		const result = webpack.findByProperty(key, options);
-		if (!result) {
-			console.warn(`webpack: failed to find ${name}`);
-			return undefined;
-		}
-		console.log(
-			`webpack: found`,
-			name,
-			"in",
-			Math.round(performance.now() - start),
-			"ms (",
-			result.id,
-			")",
-		);
-		return result.module as T;
-	},
-	{
-		forceUpdate: (args): boolean =>
-			verboseFindByProperty.cache.g(args)?.v === undefined,
-		isKeyItemEqual: "deep",
-	},
-);
-
 export type WebpackHelper = {
 	rawModules: Record<string, () => unknown>;
 	cache: WebpackCache;
 
-	load: () => void;
-	findByProperty: (
-		key: string,
-		opts?: FindByPropertyOptions,
-	) => WebpackSearchResult;
-	findByCode: (code: string) => WebpackSearchResult;
+	load: () => Result<void, WebpackNotFoundError | UnhandledException>;
+	findByProperty: Memoized<
+		<T>(
+			key: string,
+			moduleName: string,
+			opts?: FindByPropertyOptions,
+		) => Result<WebpackSearchResult<T>, WebpackNotFoundError>,
+		{ isKeyItemEqual: "deep"; forceUpdate: (args: unknown[]) => boolean }
+	>;
+	findByCode: <T>(
+		code: string,
+		moduleName: string,
+	) => Result<WebpackSearchResult<T>, WebpackNotFoundError>;
 
 	common: {
 		react: {
@@ -147,90 +114,130 @@ export const webpack: WebpackHelper = {
 	cache: {},
 	rawModules: {},
 
-	load() {
-		// @ts-expect-error
-		const require: ((id: string) => unknown) & {
-			m: Record<string, () => unknown>;
-			c: WebpackCache;
-		} = WEBPACK_SOURCE.push([[Symbol()], {}, (re: unknown) => re]);
-		this.rawModules = require.m;
-		this.cache = require.c;
+	load: () =>
+		Result.gen(function* () {
+			yield* Result.try(() => {
+				// @ts-expect-error
+				const require: ((id: string) => unknown) & {
+					m: Record<string, () => unknown>;
+					c: WebpackCache;
+				} = WEBPACK_SOURCE.push([[Symbol()], {}, (re: unknown) => re]);
+				webpack.rawModules = require.m;
+				webpack.cache = require.c;
+			});
 
-		this.common = {
-			react: {
-				React: verboseFindByPropertyRequired<ReactType>("useMemo", "React"),
-				ReactDOM: verboseFindByPropertyRequired<
-					ReactDOMType & ReactDOMClientType
-				>("createPortal", "ReactDOM"),
-				JSXRuntime: verboseFindByPropertyRequired<ReactJSXRuntimeType>(
-					"jsx",
-					"react/jsx-runtime",
-				),
-			},
-			history: verboseFindByPropertyRequired(
-				"goBack",
-				"the history (router?) module",
-			),
-			redux: {
-				api: {
-					tweets: verboseFindByPropertyRequired(
-						"unbookmark",
-						"tweets api actions store (redux)",
-					),
-					get bookmarksTimeline() {
-						return verboseFindByProperty<ReduxBookmarksTimelineAPIType>(
-							"timelineId",
-							"bookmarks timeline urt store (redux)",
-							{ maxDepth: 1, value: "bookmarks" },
-						);
+			webpack.common = {
+				react: {
+					React: (yield* webpack.findByProperty<ReactType>("useMemo", "React"))
+						.module,
+					ReactDOM: (yield* webpack.findByProperty<
+						ReactDOMType & ReactDOMClientType
+					>("createPortal", "ReactDOM")).module,
+					JSXRuntime: (yield* webpack.findByProperty<ReactJSXRuntimeType>(
+						"jsx",
+						"react/jsx-runtime",
+					)).module,
+				},
+				history: (yield* webpack.findByProperty<HistoryType>(
+					"goBack",
+					"the history (router?) module",
+					{ maxDepth: 1 },
+				)).module,
+				redux: {
+					api: {
+						tweets: (yield* webpack.findByProperty<ReduxTweetsAPIType>(
+							"unbookmark",
+							"tweets api actions store (redux)",
+							{ maxDepth: 1 },
+						)).module,
+						get bookmarksTimeline() {
+							return webpack
+								.findByProperty<ReduxBookmarksTimelineAPIType>(
+									"timelineId",
+									"bookmarks timeline urt store (redux)",
+									{ maxDepth: 1, value: "bookmarks" },
+								)
+								.map((r) => r.module)
+								.unwrapOr(undefined);
+						},
 					},
 				},
-			},
-		};
+			};
 
-		console.log(this.common);
-	},
+			console.log(webpack.common);
+			return Result.ok();
+		}),
 
-	findByProperty(key, opts) {
-		const matches = (obj: unknown, key: string, depth = 0): unknown | null => {
-			try {
-				if (typeof obj !== "object" || obj === null) return null;
-				if (key in obj) {
-					if (
-						opts &&
-						opts?.value !== undefined &&
-						(obj as Record<string, unknown>)[key] !== opts.value
-					)
-						return null;
-					return obj;
+	findByProperty: memoize(
+		<T>(key: string, moduleName: string, options?: FindByPropertyOptions) => {
+			const start = performance.now();
+			const matches = (
+				obj: unknown,
+				key: string,
+				depth = 0,
+			): unknown | null => {
+				try {
+					if (typeof obj !== "object" || obj === null) return null;
+					if (key in obj) {
+						if (
+							options &&
+							options?.value !== undefined &&
+							(obj as Record<string, unknown>)[key] !== options.value
+						)
+							return null;
+						return obj;
+					}
+					if (depth >= (options?.maxDepth ?? 0)) return null;
+
+					for (const value of Object.values(obj)) {
+						const result = matches(value, key, depth + 1);
+						if (result !== null) return result;
+					}
+					return null;
+				} catch (_) {
+					return null;
 				}
-				if (depth >= (opts?.maxDepth ?? 0)) return null;
+			};
 
-				for (const value of Object.values(obj)) {
-					const result = matches(value, key, depth + 1);
-					if (result !== null) return result;
-				}
-				return null;
-			} catch (_) {
-				return null;
+			let entry: [string, WebpackCacheEntry, unknown] | undefined;
+			for (const kv of Object.entries(webpack.cache)) {
+				const match = matches(kv[1].exports, key);
+				if (match !== null) entry = [...kv, match];
 			}
-		};
 
-		let entry: [string, WebpackCacheEntry, unknown] | undefined;
-		for (const kv of Object.entries(this.cache)) {
-			const match = matches(kv[1].exports, key);
-			if (match !== null) entry = [...kv, match];
-		}
-		return entry ? { id: entry[0], module: entry[2] } : undefined;
-	},
+			if (entry)
+				console.log(
+					"webpack: found",
+					moduleName,
+					"in",
+					Math.round(performance.now() - start),
+					"ms (",
+					entry[0],
+					")",
+				);
+			else console.warn("webpack: failed to find", moduleName);
 
-	findByCode(code) {
+			return entry
+				? Result.ok({ id: entry[0], module: entry[2] as T })
+				: Result.err(
+						new WebpackNotFoundError({ key, name: moduleName, options }),
+					);
+		},
+		{
+			forceUpdate: (args): boolean =>
+				webpack.findByProperty.cache.g(args)?.v === undefined,
+			isKeyItemEqual: "deep",
+		},
+	),
+
+	findByCode<T>(code: string, moduleName: string) {
 		const entry = Object.entries(this.rawModules).find((kv) =>
 			Function.prototype.toString.call(kv[1]).includes(code),
 		);
+
 		return entry
-			? { id: entry[0], module: this.cache[entry[0]].exports }
-			: undefined;
+			? Result.ok({ id: entry[0], module: this.cache[entry[0]].exports as T })
+			: Result.err(new WebpackNotFoundError({ key: code, name: moduleName }));
 	},
 
 	// biome-ignore lint/style/noNonNullAssertion: i don't care!!!

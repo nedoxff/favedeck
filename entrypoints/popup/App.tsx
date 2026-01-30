@@ -1,30 +1,23 @@
 import { useState } from "react";
+import { messenger } from "@/src/helpers/messaging-extension";
+import type { ExtensionState } from "@/src/helpers/state";
 
 function App() {
-	const [count, setCount] = useState(0);
+	const [state, setState] = useState<ExtensionState | undefined>(undefined);
 
+	const initialized = useRef(false);
 	useEffect(() => {
-		browser.tabs
-			.query({ active: true, currentWindow: true })
-			.then((t) => setCount(t.at(0)?.id ?? -1));
+		if (initialized.current) return;
+		messenger.onMessage("setState", (message) => setState(message.data));
+		browser.tabs.query({ active: true, currentWindow: true }).then((tab) =>
+			messenger.sendMessage("requestState", undefined, {
+				tabId: tab[0].id ?? 0,
+			}),
+		);
+		initialized.current = true;
 	}, []);
 
-	return (
-		<>
-			<h1>WXT + React</h1>
-			<div className="card">
-				<button onClick={() => setCount((count) => count + 1)}>
-					count is {count}
-				</button>
-				<p>
-					Edit <code>src/App.tsx</code> and save to test HMR
-				</p>
-			</div>
-			<p className="read-the-docs">
-				Click on the WXT and React logos to learn more
-			</p>
-		</>
-	);
+	return <>{state && <p>{JSON.stringify(state)}</p>}</>;
 }
 
 export default App;
