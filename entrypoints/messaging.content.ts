@@ -20,8 +20,9 @@ export default defineContentScript({
 		websiteMessenger.onMessage("syncState", (message) =>
 			ignoreErrors(() => messenger.sendMessage("setState", message.data)),
 		);
-		messenger.onMessage("requestState", () =>
-			ignoreErrors(() => websiteMessenger.sendMessage("requestState")),
+
+		messenger.onMessage("syncPopup", () =>
+			websiteMessenger.sendMessage("syncPopup"),
 		);
 	},
 });

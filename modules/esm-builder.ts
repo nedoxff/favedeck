@@ -62,7 +62,10 @@ export default defineWxtModule((wxt) => {
 
 	// Rebuilt during development
 	wxt.hooks.hookOnce("build:done", () => {
-		wxt.server?.watcher.on("all", async (_, __) => {
+		wxt.server?.watcher.on("all", async (event, path, stats) => {
+			if (path.includes("popup")) return;
+			console.log("[esm-builder] rebuilding due to", path);
+
 			await buildEsmContentScript();
 			wxt.server?.reloadContentScript({
 				contentScript: {

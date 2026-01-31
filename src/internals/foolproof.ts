@@ -7,14 +7,7 @@ import { memoize } from "micro-memoize";
 
 export const getUserId = memoize(async (tweetFiber?: Fiber) => {
 	// window.__META_DATA__ has a lot of goodies
-	if (
-		"__META_DATA__" in window &&
-		typeof window.__META_DATA__ === "object" &&
-		window.__META_DATA__ !== null &&
-		"userId" in window.__META_DATA__ &&
-		typeof window.__META_DATA__.userId === "string"
-	)
-		return window.__META_DATA__.userId;
+	if (window.__META_DATA__) return window.__META_DATA__.userId;
 
 	// the twid cookie is also supposed to be present i guess...
 	try {

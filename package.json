@@ -22,6 +22,7 @@
 		"@tailwindcss/vite": "^4.1.18",
 		"@types/pica": "^9.0.5",
 		"@webext-core/messaging": "^2.3.0",
+		"@webext-core/storage": "^1.2.0",
 		"better-result": "^2.6.0",
 		"bippy": "^0.5.28",
 		"buffer": "^6.0.3",

@@ -1,6 +1,7 @@
 import { Result, type UnhandledException } from "better-result";
 import { type Memoized, memoize } from "micro-memoize";
 import { WebpackNotFoundError } from "../helpers/errors";
+import type { TwitterThemeModule } from "../types/theme";
 import type { CursorTimelineEntry } from "../types/timeline";
 import type { ReduxDispatchAction } from "./redux";
 
@@ -107,6 +108,7 @@ export type WebpackHelper = {
 				bookmarksTimeline?: ReduxBookmarksTimelineAPIType;
 			};
 		};
+		theme: TwitterThemeModule;
 	};
 };
 
@@ -162,6 +164,13 @@ export const webpack: WebpackHelper = {
 						},
 					},
 				},
+				theme: (yield* webpack.findByProperty<TwitterThemeModule>(
+					"_activeTheme",
+					"Theme module",
+					{
+						maxDepth: 1,
+					},
+				)).module,
 			};
 
 			console.log(webpack.common);

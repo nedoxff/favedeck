@@ -1,54 +1,11 @@
 import * as child from "node:child_process";
+import * as fs from "node:fs/promises";
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import icons from "unplugin-icons/vite";
-import type { Plugin } from "vite";
+import type { Plugin, ViteDevServer } from "vite";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "wxt";
-
-const twitterReactHijacker = (): Plugin => {
-	return {
-		name: "twitter-react-hijacker",
-		enforce: "pre",
-		resolveId(source, importer) {
-			if (
-				![
-					"react",
-					"react-dom",
-					"react-dom/client",
-					"react/jsx-runtime",
-					"react/jsx-dev-runtime",
-				].includes(source)
-			)
-				return null;
-
-			if (!importer?.includes("popup")) {
-				console.log(`hijacking ${source} import from ${importer}`);
-
-				switch (source) {
-					case "react":
-						return path.resolve(
-							__dirname,
-							"src/internals/proxies/react-proxy.ts",
-						);
-					case "react-dom":
-					case "react-dom/client":
-						return path.resolve(
-							__dirname,
-							"src/internals/proxies/react-dom-proxy.ts",
-						);
-					case "react/jsx-runtime":
-					case "react/jsx-dev-runtime":
-						return path.resolve(
-							__dirname,
-							"src/internals/proxies/react-jsx-runtime-proxy.ts",
-						);
-				}
-			}
-			return null;
-		},
-	};
-};
 
 export default defineConfig({
 	modules: ["@wxt-dev/module-react"],
@@ -72,8 +29,64 @@ export default defineConfig({
 		},
 	}),
 	manifest: {
+		permissions: ["storage", "tabs"],
 		host_permissions: ["*://*.x.com/*", "*://*.twitter.com/*"],
 		web_accessible_resources: [{ resources: ["img/**"], matches: ["*://*/*"] }],
 	},
 	manifestVersion: 3,
 });
+
+const twitterReactHijacker = async (): Promise<Plugin> => {
+	let devServer: ViteDevServer | undefined;
+	const resolveMap: Record<string, string> = {
+		react: path.resolve(__dirname, "src/internals/proxies/react-proxy.ts"),
+		"react-dom": path.resolve(
+			__dirname,
+			"src/internals/proxies/react-dom-proxy.ts",
+		),
+		"react-dom/client": path.resolve(
+			__dirname,
+			"src/internals/proxies/react-dom-proxy.ts",
+		),
+		"react/jsx-runtime": path.resolve(
+			__dirname,
+			"src/internals/proxies/react-jsx-runtime-proxy.ts",
+		),
+		"react/jsx-dev-runtime": path.resolve(
+			__dirname,
+			"src/internals/proxies/react-jsx-runtime-proxy.ts",
+		),
+	};
+	const SOURCES: Set<string> = new Set([
+		"react",
+		"react-dom",
+		"react-dom/client",
+		"react/jsx-runtime",
+		"react/jsx-dev-runtime",
+	]);
+
+	return {
+		name: "twitter-react-hijacker",
+		enforce: "pre",
+		configureServer(server) {
+			devServer = server;
+		},
+		resolveId(source, importer) {
+			if (!SOURCES.has(source)) return null;
+			if (!importer) return null;
+
+			if (importer.includes("popup")) return null;
+			if (devServer) {
+				const module = devServer.moduleGraph.getModuleById(importer);
+				for (const parent of module?.importers ?? [])
+					if ((parent.id ?? "").includes("popup")) return null;
+			} else {
+				const moduleInfo = this.getModuleInfo(importer);
+				for (const parentImporter of moduleInfo?.importers ?? [])
+					if (parentImporter.includes("popup")) return null;
+			}
+
+			return resolveMap[source];
+		},
+	};
+};

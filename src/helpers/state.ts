@@ -1,3 +1,4 @@
+import type { GlobalMetadata } from "../window";
 import { ignoreErrors } from "./errors";
 import { websiteMessenger } from "./messaging-content";
 
@@ -25,6 +26,11 @@ export type ExtensionState = {
 
 	fine: boolean;
 	[EXTENSION_STATE_IDENTITY]?: ExtensionState;
+};
+
+export type ExtensionDebugInfo = {
+	reactVersion: string;
+	globalMetadata?: Omit<GlobalMetadata, "cookies" | "tags">;
 };
 
 const EXTENSION_STATE_IDENTITY = Symbol("extension-state-proxy-target");

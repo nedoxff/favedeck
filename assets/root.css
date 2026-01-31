@@ -15,8 +15,8 @@
 
 @theme inline {
 	--color-fd-primary: var(--fd-primary);
-	--color-fd-mask: var(--fd-mask);
 	--color-fd-bg: var(--fd-bg);
+	--color-fd-mask: var(--fd-mask);
 	--color-fd-danger: var(--fd-danger);
 
 	--color-fd-bg-15: color-mix(in srgb, var(--fd-bg), white 15%);

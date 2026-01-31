@@ -34,6 +34,9 @@ importers:
       '@webext-core/messaging':
         specifier: ^2.3.0
         version: 2.3.0
+      '@webext-core/storage':
+        specifier: ^1.2.0
+        version: 1.2.0
       better-result:
         specifier: ^2.6.0
         version: 2.6.0
@@ -1054,6 +1057,9 @@ packages:
 
   '@webext-core/messaging@2.3.0':
     resolution: {integrity: sha512-gChSVKdRs7JEq5hFH0jVROSvTq+sKq9afXTA/gBswep3RWNLhXyDsXFlvPMkYbmML1XZ8QKKC9ou2MlCKRZwSQ==}
+
+  '@webext-core/storage@1.2.0':
+    resolution: {integrity: sha512-XI86HJUhugVdAQZLcj3EH/rZv08ByVn2riX3YI4HCJ86NOH5K3OwGi0ClFa/kq5U5hIVDMG6hwOBwgEgI2G5GQ==}
 
   '@wxt-dev/browser@0.1.32':
     resolution: {integrity: sha512-jvfSppeLzlH4sOkIvMBJoA1pKoI+U5gTkjDwMKdkTWh0P/fj+KDyze3lzo3S6372viCm8tXUKNez+VKyVz2ZDw==}
@@ -3478,6 +3484,10 @@ snapshots:
     dependencies:
       serialize-error: 11.0.3
       uid: 2.0.2
+      webextension-polyfill: 0.10.0
+
+  '@webext-core/storage@1.2.0':
+    dependencies:
       webextension-polyfill: 0.10.0
 
   '@wxt-dev/browser@0.1.32':

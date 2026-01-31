@@ -1,2 +1,21 @@
 @import "tailwindcss";
 @custom-variant hover (&:hover);
+
+body {
+	font-family: unset;
+	font-size: unset;
+}
+
+@theme {
+	--font-sans: TwitterChirp, Inter, ui-sans-serif, system-ui, sans-serif;
+	--color-fd-primary: var(--fd-primary);
+	--color-fd-bg: var(--fd-bg);
+	--color-fd-fg: var(--fd-fg);
+}
+
+@supports (font-variation-settings: normal) {
+	@theme {
+		--font-sans:
+			TwitterChirp, InterVariable, ui-sans-serif, system-ui, sans-serif;
+	}
+}

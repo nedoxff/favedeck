@@ -1,5 +1,6 @@
 import { Result } from "better-result";
 import * as bippy from "bippy";
+import { memoize } from "micro-memoize";
 import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
 import { components, initializeComponents } from "@/src/components/wrapper";
 import { decksEventTarget } from "@/src/features/events/decks";
@@ -11,6 +12,7 @@ import { createTweetObserver, waitForSelector } from "@/src/helpers/observer";
 import {
 	EXTENSION_GROUP_ERROR,
 	EXTENSION_GROUP_OK,
+	type ExtensionDebugInfo,
 	extensionState,
 	type GroupState,
 	getRawExtensionState,
@@ -28,12 +30,41 @@ import {
 
 const initializeMessageListener = () =>
 	Result.try(() => {
-		websiteMessenger.onMessage("requestState", () => {
-			// getRawExtensionState is used here because extensionState is a proxy
-			// and sendMessage will try to attempt to create a copy of it and fail
-			websiteMessenger.sendMessage("syncState", getRawExtensionState());
+		websiteMessenger.onMessage("syncPopup", () => {
+			const getDebugInfo = (): ExtensionDebugInfo => {
+				if (!window.__META_DATA__)
+					return { reactVersion: webpack.common.react.React.version };
+
+				const { cookies, tags, ...globalMetadata } = window.__META_DATA__;
+				return {
+					reactVersion: webpack.common.react.React.version,
+					globalMetadata,
+				};
+			};
+
+			return {
+				debugInfo: getDebugInfo(),
+				state: getRawExtensionState(),
+				theme: {
+					...webpack.common.theme._activeTheme,
+					chirpFontStylesheet: findChirpFontStylesheet(),
+				},
+			};
 		});
 	});
+
+const findChirpFontStylesheet = memoize(() => {
+	const stylesheet = Array.from(document.styleSheets).find((sheet) =>
+		Array.from(sheet.cssRules).some((rule) =>
+			rule.cssText.startsWith("@font-face { font-family: TwitterChirp;"),
+		),
+	);
+	return stylesheet
+		? Array.from(stylesheet.cssRules)
+				.map((rule) => rule.cssText)
+				.join("\n")
+		: undefined;
+});
 
 const injectUrlObserver = () =>
 	Result.try(() => {
@@ -150,20 +181,7 @@ const initializeWebpack = async () =>
 		yield* webpack.load();
 		await initializeComponents();
 
-		const theme = yield* webpack
-			.findByProperty<{
-				_activeTheme: ThemeSample;
-				_themeChangeListeners: ((newTheme: ThemeSample) => void)[];
-			}>("_activeTheme", "Theme module", {
-				maxDepth: 1,
-			})
-			.map((result) => result.module);
-
-		type ThemeSample = {
-			colors: Record<string, string>;
-			primaryColorName: string;
-		};
-
+		const theme = webpack.common.theme;
 		theme._themeChangeListeners.push((th) => {
 			document.documentElement.style.setProperty(
 				"--fd-primary",
