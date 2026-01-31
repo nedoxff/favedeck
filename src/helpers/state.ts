@@ -14,7 +14,7 @@ export const EXTENSION_GROUP_ERROR = (error: unknown): GroupState => ({
 	error,
 });
 
-export type ExtensionState = {
+export type ExtensionStateGroups = {
 	webpack: GroupState;
 	redux: GroupState;
 	tweetComponent: GroupState;
@@ -23,9 +23,12 @@ export type ExtensionState = {
 	fiberObserver: GroupState;
 	tweetObserver: GroupState;
 	urlObserver: GroupState;
+	[EXTENSION_GROUPS_STATE_IDENTITY]?: ExtensionStateGroups;
+};
 
+export type ExtensionState = {
+	groups: ExtensionStateGroups;
 	fine: boolean;
-	[EXTENSION_STATE_IDENTITY]?: ExtensionState;
 };
 
 export type ExtensionDebugInfo = {
@@ -33,40 +36,46 @@ export type ExtensionDebugInfo = {
 	globalMetadata?: Omit<GlobalMetadata, "cookies" | "tags">;
 };
 
-const EXTENSION_STATE_IDENTITY = Symbol("extension-state-proxy-target");
-export const extensionState = new Proxy<ExtensionState>(
-	{
-		webpack: EXTENSION_GROUP_LOADING,
-		redux: EXTENSION_GROUP_LOADING,
-		tweetComponent: EXTENSION_GROUP_LOADING,
+const EXTENSION_GROUPS_STATE_IDENTITY = Symbol("extension-state-proxy-target");
 
-		messageListener: EXTENSION_GROUP_LOADING,
-		fiberObserver: EXTENSION_GROUP_LOADING,
-		tweetObserver: EXTENSION_GROUP_LOADING,
-		urlObserver: EXTENSION_GROUP_LOADING,
+export const extensionState: ExtensionState = {
+	fine: true,
+	groups: new Proxy(
+		{
+			webpack: EXTENSION_GROUP_LOADING,
+			redux: EXTENSION_GROUP_LOADING,
+			tweetComponent: EXTENSION_GROUP_LOADING,
 
-		fine: true,
-	},
-	{
-		set(target, property, newValue, receiver) {
-			Reflect.set(target, property, newValue, receiver);
-			if (
-				"status" in newValue &&
-				typeof newValue.status === "string" &&
-				newValue.status === "error"
-			)
-				target.fine = false;
-			ignoreErrors(() => websiteMessenger.sendMessage("syncState", target));
-			return true;
+			messageListener: EXTENSION_GROUP_LOADING,
+			fiberObserver: EXTENSION_GROUP_LOADING,
+			tweetObserver: EXTENSION_GROUP_LOADING,
+			urlObserver: EXTENSION_GROUP_LOADING,
 		},
-		get(target, property, receiver) {
-			return property === EXTENSION_STATE_IDENTITY
-				? target
-				: Reflect.get(target, property, receiver);
+		{
+			set(target, property, newValue, receiver) {
+				Reflect.set(target, property, newValue, receiver);
+				if (
+					"status" in newValue &&
+					typeof newValue.status === "string" &&
+					newValue.status === "error"
+				)
+					extensionState.fine = false;
+				ignoreErrors(() =>
+					websiteMessenger.sendMessage("syncState", getRawExtensionState()),
+				);
+				return true;
+			},
+			get(target, property, receiver) {
+				return property === EXTENSION_GROUPS_STATE_IDENTITY
+					? target
+					: Reflect.get(target, property, receiver);
+			},
 		},
-	},
-);
+	),
+};
 
-export const getRawExtensionState = () =>
+export const getRawExtensionState = (): ExtensionState => ({
+	fine: extensionState.fine,
 	// biome-ignore lint/style/noNonNullAssertion: i know what i'm doing (and so does the proxy)
-	extensionState[EXTENSION_STATE_IDENTITY]!;
+	groups: extensionState.groups[EXTENSION_GROUPS_STATE_IDENTITY]!,
+});

@@ -318,7 +318,7 @@ const injectFiberObserver = () =>
 						if (reduxFiber) {
 							console.log("found fiber with the redux store");
 							setReduxStoreFromFiber(reduxFiber);
-							extensionState.redux = EXTENSION_GROUP_OK;
+							extensionState.groups.redux = EXTENSION_GROUP_OK;
 						}
 					}
 
@@ -334,7 +334,7 @@ const injectFiberObserver = () =>
 					if (fiber.key?.startsWith("tweet") && !found) {
 						found = true;
 						console.log("found the tweet component");
-						extensionState.tweetComponent = getTweetComponentsFromFiber(
+						extensionState.groups.tweetComponent = getTweetComponentsFromFiber(
 							fiber,
 						).match({
 							ok: () => EXTENSION_GROUP_OK,
@@ -365,11 +365,13 @@ const inject = async () => {
 			err: EXTENSION_GROUP_ERROR,
 		});
 
-	extensionState.webpack = mapResult(await initializeWebpack());
-	extensionState.messageListener = mapResult(initializeMessageListener());
-	extensionState.fiberObserver = mapResult(injectFiberObserver());
-	extensionState.urlObserver = mapResult(injectUrlObserver());
-	extensionState.tweetObserver = mapResult(injectTweetObserver());
+	extensionState.groups.webpack = mapResult(await initializeWebpack());
+	extensionState.groups.messageListener = mapResult(
+		initializeMessageListener(),
+	);
+	extensionState.groups.fiberObserver = mapResult(injectFiberObserver());
+	extensionState.groups.urlObserver = mapResult(injectUrlObserver());
+	extensionState.groups.tweetObserver = mapResult(injectTweetObserver());
 };
 
 if (document.readyState === "complete") inject();

@@ -11,6 +11,7 @@ body {
 	--color-fd-primary: var(--fd-primary);
 	--color-fd-bg: var(--fd-bg);
 	--color-fd-fg: var(--fd-fg);
+	--color-fd-danger: var(--fd-danger);
 }
 
 @supports (font-variation-settings: normal) {
