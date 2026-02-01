@@ -1,6 +1,7 @@
 import * as child from "node:child_process";
 import * as fs from "node:fs/promises";
 import path from "node:path";
+import * as util from "node:util";
 import tailwindcss from "@tailwindcss/vite";
 import icons from "unplugin-icons/vite";
 import type { Plugin, ViteDevServer } from "vite";
@@ -9,6 +10,7 @@ import { defineConfig } from "wxt";
 
 export default defineConfig({
 	modules: ["@wxt-dev/module-react"],
+
 	vite: () => ({
 		plugins: [
 			twitterReactHijacker(),
@@ -37,7 +39,6 @@ export default defineConfig({
 });
 
 const twitterReactHijacker = async (): Promise<Plugin> => {
-	let devServer: ViteDevServer | undefined;
 	const resolveMap: Record<string, string> = {
 		react: path.resolve(__dirname, "src/internals/proxies/react-proxy.ts"),
 		"react-dom": path.resolve(
@@ -64,28 +65,18 @@ const twitterReactHijacker = async (): Promise<Plugin> => {
 		"react/jsx-runtime",
 		"react/jsx-dev-runtime",
 	]);
+	let isPopup: boolean;
 
 	return {
 		name: "twitter-react-hijacker",
 		enforce: "pre",
-		configureServer(server) {
-			devServer = server;
+		configResolved(config) {
+			isPopup = JSON.stringify(config.build.rollupOptions.input ?? "").includes(
+				"popup",
+			);
 		},
 		resolveId(source, importer) {
-			if (!SOURCES.has(source)) return null;
-			if (!importer) return null;
-
-			if (importer.includes("popup")) return null;
-			if (devServer) {
-				const module = devServer.moduleGraph.getModuleById(importer);
-				for (const parent of module?.importers ?? [])
-					if ((parent.id ?? "").includes("popup")) return null;
-			} else {
-				const moduleInfo = this.getModuleInfo(importer);
-				for (const parentImporter of moduleInfo?.importers ?? [])
-					if (parentImporter.includes("popup")) return null;
-			}
-
+			if (!SOURCES.has(source) || !importer || isPopup) return null;
 			return resolveMap[source];
 		},
 	};
