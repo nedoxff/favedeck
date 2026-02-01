@@ -32,7 +32,7 @@ export type ExtensionState = {
 };
 
 export type ExtensionDebugInfo = {
-	reactVersion: string;
+	reactVersion?: string;
 	globalMetadata?: Omit<GlobalMetadata, "cookies" | "tags">;
 };
 

@@ -1,26 +1,27 @@
-import { useState } from "react";
 import Spinner from "@/entrypoints/popup/components/Spinner";
-import FoldersLogo from "@/public/img/icons/folders-colored.svg?react";
 import MartenLogo from "@/public/img/icons/marten-colored.svg?react";
+import SimpleTooltip from "@/src/components/common/SimpleTooltip";
 import { cn } from "@/src/helpers/cn";
-import { messenger } from "@/src/helpers/messaging-extension";
 import type {
 	ExtensionDebugInfo,
 	ExtensionState,
 	ExtensionStateGroups,
 } from "@/src/helpers/state";
-import type { FavedeckThemeExtensions, TwitterTheme } from "@/src/types/theme";
 import AlertIcon from "~icons/mdi/alert-circle-outline";
 import CheckIcon from "~icons/mdi/check";
 import Circle from "~icons/mdi/circle";
 import SadEmoji from "~icons/mdi/emoticon-sad-outline";
-import { usePopupState } from "./state";
-import { popupStorage } from "./storage";
+import { usePopupState } from "./helpers/state";
+import {
+	createDebugInfoReport,
+	createErrorReportForExtensionGroup,
+} from "./helpers/utils";
 
 function DashboardStateGroup(props: {
 	state: ExtensionState;
 	group: keyof Omit<ExtensionStateGroups, symbol>;
 }) {
+	const [copiedReport, setCopiedReport] = useState(false);
 	const group = props.state.groups[props.group];
 	useEffect(() => {
 		if (group.status === "error") console.error(group.error);
@@ -30,20 +31,67 @@ function DashboardStateGroup(props: {
 		switch (props.group) {
 			case "webpack":
 				return (
-					<span
-						className="underline decoration-dotted cursor-help"
-						title="The core component for favedeck."
+					<SimpleTooltip
+						content="The Webpack component is responsible for finding the React instance, as well as syncing history state and themes.
+Without it, favedeck can't render any content."
 					>
 						Webpack
-					</span>
+					</SimpleTooltip>
 				);
 			case "redux":
+				return (
+					<SimpleTooltip
+						content="The Redux component is responsible for adding tweet entities & talking to the Twitter API (unbookmarking/fetching timelines).
+Without it, decks can't be viewed, and the &quot;Sort Bookmarks&quot; modal cannot be used."
+					>
+						Redux
+					</SimpleTooltip>
+				);
 			case "tweetComponent":
+				return (
+					<SimpleTooltip
+						content="The React component that renders tweets. Requires the Fiber Observer to be found.
+Without it, decks can't be viewed, and the &quot;Sort Bookmarks&quot; modal cannot be used."
+					>
+						Tweet Component
+					</SimpleTooltip>
+				);
 			case "messageListener":
+				return (
+					<SimpleTooltip
+						content="The Message Listener syncs the popup with the scripts running inside the webpage.
+It also updates the icon of the extension to match your themes's primary color."
+					>
+						Message Listener
+					</SimpleTooltip>
+				);
 			case "fiberObserver":
+				return (
+					<SimpleTooltip
+						content="The Fiber Observer analyzes the React components being rendered on the page.
+The Tweet and Redux components depend on this observer."
+					>
+						Fiber Observer
+					</SimpleTooltip>
+				);
 			case "tweetObserver":
+				return (
+					<SimpleTooltip
+						content="The Tweet Observer looks for changes in the DOM and highlights tweets which were already decked.
+Not crucial for the extension to work, but may degrade UX."
+					>
+						Tweet Observer
+					</SimpleTooltip>
+				);
 			case "urlObserver":
-				return props.group;
+				return (
+					<SimpleTooltip
+						content="The URL Observer is responsible for showing favedeck's pages based on the URL. Depends on the Webpack component.
+Without it, you can still deck tweets, but you won't be able to view them."
+					>
+						URL Observer
+					</SimpleTooltip>
+				);
 		}
 	}, [props.group]);
 
@@ -63,10 +111,26 @@ function DashboardStateGroup(props: {
 					<div className="flex flex-row items-center">
 						<AlertIcon width={24} />
 						<p>Error</p>
+						<button
+							onClick={async () => {
+								await navigator.clipboard.writeText(
+									createErrorReportForExtensionGroup(props.group),
+								);
+								setCopiedReport(true);
+								setTimeout(() => setCopiedReport(false), 1000);
+							}}
+							type="button"
+							disabled={copiedReport}
+							className={
+								"ml-2 rounded-full cursor-pointer text-sm font-bold py-1 px-4 text-center bg-fd-primary disabled:bg-fd-primary/90 hover:bg-fd-primary/90"
+							}
+						>
+							{copiedReport ? "Copied!" : "Copy error report"}
+						</button>
 					</div>
 				);
 		}
-	}, [group]);
+	}, [group, copiedReport]);
 
 	return (
 		<div className="flex flex-row items-center gap-2">
@@ -80,6 +144,7 @@ function Dashboard(props: {
 	state: ExtensionState;
 	debugInfo?: ExtensionDebugInfo;
 }) {
+	const [copiedDebugInformation, setCopiedDebugInformation] = useState(false);
 	return (
 		<div className="w-md bg-fd-bg flex flex-col">
 			<div className="p-4 flex flex-col gap-4">
@@ -91,7 +156,7 @@ function Dashboard(props: {
 							The extension is not guaranteed to work properly!
 						</p>
 					)}
-					<div className="flex flex-col mt-2">
+					<div className="flex flex-col mt-2 gap-1">
 						{Object.keys(props.state.groups).map((key) => (
 							<DashboardStateGroup
 								key={key}
@@ -105,22 +170,33 @@ function Dashboard(props: {
 					<details className="text-fd-fg">
 						<summary className="font-medium text-xl">Debug information</summary>
 						<div className="flex flex-col items-start gap-1 mt-2">
-							<p>
-								Twitter is being rendered with React{" "}
-								<span className="font-mono bg-fd-primary/50 rounded-md p-1">
-									v{props.debugInfo.reactVersion}
-								</span>
-							</p>
+							{props.debugInfo.reactVersion ? (
+								<p>
+									Twitter is being rendered with React{" "}
+									<span className="font-mono bg-fd-primary/50 rounded-md p-1">
+										v{props.debugInfo.reactVersion}
+									</span>
+								</p>
+							) : (
+								<p>Cannot detect React version (Webpack probably failed)</p>
+							)}
+
 							<button
-								onClick={() => {
-									browser.tabs.create({ url: "https://x.com" });
+								onClick={async () => {
+									if (!props.debugInfo) return;
+									await navigator.clipboard.writeText(
+										createDebugInfoReport(props.debugInfo),
+									);
+									setCopiedDebugInformation(true);
+									setTimeout(() => setCopiedDebugInformation(false), 1000);
 								}}
 								type="button"
+								disabled={copiedDebugInformation}
 								className={
-									"rounded-full cursor-pointer font-bold py-2 px-6 text-center bg-fd-primary hover:bg-fd-primary/90"
+									"rounded-full cursor-pointer font-bold py-2 px-6 text-center bg-fd-primary disabled:bg-fd-primary/90 hover:bg-fd-primary/90"
 								}
 							>
-								Copy debug information
+								{copiedDebugInformation ? "Copied!" : "Copy debug information"}
 							</button>
 						</div>
 					</details>
@@ -133,6 +209,19 @@ function Dashboard(props: {
 					<p className="text-fd-fg text-2xl font-bold leading-none">favedeck</p>
 					<p className="opacity-50 text-sm text-fd-fg flex flex-row items-center gap-1">
 						{import.meta.env.VITE_APP_VERSION} <Circle width={4} height={4} />
+						<button
+							type="button"
+							onClick={() => {
+								browser.tabs.update({
+									url: "https://x.com/i/bookmarks#fd-settings",
+								});
+								window.close();
+							}}
+							className="underline cursor-pointer"
+						>
+							settings
+						</button>
+						<Circle width={4} height={4} />
 						<button
 							type="button"
 							onClick={() => {
@@ -209,7 +298,6 @@ function App() {
 		}
 	}, [theme]);
 
-	console.log(theme, isTwitterTab, state);
 	if (!theme)
 		return (
 			<div className="w-md bg-black flex flex-col gap-2 p-8 justify-center items-center">
@@ -232,7 +320,7 @@ function App() {
 					<br />
 					favedeck doesn't have anything useful to show here.
 				</p>
-				<OpenTwitterButton hasTheme />
+				<OpenTwitterButton className="mt-2" hasTheme />
 			</div>
 		);
 	if (!state)

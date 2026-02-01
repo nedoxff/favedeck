@@ -9,6 +9,6 @@ interface PopupState {
 	theme: (TwitterTheme & FavedeckThemeExtensions) | null;
 }
 
-export const usePopupState = create<PopupState>((set) => ({
+export const usePopupState = create<PopupState>(() => ({
 	theme: null,
 }));

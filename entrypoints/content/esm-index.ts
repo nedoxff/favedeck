@@ -1,4 +1,4 @@
-import { Result } from "better-result";
+import { Result, type UnhandledException } from "better-result";
 import * as bippy from "bippy";
 import { memoize } from "micro-memoize";
 import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
@@ -7,6 +7,7 @@ import { decksEventTarget } from "@/src/features/events/decks";
 import { internalsEventTarget } from "@/src/features/events/internals";
 import { kv } from "@/src/features/storage/kv";
 import { DEFAULT_SETTINGS } from "@/src/features/storage/settings";
+import type { WebpackNotFoundError } from "@/src/helpers/errors";
 import { websiteMessenger } from "@/src/helpers/messaging-content";
 import { createTweetObserver, waitForSelector } from "@/src/helpers/observer";
 import {
@@ -37,7 +38,9 @@ const initializeMessageListener = () =>
 
 				const { cookies, tags, ...globalMetadata } = window.__META_DATA__;
 				return {
-					reactVersion: webpack.common.react.React.version,
+					reactVersion: webpack.common
+						? webpack.common.react.React.version
+						: undefined,
 					globalMetadata,
 				};
 			};
@@ -45,10 +48,12 @@ const initializeMessageListener = () =>
 			return {
 				debugInfo: getDebugInfo(),
 				state: getRawExtensionState(),
-				theme: {
-					...webpack.common.theme._activeTheme,
-					chirpFontStylesheet: findChirpFontStylesheet(),
-				},
+				theme: webpack.common
+					? {
+							...webpack.common.theme._activeTheme,
+							chirpFontStylesheet: findChirpFontStylesheet(),
+						}
+					: undefined,
 			};
 		});
 	});
@@ -338,7 +343,7 @@ const injectFiberObserver = () =>
 							fiber,
 						).match({
 							ok: () => EXTENSION_GROUP_OK,
-							err: EXTENSION_GROUP_ERROR,
+							err: (err) => EXTENSION_GROUP_ERROR(err.toJSON()),
 						});
 					}
 				});
@@ -359,10 +364,12 @@ console.log("hello from esm content script!");
 })();
 
 const inject = async () => {
-	const mapResult = <A, E>(result: Result<A, E>): GroupState =>
+	const mapResult = <A>(
+		result: Result<A, UnhandledException | WebpackNotFoundError>,
+	): GroupState =>
 		result.match({
 			ok: () => EXTENSION_GROUP_OK,
-			err: EXTENSION_GROUP_ERROR,
+			err: (err) => EXTENSION_GROUP_ERROR(err.toJSON()),
 		});
 
 	extensionState.groups.webpack = mapResult(await initializeWebpack());

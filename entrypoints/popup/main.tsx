@@ -3,8 +3,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { messenger } from "@/src/helpers/messaging-extension.ts";
 import App from "./App.tsx";
-import { usePopupState } from "./state.ts";
-import { popupStorage } from "./storage.ts";
+import { usePopupState } from "./helpers/state.ts";
+import { popupStorage } from "./helpers/storage.ts";
 
 (async () => {
 	const currentTab = (
@@ -17,16 +17,19 @@ import { popupStorage } from "./storage.ts";
 		theme,
 	});
 
-	messenger.onMessage("setState", (message) => {
-		console.log(message.data);
-		usePopupState.setState({ state: message.data });
-	});
+	messenger.onMessage("setState", (message) =>
+		usePopupState.setState({ state: message.data }),
+	);
 	if (currentTab?.id)
 		messenger
 			.sendMessage("syncPopup", undefined, { tabId: currentTab.id })
 			.then(({ debugInfo, state, theme }) => {
-				usePopupState.setState({ debugInfo, state, theme });
-				popupStorage.setItem("lastSyncedTheme", theme);
+				usePopupState.setState((cur) => ({
+					debugInfo,
+					state,
+					theme: theme ? theme : cur.theme,
+				}));
+				if (theme) popupStorage.setItem("lastSyncedTheme", theme);
 			});
 })();
 

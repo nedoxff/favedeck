@@ -29,7 +29,7 @@ export default defineConfig({
 		},
 	}),
 	manifest: {
-		permissions: ["storage", "tabs"],
+		permissions: ["storage", "tabs", "clipboardWrite"],
 		host_permissions: ["*://*.x.com/*", "*://*.twitter.com/*"],
 		web_accessible_resources: [{ resources: ["img/**"], matches: ["*://*/*"] }],
 	},

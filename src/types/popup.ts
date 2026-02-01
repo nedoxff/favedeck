@@ -4,5 +4,5 @@ import type { FavedeckThemeExtensions, TwitterTheme } from "./theme";
 export type PopupSyncPayload = {
 	state: ExtensionState;
 	debugInfo: ExtensionDebugInfo;
-	theme: TwitterTheme & FavedeckThemeExtensions;
+	theme?: TwitterTheme & FavedeckThemeExtensions;
 };
