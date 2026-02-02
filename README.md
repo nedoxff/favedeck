@@ -8,7 +8,7 @@
 
 ## Features
 
-<img align="right" width="55%" src="docs/img/save.gif"/>
+<img align="right" hspace="10" width="55%" src="docs/img/save.gif"/>
 
 ### Deck tweets
 
