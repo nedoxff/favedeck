@@ -1,10 +1,8 @@
 import * as child from "node:child_process";
-import * as fs from "node:fs/promises";
 import path from "node:path";
-import * as util from "node:util";
 import tailwindcss from "@tailwindcss/vite";
 import icons from "unplugin-icons/vite";
-import type { Plugin, ViteDevServer } from "vite";
+import type { Plugin } from "vite";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "wxt";
 
@@ -65,18 +63,22 @@ const twitterReactHijacker = async (): Promise<Plugin> => {
 		"react/jsx-runtime",
 		"react/jsx-dev-runtime",
 	]);
-	let isPopup: boolean;
+	let ignore: boolean;
 
 	return {
 		name: "twitter-react-hijacker",
 		enforce: "pre",
 		configResolved(config) {
-			isPopup = JSON.stringify(config.build.rollupOptions.input ?? "").includes(
-				"popup",
-			);
+			ignore =
+				typeof config.build.lib !== "boolean" &&
+				config.build.lib.name === "_content"
+					? false
+					: JSON.stringify(config.build.rollupOptions.input ?? "").includes(
+							"popup",
+						) || config.command === "serve";
 		},
-		resolveId(source, importer) {
-			if (!SOURCES.has(source) || !importer || isPopup) return null;
+		async resolveId(source, importer) {
+			if (!SOURCES.has(source) || !importer || ignore) return null;
 			return resolveMap[source];
 		},
 	};
