@@ -20,7 +20,7 @@ Upon pressing the bookmark button, you'll now be prompted to add the tweet to on
 > [!NOTE]
 > This isn't a requirement; tweets are still bookmarked when you press the button, though you *will* save time by doing the sorting beforehand.
 
-<br/>
+<br clear="right"/><br/>
 
 <img align="left" width="55%" src="docs/img/organize.gif"/>
 
