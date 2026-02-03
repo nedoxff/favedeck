@@ -1,3 +1,3 @@
-## [Reordering tweets in Masonry mode](#reordering-tweets-in-masonry-mode)
+## [I can't reorder some tweets in the deck?](#i-cant-reorder-some-tweets-in-the-deck)
 
-meow
+yeah sorry that happens

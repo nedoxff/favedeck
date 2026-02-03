@@ -9,6 +9,14 @@
     <a href="https://http.cat/404"><img height="60" src="docs/img/get-firefox.png"/></a>
 </p>
 
+<p align="center">
+    <a href="docs/faq.md">FAQ</a>
+    ◆
+    <a href="docs/technicalities.md">Technicalities</a>
+    ◆
+    <a href="docs/onboarding.md">Onboarding</a>
+</p>
+
 **favedeck** <sup>(stylized in lowercase)</sup> is a browser extension that adds "decking" functionality similar to Pinterest's boards for Twitter bookmarks.
 
 > [!WARNING]
@@ -48,7 +56,7 @@ You can also view all bookmarks as you normally would by pressing the "All bookm
 Tweets inside decks can also be reordered, "undecked" (removed from said deck), or added/moved to other decks.
 
 > [!IMPORTANT]
-> There are some limitations on how tweets can be re-ordered. [You can read about them here.](docs/faq.md#reordering-tweets-in-masonry-mode)
+> There are some limitations on how tweets can be re-ordered. [You can read about them here.](docs/faq.md#i-cant-reorder-some-tweets-in-the-deck)
 
 <br clear="left"/><br/>
 
@@ -209,3 +217,9 @@ export default defineWebExtConfig({
 
 favedeck is open-source software licensed under [AGPL-3.0](LICENSE).
 
+Thank you:
+
+- My friends for keeping me sane
+- [Open-source authors making this extension possible](package.json)
+- The authors of React Developer Tools and [this Webpack reverse engineering guide](https://gist.github.com/0xdevalias/8c621c5d09d780b1d321bfdb86d67cdd)
+- You :<wbr/>)
