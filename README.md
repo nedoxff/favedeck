@@ -4,6 +4,11 @@
     favedeck
 </h1>
 
+<p align="center">
+    <a href="https://http.cat/404"><img height="60" src="docs/img/get-chrome.png"/></a>
+    <a href="https://http.cat/404"><img height="60" src="docs/img/get-firefox.png"/></a>
+</p>
+
 **favedeck** <sup>(stylized in lowercase)</sup> is a browser extension that adds "decking" functionality similar to Pinterest's boards for Twitter bookmarks.
 
 > [!WARNING]
@@ -13,9 +18,11 @@
 
 - [Features](#features)
 - [Motivation/Implementation](#motivationimplementation)
+- [Compatibility](#compatibility)
 - [Limitations](#limitations)
 - [TODO](#todo)
 - [Issues/Contributing](#issuescontributing)
+- [Licensing and Thank Yous](#licensing-and-thank-yous)
 
 ## [Features](#features)
 
@@ -41,11 +48,11 @@ You can also view all bookmarks as you normally would by pressing the "All bookm
 Tweets inside decks can also be reordered, "undecked" (removed from said deck), or added/moved to other decks.
 
 > [!IMPORTANT]
-> There are some limitations on how tweets can be re-ordered. [You can read about them here.](docs/faq.md#masonry-reordering)
+> There are some limitations on how tweets can be re-ordered. [You can read about them here.](docs/faq.md#reordering-tweets-in-masonry-mode)
 
 <br clear="left"/><br/>
 
-<h3 align="center">Sort existing bookmarks</h3>
+### <h3 align="center">Sort existing bookmarks</h3>
 <p align="center">Organize tweets from your bookmarks with a silly interactive interface similar to card games!</p>
 
 <img align="center" src="docs/img/sort.gif"/>
@@ -72,23 +79,133 @@ In contrast, favedeck hacks directly into the Twitter website and changes UI ele
 
 Yes! The "decking" action itself makes **zero API requests** and everything is stored **locally**. [You can read more in the Privacy Policy](PRIVACY.md).
 
+## [Compatibility](#compatibility)
+
+favedeck is compatible with all major browsers except Safari since I have no job and can't pay Apple $100/year to publish the extension to their store. Otherwise, Firefox and Chromium-based browsers released at most a year ago *should* work.
+
+favedeck **is** compatible with:
+
+- [Control Panel for Twitter](https://github.com/insin/control-panel-for-twitter)
+
+favedeck **is NOT** compatible with:
+
+- [OldTwitter](https://github.com/dimdenGD/OldTwitter) (it's a separate Twitter client)
+
+If you encounter any issues while using other Twitter-related extensions, please [report them](#issuescontributing)!
+
 ## [Limitations](#limitations)
 
 ### Ratelimits
 
-yeah
+Some functionality of favedeck depends on Twitter's API (e.g. fetching the bookmarks timeline, as well as unbookmarking tweets), which has a ratelimit of about **500 requests per 15 minutes** nearly on *all* methods.
+
+Due to this, some features of favedeck are also ratelimited, and some stuff in [TODO](#todo) might be delayed due to implementation complexities. [You can read more about this in The Technicalities.](docs/technicalities.md#ratelimits)
 
 ## [TODO](#todo)
 
 There are some things I'd like to implement in the future but chose not to for the first version of the extension:
 
-- [ ] Importing/exporting tweets
-    <details><summary>Details</summary><p>meow</p></details>
-- [ ] Downloading decks (similar to [booksave](https://github.com/nedoxff/booksave)) 
-    <details><summary>Details</summary><p>bark</p></details>
-- [ ] Selecting multiple tweets in a deck (and actions with them, e.g. move, undeck, etc.)
-    <details><summary>Details</summary><p>moo</p></details>
+<details>
+    <summary>Importing/exporting decks</summary>
+
+> Technically, implementing the import/export action itself is not complicated, but due to Twitter's ratelimits there's no simple way of transferring bookmarks between different accounts if there are more than 500 of them (besides, if you get close to sending hundreds of requests per second I'm sure Twitter's servers are likely to ban the account, but I don't want to test that).
+> 
+> One solution I had in mind is to "fake" the bookmarks, so that they would appear in the decks but not in the "All bookmarks" section, but that seems more like a hack than a solution.
+</details>
+
+<details>
+    <summary>Downloading decks (similar to <a href="https://github.com/nedoxff/booksave">booksave</a>)</summary>
+
+> Actually easier to implement than in booksave since favedeck caches the entities of all tweets in IndexedDB. Probably the most likely feature to get implemented in the next version.
+</details>
+
+<details>
+    <summary>Selecting multiple tweets in a deck (and actions with them, e.g. move, undeck, etc.)</summary>
+
+> The "selecting" part is harder than the "actions" part. I'm really stubborn about this since I've barely used this feature in Pinterest.
+</details>
+
+<details>
+    <summary>Translations (i18n)</summary>
+
+> Will require reworking a lot of the code, but if there will be demand for it I'll definitely implement community-made translations with [lingui](https://lingui.dev).
+</details>
+
+If you have any suggestions or potential feature ideas, please [submit them](#issuescontributing)!
 
 ## [Issues/Contributing](#issuescontributing)
 
-😺
+You can submit issues/suggestions via [the issue tracker](https://github.com/nedoxff/favedeck/issues) or by contacting me:
+
+- [Twitter](https://x.com/nedodraws)
+- [Bluesky](https://bsky.app/profile/nedoxff.bsky.social)
+- [Email (I guess?)](mailto:nedoxff@proton.me)
+
+> [!TIP]
+> It is **highly** recommended (if not required) to include the debug information when submitting a bug report. Whenever something breaks in the extension, you'll get the option to copy the error report in the popup:
+> 
+> <img width="50%" src="docs/img/popup-broken.png"/>
+>
+> If nothing is broken, you can still get some useful stuff by pressing "Copy debug information", which is always present.
+
+### Contributing
+
+You'll need `nodejs (>= 22.14.0)` and `pnpm (>= 10.7.0)`.
+
+- Clone the repository:
+
+```
+git clone https://github.com/nedoxff/favedeck
+```
+
+- Install dependencies:
+
+```
+cd favedeck
+pnpm i
+pnpm approve-builds
+pnpm postinstall
+```
+
+- Start developing!
+
+```bash
+pnpm dev    # Launches a Chrome instance with the extension.
+            # Development mode with Firefox is (currently) not supported.
+```
+
+<details>
+    <summary>Optional (but recommended): Setup web-ext</summary>
+
+> Every time you restart the project via `pnpm dev`, the Chrome profile will be reset and you'll have to relogin into Twitter. To persist the Chrome profile, create a file named `web-ext.config.ts` in the root of the project with the following contents:
+
+```ts
+import { resolve } from 'node:path';
+import { defineWebExtConfig } from 'wxt';
+
+export default defineWebExtConfig({
+  binaries: {
+    // path to chrome.exe, e.g.
+    chrome: "C:\\Program Files\\Google\\Chrome Beta\\Application\\chrome.exe"
+  },
+  // this will create a profile in the project directory,
+  // but you can technically change it to one of your profiles.
+  //                         ↑ (this hasn't been tested)
+  chromiumProfile: resolve(".wxt/chrome-data"),
+  keepProfileChanges: true,
+  // optional, but I don't see why someone wouldn't want to have this...
+  startUrls: ["https://x.com"],
+});
+```
+
+> This can also be useful if `wxt` can't find a Chromium instance to use by default.
+
+</details>
+
+> [!WARNING]
+> Please read [The Technicalities](docs/technicalities.md) before touching the code.
+
+## [Licensing and Thank Yous](#licensing-and-thank-yous)
+
+favedeck is open-source software licensed under [AGPL-3.0](LICENSE).
+
