@@ -43,11 +43,7 @@ enum DeckCardState {
 const saveTweet = async (deck: string, tweet: string) => {
 	await addTweetToDeck(deck, tweet);
 
-	// if we saved a tweet from the ungrouped "deck", highlight the tweet
-	if (
-		decksEventTarget.currentDeck === "all" &&
-		components.SelectDeckPopup.initiator
-	) {
+	if (components.SelectDeckPopup.initiator) {
 		const tweetNode = findParentNode(
 			components.SelectDeckPopup.initiator,
 			matchers.tweetRoot.matcher,
@@ -348,6 +344,7 @@ export const SelectDeckPopup = (() => {
 			initiatorElement = initiator;
 
 			container = document.createElement("div");
+			container.classList.add("favedeck-root");
 			container.style.pointerEvents = "auto";
 			container.style.opacity = "0";
 			container.style.position = "absolute";

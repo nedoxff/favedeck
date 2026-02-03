@@ -13,29 +13,31 @@ export function TwitterModal(props: {
 }) {
 	const contentRef = useRef<HTMLDivElement>(null);
 	return (
-		<div
-			role="button"
-			className="fixed top-0 bg-fd-mask left-0 w-screen h-screen pointer-events-auto flex flex-col justify-center items-center"
-			style={{
-				zIndex: props.zIndex ? props.zIndex.toString() : "0",
-			}}
-			onClick={(ev) => {
-				ev.stopPropagation();
-				if (
-					ev.target instanceof Node &&
-					!contentRef.current?.contains(ev.target)
-				)
-					props.onClose?.();
-			}}
-		>
+		<div className="favedeck-root">
 			<div
-				className={cn(
-					"p-8 flex flex-col gap-2 rounded-xl bg-fd-bg cursor-auto",
-					props.className,
-				)}
-				ref={contentRef}
+				role="button"
+				className="fixed top-0 bg-fd-mask left-0 w-screen h-screen pointer-events-auto flex flex-col justify-center items-center"
+				style={{
+					zIndex: props.zIndex ? props.zIndex.toString() : "0",
+				}}
+				onClick={(ev) => {
+					ev.stopPropagation();
+					if (
+						ev.target instanceof Node &&
+						!contentRef.current?.contains(ev.target)
+					)
+						props.onClose?.();
+				}}
 			>
-				{props.children}
+				<div
+					className={cn(
+						"p-8 flex flex-col gap-2 rounded-xl bg-fd-bg cursor-auto",
+						props.className,
+					)}
+					ref={contentRef}
+				>
+					{props.children}
+				</div>
 			</div>
 		</div>
 	);

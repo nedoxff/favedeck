@@ -37,6 +37,7 @@ import { IconButton } from "../common/IconButton";
 import Spinner from "../common/Spinner";
 import { tweetComponents } from "../external/Tweet";
 import { TweetWrapper } from "../external/TweetWrapper";
+import { components } from "../wrapper";
 import CreateDeckModal from "./CreateDeckModal";
 import { TwitterModal } from "./TwitterModal";
 
@@ -370,6 +371,14 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 										}
 										default: {
 											await addTweetToDeck(target, tweet);
+											const node = document.querySelector(
+												`div[data-favedeck-id="${tweet}"]`,
+											);
+											if (node)
+												components.DeckViewer.checkTweet(
+													node as HTMLElement,
+													tweet,
+												);
 											break;
 										}
 									}
@@ -434,7 +443,13 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 							);
 						setPendingNewDeckTweet(undefined);
 					}}
-					onCreated={(id) => addTweetToDeck(id, pendingNewDeckTweet.id)}
+					onCreated={(id) => {
+						addTweetToDeck(id, pendingNewDeckTweet.id);
+						const node = document.querySelector(
+							`div[data-favedeck-id="${id}"]`,
+						);
+						if (node) components.DeckViewer.checkTweet(node as HTMLElement, id);
+					}}
 				/>
 			)}
 		</>

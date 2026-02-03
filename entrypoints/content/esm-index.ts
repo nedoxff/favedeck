@@ -300,6 +300,7 @@ const checkPrimaryColumn = (el: HTMLElement) => {
 		.childNodes[0] as HTMLElement;
 
 	const div = document.createElement("div");
+	div.classList.add("favedeck-root");
 	div.id = "favedeck-viewer";
 	el.prepend(div);
 };
