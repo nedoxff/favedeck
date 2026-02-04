@@ -52,7 +52,9 @@ function GenericTweetMasonry<T extends { id: string }>(
 	const [changesCount, setChangesCount] = useState(0);
 	useEffect(() => {
 		const unbookmarkedListener = (ev: CustomEvent<string>) => {
-			setTweets((tweets) => tweets.filter((tweet) => tweet.id !== ev.detail));
+			setTweets((tweets) =>
+				tweets.filter((tweet) => !tweet.id.startsWith(ev.detail)),
+			);
 			setChangesCount((c) => c + 1);
 		};
 		const undeckedListener = (
@@ -60,7 +62,7 @@ function GenericTweetMasonry<T extends { id: string }>(
 		) => {
 			if (props.deck.id === ev.detail.deck) {
 				setTweets((tweets) =>
-					tweets.filter((tweet) => tweet.id !== ev.detail.tweet),
+					tweets.filter((tweet) => !tweet.id.startsWith(ev.detail.tweet)),
 				);
 				setChangesCount((c) => c + 1);
 			}
@@ -82,7 +84,14 @@ function GenericTweetMasonry<T extends { id: string }>(
 
 	const maybeLoadMore = useInfiniteLoader(
 		async (start, stop) => {
-			console.log(deckSize, tweets, start, stop);
+			console.log(
+				"fetching more tweets: total",
+				deckSize,
+				"start",
+				start,
+				"stop",
+				stop,
+			);
 			const newTweets = await props.fetcher(start, stop);
 			setTweets((current) => [
 				...current,

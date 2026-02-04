@@ -89,17 +89,20 @@ const injectUrlObserver = () =>
 			}
 
 			const previousRoute = webpack.common.history._locationsHistory.at(-1);
-			console.log(location, components.DeckViewer, previousRoute);
-			console.log(
-				location.pathname.endsWith("bookmarks"),
-				!components.DeckViewer.isMounted,
-				!(previousRoute?.isModalRoute ?? false),
-			);
 			const shouldCreateViewer =
 				location.pathname.endsWith("bookmarks") &&
 				!components.DeckViewer.isMounted &&
 				!(previousRoute?.isModalRoute ?? false);
-			console.log("should create DeckViewer:", shouldCreateViewer);
+			console.log(
+				"should create DeckViewer:",
+				location.pathname.endsWith("bookmarks"),
+				'(path ends with "bookmarks") &&',
+				!components.DeckViewer.isMounted,
+				"(DeckViewer is NOT mounted) &&",
+				!(previousRoute?.isModalRoute ?? false),
+				"(previous route is NOT modal) ==",
+				shouldCreateViewer,
+			);
 			if (shouldCreateViewer) components.DeckViewer.create();
 		});
 

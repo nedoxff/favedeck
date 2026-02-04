@@ -206,7 +206,9 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 		// if it was previously in the ungrouped "deck", it's supposed to be brought back.
 		// although, it needs to be found in the original list, not the DeckTweetList...
 		// TODO: move this into a helper function?
-		const node = document.querySelector(`div[data-favedeck-id=${props.tweet}]`);
+		const node = document.querySelector(
+			`div[data-favedeck-id="${props.tweet}"]`,
+		);
 		if (node)
 			components.DeckViewer.checkTweet(node as HTMLElement, props.tweet);
 	}, [setState]);

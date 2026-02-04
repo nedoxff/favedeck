@@ -1,5 +1,6 @@
 import { Result, type UnhandledException } from "better-result";
 import * as bippy from "bippy";
+import { getProperty } from "dot-prop";
 import { memoize } from "micro-memoize";
 import { getSetting } from "../features/storage/settings";
 import type { RawTweet } from "../types/tweet";
@@ -141,3 +142,20 @@ export const getRootNodeFromTweetElement = memoize((el: HTMLElement) =>
 		};
 	}),
 );
+
+export const pauseTweetVideo = (video: HTMLVideoElement) => {
+	const fiber = bippy.getFiberFromHostInstance(video);
+	if (!fiber) return Result.err("couldn't get host fiber from video element");
+	const playerFiber = bippy.traverseFiber(
+		fiber,
+		(f) => {
+			return getProperty(f, "memoizedProps.value.playerApi") !== undefined;
+		},
+		true,
+	);
+	if (!playerFiber)
+		return Result.err("couldn't find fiber which had the playerApi");
+	// @ts-expect-error
+	playerFiber.memoizedProps.value.playerApi.pause();
+	return Result.ok();
+};

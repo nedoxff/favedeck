@@ -8,6 +8,7 @@ import { getDeck } from "@/src/features/storage/decks";
 import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { isTweetInDeck } from "@/src/features/storage/tweets";
 import { waitForSelector } from "@/src/helpers/observer";
+import { pauseTweetVideo } from "@/src/internals/goodies";
 import { webpack } from "@/src/internals/webpack";
 import BackIcon from "~icons/mdi/arrow-left";
 import SettingsIcon from "~icons/mdi/cog-outline";
@@ -292,6 +293,22 @@ export const DeckViewer: {
 				originalContainer.style.zIndex = "-1000";
 				originalContainer.style.maxHeight = "100vh";
 				originalContainer.style.overflowY = "hidden";
+
+				// pause all videos playing in the timeline just in case
+				queueMicrotask(() => {
+					if (!originalContainer) return;
+					console.time(
+						"pause videos after hiding DeckViewer.originalContainer",
+					);
+					for (const video of originalContainer.querySelectorAll("video")) {
+						const result = pauseTweetVideo(video);
+						if (result.isErr())
+							console.warn("failed to pause video", video, result.error);
+					}
+					console.timeEnd(
+						"pause videos after hiding DeckViewer.originalContainer",
+					);
+				});
 			},
 			get value() {
 				return originalContainer;

@@ -406,7 +406,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 							<div className="flex flex-col gap-4 py-2 basis-1/4 *:basis-1/2">
 								<CustomDropCard id="unbookmark">
 									<BookmarkIcon width={48} height={48} />
-									<p className="text-xl">Unbookmark tweet</p>
+									<p className="text-xl">Remove from bookmarks</p>
 								</CustomDropCard>
 								<CustomDropCard id="new-deck">
 									<PlusIcon width={48} height={48} />

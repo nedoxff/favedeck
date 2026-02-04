@@ -8,7 +8,7 @@ export type FavedeckSettings = {
 };
 
 export const DEFAULT_SETTINGS: FavedeckSettings = {
-	includeQuoteTweets: true,
+	includeQuoteTweets: false,
 	updateStatistics: false,
 };
 
