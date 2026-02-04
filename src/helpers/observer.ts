@@ -1,5 +1,3 @@
-import { matchers } from "../internals/matchers";
-
 export const waitForSelector = (
 	el: Element,
 	selector: string,

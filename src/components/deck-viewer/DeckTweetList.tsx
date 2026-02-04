@@ -2,9 +2,11 @@ import type { Draggable } from "@dnd-kit/dom";
 import { move } from "@dnd-kit/helpers";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
+import { Result } from "better-result";
 import { useLiveQuery } from "dexie-react-hooks";
 import { deepEqual } from "fast-equals";
 import { Masonry, type MasonryProps, useInfiniteLoader } from "masonic";
+import { memoize } from "micro-memoize";
 import React, { memo } from "react";
 import { tweetsEventTarget } from "@/src/features/events/tweets";
 import {
@@ -80,7 +82,7 @@ function GenericTweetMasonry<T extends { id: string }>(
 
 	const maybeLoadMore = useInfiniteLoader(
 		async (start, stop) => {
-			console.log(start, stop);
+			console.log(deckSize, tweets, start, stop);
 			const newTweets = await props.fetcher(start, stop);
 			setTweets((current) => [
 				...current,
@@ -110,6 +112,7 @@ function GenericTweetMasonry<T extends { id: string }>(
 	) : (
 		<DragDropProvider
 			onDragEnd={(ev) => {
+				setChangesCount((c) => c + 1);
 				setTweets((tweets) => {
 					const newTweets = move(tweets, ev);
 					updateTweetsOrder(
@@ -120,7 +123,6 @@ function GenericTweetMasonry<T extends { id: string }>(
 					);
 					return newTweets;
 				});
-				setChangesCount((c) => c + 1);
 			}}
 			onDragOver={(ev) => {
 				ev.preventDefault();
@@ -172,7 +174,6 @@ const DeckMasonryListItem = memo(function DeckMasonryListItem(props: {
 	return (
 		<article
 			ref={ref}
-			style={{ width: `${props.width}px` }}
 			className={cn(
 				"rounded-2xl overflow-hidden relative group transition-all",
 				isDragging ? "opacity-25" : "opacity-100",
@@ -278,20 +279,42 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 		<div className="grow p-4">
 			<GenericTweetMasonry<TweetMasonryInfo>
 				deck={props.deck}
-				fetcher={async (start, stop) => {
-					// TODO: checkDatabaseTweets probably not needed here?
-					const newTweets = await getDeckTweets(
-						props.deck.id,
-						start,
-						stop - start + 1,
-					);
-					await addEntitiesFromDatabaseTweets(newTweets);
-					return (
-						await Promise.all(
-							newTweets.map((t) => convertDatabaseTweetToMasonryInfos(t.id)),
-						)
-					).flat();
-				}}
+				fetcher={memoize(async (start, stop) =>
+					(
+						await Result.gen(async function* () {
+							{
+								// TODO: checkDatabaseTweets probably not needed here?
+								const newTweets = await getDeckTweets(
+									props.deck.id,
+									start,
+									stop - start + 1,
+								);
+								yield* Result.await(addEntitiesFromDatabaseTweets(newTweets));
+								const infos: TweetMasonryInfo[] = [];
+								for (const tweet of newTweets) {
+									infos.push(
+										...(yield* Result.await(
+											convertDatabaseTweetToMasonryInfos(tweet.id),
+										)),
+									);
+								}
+								return Result.ok(infos);
+							}
+						})
+					).match({
+						ok: (v) => v,
+						err: (err) => {
+							console.error(
+								"failed to fetch items for DeckMasonryList from",
+								start,
+								"to",
+								stop,
+								err,
+							);
+							return [];
+						},
+					}),
+				)}
 				render={DeckMasonryListItem}
 				overlayRenderer={React.memo(
 					({ draggable }) => {
@@ -357,13 +380,31 @@ export function DeckTweetList(props: { deck: DatabaseDeck }) {
 		<div className="grow">
 			<GenericTweetMasonry<{ id: string }>
 				deck={props.deck}
-				fetcher={async (start, stop) => {
-					const tweets = await checkDatabaseTweets(
-						await getDeckTweets(props.deck.id, start, stop - start + 1),
-					);
-					await addEntitiesFromDatabaseTweets(tweets);
-					return tweets.map((t) => ({ id: t.id }));
-				}}
+				fetcher={memoize(async (start, stop) =>
+					(
+						await Result.gen(async function* () {
+							const tweets = yield* Result.await(
+								checkDatabaseTweets(
+									await getDeckTweets(props.deck.id, start, stop - start + 1),
+								),
+							);
+							yield* Result.await(addEntitiesFromDatabaseTweets(tweets));
+							return Result.ok(tweets.map((t) => ({ id: t.id })));
+						})
+					).match({
+						ok: (v) => v,
+						err: (err) => {
+							console.error(
+								"failed to fetch items for DeckTweetList from",
+								start,
+								"to",
+								stop,
+								err,
+							);
+							return [];
+						},
+					}),
+				)}
 				render={ScrollableTweetWrapper}
 				overlayRenderer={React.memo(
 					({ draggable }) =>

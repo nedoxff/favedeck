@@ -1,5 +1,5 @@
 > [!NOTE]
-> This document will be much less formal than the [README](../README.md).
+> This document is much less formal than the [README](../README.md).
 
 ## [Ratelimits](#ratelimits)
 
@@ -27,6 +27,52 @@ This was very much a disaster and led to a lot of bad glue code being written. E
 > ***What if favedeck's React imports get redirected to use Twitter's React instance?***
 
 This is what the `twitter-react-hijacker` Vite plugin inside `wxt.config.ts` does. It detects any imports of React inside the extension and proxies them through `webpack.common.react.React`, `webpack.common.react.ReactDOM` and `webpack.common.react.JSXRuntime`, which are loaded from Twitters's webpack bundle.
+
+Thanks to this plugin, instead of this:
+
+```ts
+function DeckTweetList() {
+	const tweets = {...};
+	const ref = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		if (!ref.current || !tweets || tweets.length === 0) return;
+
+		const TwitterReact = webpack.common.react.React;
+		const TwitterReactDOM = webpack.common.react.ReactDOM;
+		const root = TwitterReactDOM.createRoot(ref.current);
+
+		const tweetsContainer = TwitterReact.createElement("div", {
+			children: tweets.map((t) =>
+				TwitterReact.createElement(tweetComponents.Tweet, {
+					...tweetComponents.meta.defaultTweetProps,
+				}),
+			),
+		});
+
+		const bridge = TwitterReact.createElement(tweetComponents.ContextBridge, {
+			children: tweetsContainer,
+		});
+		root.render(TwitterReact.createElement(() => bridge));
+	}, [ref.current, tweets]);
+
+	return <div ref={ref}></div>;
+}
+```
+
+You can do:
+
+```ts
+function DeckTweetList() {
+	return (
+		<tweetComponents.ContextBridge>
+			{tweets.map((t) => (
+				<tweetComponents.Tweet {...props} />
+			))}
+		</tweetComponents.ContextBridge>
+	);
+}
+
+```
 
 > [!NOTE]
 > The important thing to mention here is that **the popup code is exempt from this hijacking**. It renders React just like it would regularly, which is the reason why `Twitter is being rendered with React vXX.X.X` is displayed in the popup under "Debug Information".

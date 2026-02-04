@@ -1,3 +1,4 @@
+import { Result, type UnhandledException } from "better-result";
 import * as bippy from "bippy";
 import { memoize } from "micro-memoize";
 import { getSetting } from "../features/storage/settings";
@@ -66,30 +67,38 @@ export type TweetMasonryInfo = {
 	tweet: string;
 	info: MediaInfo;
 };
+
 // this must be called AFTER adding the entities
 export const convertDatabaseTweetToMasonryInfos = async (
 	tweet: string,
 	quality = "small",
-): Promise<TweetMasonryInfo[]> => {
+) => {
 	const includeQuoteTweets = await getSetting("includeQuoteTweets");
-	const convertEntity = (id?: string): TweetMasonryInfo[] => {
-		if (!id || !tweetEntityLoaded(id)) return [];
-		const tweetEntity = getTweetEntity(id);
-		const authorEntity = getUserEntity(tweetEntity.user);
-		return [
-			...getMediaInfo(tweetEntity, quality).map((i) => ({
-				author: {
-					id: tweetEntity.user,
-					name: authorEntity.screen_name,
-					profileImage: authorEntity.profile_image_url_https,
-				},
-				id: `${id}-${i.index}`,
-				tweet: id,
-				info: i,
-			})),
-			...(includeQuoteTweets ? convertEntity(tweetEntity.quoted_status) : []),
-		];
-	};
+	const convertEntity = (
+		id?: string,
+	): Result<TweetMasonryInfo[], UnhandledException> =>
+		Result.gen(function* () {
+			{
+				if (!id || !tweetEntityLoaded(id)) return Result.ok([]);
+				const tweetEntity = yield* getTweetEntity(id);
+				const authorEntity = yield* getUserEntity(tweetEntity.user);
+				return Result.ok([
+					...getMediaInfo(tweetEntity, quality).map((i) => ({
+						author: {
+							id: tweetEntity.user,
+							name: authorEntity.screen_name,
+							profileImage: authorEntity.profile_image_url_https,
+						},
+						id: `${id}-${i.index}`,
+						tweet: id,
+						info: i,
+					})),
+					...(includeQuoteTweets
+						? convertEntity(tweetEntity.quoted_status).unwrapOr([])
+						: []),
+				]);
+			}
+		});
 	return convertEntity(tweet);
 };
 
@@ -100,29 +109,35 @@ export const findTweetFiber = (anyFiber: bippy.Fiber) =>
 		true,
 	);
 
-export const getTweetIdFromFiber = (tweetFiber: bippy.Fiber): string => {
-	if (bippy.getDisplayName(tweetFiber) !== "Tweet")
-		throw new Error('bippy.getDisplayName(fiber) !== "Tweet"');
-	const tweet: RawTweet = tweetFiber.memoizedProps?.tweet as RawTweet;
-	if (!tweet)
-		throw new Error(
-			"the tweet fiber (somehow) doesn't have the tweet in memoizedProps",
-		);
-	return tweet.id_str;
-};
+export const getTweetIdFromFiber = (tweetFiber: bippy.Fiber) =>
+	Result.try(() => {
+		if (bippy.getDisplayName(tweetFiber) !== "Tweet")
+			throw new Error('bippy.getDisplayName(fiber) !== "Tweet"');
+		const tweet: RawTweet = tweetFiber.memoizedProps?.tweet as RawTweet;
+		if (!tweet)
+			throw new Error(
+				"the tweet fiber (somehow) doesn't have the tweet in memoizedProps",
+			);
+		return tweet.id_str;
+	});
 
 export type RootNodeInfo = { rootNode: HTMLElement; id: string };
-export const getRootNodeFromTweetElement = memoize(
-	(el: HTMLElement): RootNodeInfo | null => {
+export const getRootNodeFromTweetElement = memoize((el: HTMLElement) =>
+	Result.try(() => {
 		const anyFiber = bippy.getFiberFromHostInstance(el);
-		if (!anyFiber) return null;
+		if (!anyFiber) throw new Error("couldn't find a fiber for HTMLElement");
 		const tweetFiber = findTweetFiber(anyFiber);
-		if (!tweetFiber) return null;
+		if (!tweetFiber) throw new Error("couldn't find Tweet fiber from anyFiber");
 		const rootNode = findParentNode(el, matchers.tweetRoot.matcher);
-		if (!rootNode) return null;
+		if (!rootNode) throw new Error("couldn't find root node element");
+		const id = getTweetIdFromFiber(tweetFiber);
+		if (id.isErr())
+			throw new Error("couldn't find tweet id from tweetFiber", {
+				cause: id.error.cause,
+			});
 		return {
 			rootNode,
-			id: getTweetIdFromFiber(tweetFiber),
+			id: id.value,
 		};
-	},
+	}),
 );

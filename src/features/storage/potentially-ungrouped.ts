@@ -22,8 +22,8 @@ export const addPotentiallyUngroupedTweet = async (id: string) => {
 		user: (await getUserId()) ?? "",
 		payload: await compressObject(
 			mergician(
-				await getTweetEntityPayloadFromReduxStore(id),
-				await getTweetEntityPayloadFromDatabase(id),
+				(await getTweetEntityPayloadFromReduxStore(id)).unwrapOr({}),
+				(await getTweetEntityPayloadFromDatabase(id)).unwrapOr({}),
 			),
 		),
 	});

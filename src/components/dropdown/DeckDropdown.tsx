@@ -118,7 +118,7 @@ export default function DeckDropdown(props: {
 							// de-highlight tweets which became ungrouped
 							// note: this is really ugly but required as highlighted tweets aren't re-verified
 							const tweets = (
-								await (await getAllDeckTweets(props.deck.id)).toArray()
+								await getAllDeckTweets(props.deck.id).toArray()
 							).map((t) => t.id);
 							const tweetElements = Array.from(
 								document.querySelectorAll(matchers.tweet.querySelector),
@@ -130,8 +130,11 @@ export default function DeckDropdown(props: {
 
 							for (const el of tweetElements) {
 								const info = getRootNodeFromTweetElement(el);
-								if (!info || !tweets.includes(info.id)) continue;
-								components.DeckViewer.checkTweet(info.rootNode, info.id);
+								if (info.isErr() || !tweets.includes(info.value.id)) continue;
+								components.DeckViewer.checkTweet(
+									info.value.rootNode,
+									info.value.id,
+								);
 							}
 						}}
 					/>,

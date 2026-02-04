@@ -1,8 +1,8 @@
+import { Result } from "better-result";
 import Dexie from "dexie";
 import { getUserId } from "@/src/internals/foolproof";
 import { getThumbnailUrl } from "@/src/internals/goodies";
 import {
-	type AddEntitiesPayload,
 	getBookmarksTimelineEntries,
 	getTweetEntity,
 } from "@/src/internals/redux";
@@ -33,61 +33,63 @@ export const isTweetInDeck = async (id: string) =>
 export const isTweetInSpecificDeck = async (id: string, deck: string) =>
 	(await db.tweets.get([id, await getUserId(), deck])) !== undefined;
 
-export const addTweetToDeck = async (deck: string, tweet: string) => {
-	const entities = (await getTweetEntityPayloadFromReduxStore(
-		tweet,
-	)) as Required<AddEntitiesPayload>;
-	for (const entity of Object.values(entities.tweets))
-		if (entity.user in entities.users)
-			await putTweetEntity(
-				entity,
-				entities.users[entity.user],
-				entities.favedeck.quoteOf[entity.id_str],
-			);
+export const addTweetToDeck = (tweet: string, deck: string) =>
+	Result.tryPromise(async () => {
+		const entities = await getTweetEntityPayloadFromReduxStore(tweet);
+		if (entities.isErr()) throw entities.error;
 
-	const getThumbnailUrlRecursive = async (entity: RawTweet) => {
-		const thumbnailUrl = getThumbnailUrl(entity);
-		if (thumbnailUrl) return thumbnailUrl;
-		const quotedEntity = entity.quoted_status
-			? getTweetEntity(entity.quoted_status)
-			: undefined;
-		return getThumbnailUrl(quotedEntity);
-	};
+		for (const entity of Object.values(entities.value.tweets))
+			if (entity.user in entities.value.users)
+				await putTweetEntity(
+					entity,
+					entities.value.users[entity.user],
+					entities.value.favedeck.quoteOf[entity.id_str],
+				);
 
-	await db.tweets.put({
-		dateAdded: new Date(),
-		deck,
-		id: tweet,
-		user: (await getUserId()) ?? "",
-		thumbnail: await getThumbnailUrlRecursive(entities.tweets[tweet]),
-		order: Dexie.minKey,
+		const getThumbnailUrlRecursive = async (entity: RawTweet) => {
+			const thumbnailUrl = getThumbnailUrl(entity);
+			if (thumbnailUrl) return thumbnailUrl;
+			const quotedEntity = entity.quoted_status
+				? getTweetEntity(entity.quoted_status).unwrapOr(undefined)
+				: undefined;
+			return getThumbnailUrl(quotedEntity);
+		};
+
+		await db.tweets.put({
+			dateAdded: new Date(),
+			deck,
+			id: tweet,
+			user: (await getUserId()) ?? "",
+			thumbnail: await getThumbnailUrlRecursive(entities.value.tweets[tweet]),
+			order: Dexie.minKey,
+		});
+		await removePotentiallyUngroupedTweet(tweet);
+		tweetsEventTarget.dispatchTweetDecked(tweet, deck);
 	});
-	await removePotentiallyUngroupedTweet(tweet);
-	tweetsEventTarget.dispatchTweetDecked(tweet, deck);
-};
 
-export const removeTweet = async (
+export const removeTweet = (
 	id: string,
 	deck?: string,
 	options: { markUngrouped: boolean } = { markUngrouped: true },
-) => {
-	const user = await getUserId();
-	// deck here is optional so don't use .get
-	await db.tweets
-		.where("[id+user+deck]")
-		.between(
-			[id, user, deck ?? Dexie.minKey],
-			[id, user, deck ?? Dexie.maxKey],
-			true,
-			true,
-		)
-		.delete();
-	if (options.markUngrouped && !(await isTweetInDeck(id)))
-		await addPotentiallyUngroupedTweet(id);
-	const similarTweetsLeft = await db.tweets.where({ id, user }).count();
-	if (similarTweetsLeft === 0) await removeTweetEntityAndRelatives(id);
-	if (deck) tweetsEventTarget.dispatchTweetUndecked(id, deck);
-};
+) =>
+	Result.tryPromise(async () => {
+		const user = await getUserId();
+		// deck here is optional so don't use .get
+		await db.tweets
+			.where("[id+user+deck]")
+			.between(
+				[id, user, deck ?? Dexie.minKey],
+				[id, user, deck ?? Dexie.maxKey],
+				true,
+				true,
+			)
+			.delete();
+		if (options.markUngrouped && !(await isTweetInDeck(id)))
+			await addPotentiallyUngroupedTweet(id);
+		const similarTweetsLeft = await db.tweets.where({ id, user }).count();
+		if (similarTweetsLeft === 0) await removeTweetEntityAndRelatives(id);
+		if (deck) tweetsEventTarget.dispatchTweetUndecked(id, deck);
+	});
 
 export const splitTweets = async (
 	entries: TweetTimelineEntry[],

@@ -17,10 +17,9 @@ import { popupStorage } from "./helpers/storage.ts";
 		theme,
 	});
 
-	messenger.onMessage("setState", (message) =>
-		usePopupState.setState({ state: message.data }),
-	);
-	if (currentTab?.id)
+	let syncedPopup = false;
+	const trySyncPopup = () => {
+		if (!currentTab.id || syncedPopup) return;
 		messenger
 			.sendMessage("syncPopup", undefined, { tabId: currentTab.id })
 			.then(({ debugInfo, state, theme }) => {
@@ -29,8 +28,16 @@ import { popupStorage } from "./helpers/storage.ts";
 					state,
 					theme: theme ? theme : cur.theme,
 				}));
+				syncedPopup = true;
 				if (theme) popupStorage.setItem("lastSyncedTheme", theme);
 			});
+	};
+
+	messenger.onMessage("setState", (message) => {
+		usePopupState.setState({ state: message.data });
+		trySyncPopup();
+	});
+	if (currentTab?.id) trySyncPopup();
 })();
 
 // biome-ignore lint/style/noNonNullAssertion: this script is only loaded when root is already present

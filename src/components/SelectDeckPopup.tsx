@@ -2,6 +2,7 @@
 /** biome-ignore-all lint/a11y/useSemanticElements: TODO */
 /** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
 
+import { Result } from "better-result";
 import * as bippy from "bippy";
 import { useLiveQuery } from "dexie-react-hooks";
 import { createPortal } from "react-dom";
@@ -22,11 +23,7 @@ import {
 	isTweetInSpecificDeck,
 	removeTweet,
 } from "../features/storage/tweets";
-import {
-	findTweetFiber,
-	getRootNodeFromTweetElement,
-	getTweetIdFromFiber,
-} from "../internals/goodies";
+import { findTweetFiber, getTweetIdFromFiber } from "../internals/goodies";
 import { findParentNode, matchers } from "../internals/matchers";
 import { unbookmarkTweet } from "../internals/redux";
 import CreateDeckModal from "./modals/CreateDeckModal";
@@ -38,19 +35,22 @@ enum DeckCardState {
 	SAVED,
 	REMOVING,
 	REMOVED,
+	ERROR,
 }
 
-const saveTweet = async (deck: string, tweet: string) => {
-	await addTweetToDeck(deck, tweet);
+const saveTweet = async (tweet: string, deck: string) => {
+	const result = await addTweetToDeck(tweet, deck);
+	if (result.isErr()) return result;
 
 	if (components.SelectDeckPopup.initiator) {
 		const tweetNode = findParentNode(
 			components.SelectDeckPopup.initiator,
 			matchers.tweetRoot.matcher,
 		);
-		if (!tweetNode) return;
+		if (!tweetNode) return Result.ok();
 		components.DeckViewer.checkTweet(tweetNode, tweet);
 	}
+	return Result.ok();
 };
 
 function ActionsCard(props: { tweet: string }) {
@@ -71,8 +71,20 @@ function ActionsCard(props: { tweet: string }) {
 					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-15! hover:shadow-lighten! rounded-xl"
 					onClick={async () => {
 						components.SelectDeckPopup.hide();
-						await unbookmarkTweet(props.tweet);
-						await removeTweet(props.tweet, undefined, { markUngrouped: false });
+						(
+							await Result.gen(async function* () {
+								yield* Result.await(unbookmarkTweet(props.tweet));
+								yield* Result.await(
+									removeTweet(props.tweet, undefined, { markUngrouped: false }),
+								);
+								return Result.ok();
+							})
+						).match({
+							ok: () =>
+								console.log("successfully unbookmarked tweet", props.tweet),
+							err: () =>
+								console.error("failed to unbookmark tweet", props.tweet),
+						});
 					}}
 				>
 					<BookmarkIcon width={24} height={24} />
@@ -82,7 +94,18 @@ function ActionsCard(props: { tweet: string }) {
 			{showNewDeckModal &&
 				createPortal(
 					<CreateDeckModal
-						onCreated={(deck) => saveTweet(deck, props.tweet)}
+						onCreated={async (deck) => {
+							const result = await saveTweet(props.tweet, deck);
+							if (result.isErr()) {
+								console.error(
+									"failed to save tweet",
+									props.tweet,
+									"to newly created deck",
+									deck,
+									result.error,
+								);
+							}
+						}}
 						onClose={() => setShowNewDeckModal(false)}
 					/>,
 					document.body,
@@ -127,6 +150,8 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 					return "Removing";
 				case DeckCardState.REMOVED:
 					return "Removed!";
+				case DeckCardState.ERROR:
+					return "Error!";
 			}
 		};
 
@@ -139,13 +164,39 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 	}, [state]);
 
 	const save = useCallback(async () => {
-		await saveTweet(props.deck.id, props.tweet);
-		setState(DeckCardState.SAVED);
+		setState(
+			(await saveTweet(props.tweet, props.deck.id)).match({
+				ok: () => DeckCardState.SAVED,
+				err: (err) => {
+					console.error(
+						"failed to save tweet",
+						props.tweet,
+						"to deck",
+						props.deck.id,
+						err,
+					);
+					return DeckCardState.ERROR;
+				},
+			}),
+		);
 	}, [setState]);
 
 	const remove = useCallback(async () => {
-		await removeTweet(props.tweet, props.deck.id);
-		setState(DeckCardState.REMOVED);
+		setState(
+			(await removeTweet(props.tweet, props.deck.id)).match({
+				ok: () => DeckCardState.REMOVED,
+				err: (err) => {
+					console.error(
+						"failed to remove tweet",
+						props.tweet,
+						"from deck",
+						props.deck.id,
+						err,
+					);
+					return DeckCardState.ERROR;
+				},
+			}),
+		);
 
 		// if we're currently viewing this deck
 		if (decksEventTarget.currentDeck === props.deck.id)
@@ -155,14 +206,9 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 		// if it was previously in the ungrouped "deck", it's supposed to be brought back.
 		// although, it needs to be found in the original list, not the DeckTweetList...
 		// TODO: move this into a helper function?
-		const tweets = Array.from(
-			document.querySelectorAll(matchers.tweet.querySelector),
-		).map((n) => n as HTMLElement);
-		for (const tweet of tweets) {
-			const info = getRootNodeFromTweetElement(tweet);
-			if (!info || info.id !== props.tweet) continue;
-			components.DeckViewer.checkTweet(info.rootNode, info.id);
-		}
+		const node = document.querySelector(`div[data-favedeck-id=${props.tweet}]`);
+		if (node)
+			components.DeckViewer.checkTweet(node as HTMLElement, props.tweet);
 	}, [setState]);
 
 	const saveButtonClicked = async () => {
@@ -202,6 +248,11 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 					{state === DeckCardState.REMOVED && (
 						<p className="pointer-events-none opacity-50 text-sm -mt-1">
 							Click again to save
+						</p>
+					)}
+					{state === DeckCardState.ERROR && (
+						<p className="pointer-events-none opacity-50 text-sm -mt-1">
+							Check the console
 						</p>
 					)}
 				</div>
@@ -325,7 +376,15 @@ export const SelectDeckPopup = (() => {
 						);
 						return;
 					}
-					currentTweet = getTweetIdFromFiber(tweetFiber);
+					const tweetId = getTweetIdFromFiber(tweetFiber);
+					if (tweetId.isErr()) {
+						console.error(
+							"cannot show SelectDeckPopup for initiator (couldn't get tweet id from fiber)",
+							tweetId.error,
+						);
+						return;
+					}
+					currentTweet = tweetId.value;
 					break;
 				}
 				case "masonry-cell": {

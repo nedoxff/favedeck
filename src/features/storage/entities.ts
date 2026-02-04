@@ -1,9 +1,11 @@
+import { Result, type UnhandledException } from "better-result";
 import { mergician } from "mergician";
 import { compressObject, decompressObject } from "@/src/helpers/compression";
 import {
 	type AddEntitiesPayload,
 	getTweetEntity,
 	getUserEntity,
+	tweetEntityLoaded,
 } from "@/src/internals/redux";
 import type { RawTweet, RawTweetUser } from "@/src/types/tweet";
 import { db } from "./definition";
@@ -82,60 +84,51 @@ export const getTweetEntityIds = async (id: string) => {
 	return [id];
 };
 
-export const getTweetEntityPayloadFromReduxStore = async (
-	tweet: string,
-): Promise<AddEntitiesPayload> => {
-	const payload: AddEntitiesPayload = {
+export const getTweetEntityPayloadFromReduxStore = async (tweet: string) => {
+	const payload: Required<AddEntitiesPayload> = {
 		tweets: {},
 		users: {},
 		favedeck: { quoteOf: {} },
 	};
-	const addTweet = (id: string) => {
-		if (!payload.tweets || !payload.users || !payload.favedeck) return;
-		try {
-			const tweetEntity = getTweetEntity(id);
+	const addTweet = (id: string): Result<void, UnhandledException> =>
+		Result.gen(function* () {
+			if (!tweetEntityLoaded(id)) return Result.ok();
+			const tweetEntity = yield* getTweetEntity(id);
 			payload.tweets[tweetEntity.id_str] = tweetEntity;
-			payload.users[tweetEntity.user] = getUserEntity(tweetEntity.user);
+			payload.users[tweetEntity.user] = yield* getUserEntity(tweetEntity.user);
 			if (tweetEntity.quoted_status) {
-				addTweet(tweetEntity.quoted_status);
+				yield* addTweet(tweetEntity.quoted_status);
 				payload.favedeck.quoteOf[tweetEntity.quoted_status] =
 					tweetEntity.id_str;
 			}
-		} catch (err) {
-			console.warn("failed to add tweet", tweet, "to AddEntitiesPayload", err);
-		}
-	};
-	addTweet(tweet);
-	return payload;
+			return Result.ok();
+		});
+	return addTweet(tweet).map(() => payload);
 };
 
-export const getTweetEntityPayloadFromDatabase = async (
-	id: string,
-): Promise<AddEntitiesPayload> => {
-	const rawTweetEntity = await db.entities.get(`tweet-${id}`);
-	if (!rawTweetEntity) {
-		console.warn(`entity tweet-${id} not found`);
-		return {};
-	}
-	const tweetEntity: RawTweet = await decompressObject(rawTweetEntity.data);
+export const getTweetEntityPayloadFromDatabase = async (id: string) =>
+	Result.tryPromise(async (): Promise<AddEntitiesPayload> => {
+		const rawTweetEntity = await db.entities.get(`tweet-${id}`);
+		if (!rawTweetEntity) throw new Error(`entity tweet-${id} not found`);
+		const tweetEntity: RawTweet = await decompressObject(rawTweetEntity.data);
 
-	const rawUserEntity = await db.entities.get(`user-${tweetEntity.user}`);
-	if (!rawUserEntity) {
-		console.warn(
-			`entity user-${tweetEntity.user} not found (needed for tweet-${id})`,
-		);
-		return {};
-	}
-	const userEntity: RawTweetUser = await decompressObject(rawUserEntity.data);
+		const rawUserEntity = await db.entities.get(`user-${tweetEntity.user}`);
+		if (!rawUserEntity)
+			throw new Error(
+				`entity user-${tweetEntity.user} not found (needed for tweet-${id})`,
+			);
+		const userEntity: RawTweetUser = await decompressObject(rawUserEntity.data);
 
-	const payload = {
-		tweets: { [id]: tweetEntity },
-		users: { [tweetEntity.user]: userEntity },
-	};
-	return tweetEntity.quoted_status
-		? mergician(
-				payload,
-				await getTweetEntityPayloadFromDatabase(tweetEntity.quoted_status),
-			)
-		: payload;
-};
+		const payload = {
+			tweets: { [id]: tweetEntity },
+			users: { [tweetEntity.user]: userEntity },
+		};
+		return tweetEntity.quoted_status
+			? mergician(
+					payload,
+					(
+						await getTweetEntityPayloadFromDatabase(tweetEntity.quoted_status)
+					).unwrapOr([]),
+				)
+			: payload;
+	});

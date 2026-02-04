@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import Spinner from "@/entrypoints/popup/components/Spinner";
 import MartenLogo from "@/public/img/icons/marten-colored.svg?react";
 import SimpleTooltip from "@/src/components/common/SimpleTooltip";
@@ -25,7 +26,7 @@ function DashboardStateGroup(props: {
 	const group = props.state.groups[props.group];
 	useEffect(() => {
 		if (group.status === "error") console.error(group.error);
-	}, []);
+	}, [group]);
 
 	const title = useMemo(() => {
 		switch (props.group) {
@@ -130,7 +131,7 @@ Without it, you can still deck tweets, but you won't be able to view them."
 					</div>
 				);
 		}
-	}, [group, copiedReport]);
+	}, [props.group, group, copiedReport]);
 
 	return (
 		<div className="flex flex-row items-center gap-2">

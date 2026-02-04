@@ -370,7 +370,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 											break;
 										}
 										default: {
-											await addTweetToDeck(target, tweet);
+											await addTweetToDeck(tweet, target);
 											const node = document.querySelector(
 												`div[data-favedeck-id="${tweet}"]`,
 											);
@@ -444,7 +444,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 						setPendingNewDeckTweet(undefined);
 					}}
 					onCreated={(id) => {
-						addTweetToDeck(id, pendingNewDeckTweet.id);
+						addTweetToDeck(pendingNewDeckTweet.id, id);
 						const node = document.querySelector(
 							`div[data-favedeck-id="${id}"]`,
 						);

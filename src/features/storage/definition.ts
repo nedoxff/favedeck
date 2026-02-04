@@ -44,8 +44,8 @@ export const db = new Dexie("favedeck") as Dexie & {
 };
 
 db.version(1).stores({
-	tweets: "[id+user+deck], id, user, deck, [deck+order+dateAdded], thumbnail",
-	decks: "&id, user, name, secret, viewMode, dateModified, order",
+	tweets: "[id+user+deck], id, user, deck, [deck+order+dateAdded]",
+	decks: "&id, user, order",
 	kv: "&key, value",
 	entities: "&key, type, meta.quoteOf, meta.user",
 	potentiallyUngrouped: "[id+user]",

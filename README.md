@@ -13,8 +13,6 @@
     <a href="docs/faq.md">FAQ</a>
     ◆
     <a href="docs/technicalities.md">Technicalities</a>
-    ◆
-    <a href="docs/onboarding.md">Onboarding</a>
 </p>
 
 **favedeck** <sup>(stylized in lowercase)</sup> is a browser extension that adds "decking" functionality similar to Pinterest's boards for Twitter bookmarks.
@@ -56,7 +54,7 @@ You can also view all bookmarks as you normally would by pressing the "All bookm
 Tweets inside decks can also be reordered, "undecked" (removed from said deck), or added/moved to other decks.
 
 > [!IMPORTANT]
-> There are some limitations on how tweets can be re-ordered. [You can read about them here.](docs/faq.md#i-cant-reorder-some-tweets-in-the-deck)
+> At the moment, there are some limitations on how tweets can be re-ordered. [You can read about them here.](docs/faq.md#i-cant-reorder-some-tweets-in-the-deck)
 
 <br clear="left"/><br/>
 
@@ -85,11 +83,11 @@ In contrast, favedeck hacks directly into the Twitter website and changes UI ele
 
 ### But is it private?
 
-Yes! The "decking" action itself makes **zero API requests** and everything is stored **locally**. [You can read more in the Privacy Policy](PRIVACY.md).
+Yes! The "decking" feature makes **zero API requests** and everything is stored **locally**. [You can read more in the Privacy Policy](PRIVACY.md).
 
 ## [Compatibility](#compatibility)
 
-favedeck is compatible with all major browsers except Safari since I have no job and can't pay Apple $100/year to publish the extension to their store. Otherwise, Firefox and Chromium-based browsers released at most a year ago *should* work.
+favedeck is compatible with all major browsers except Safari since I don't have a job and can't pay Apple $100/year to publish the extension to their store. Otherwise, Firefox and Chromium-based browsers released at most a year ago *should* work.
 
 favedeck **is** compatible with:
 
@@ -133,8 +131,20 @@ There are some things I'd like to implement in the future but chose not to for t
 > The "selecting" part is harder than the "actions" part. I'm really stubborn about this since I've barely used this feature in Pinterest.
 </details>
 
-<details>
+<details open>
     <summary>Translations (i18n)</summary>
+
+> Not exactly sure how to implement it but there was one idea of using an array of "order"s instead of a singular value like it's currently implemented (the order value controls where the tweet and all its quotes and images are located, so they're kind of inseparable)
+</details>
+
+<details open>
+    <summary>Detect ratelimits?</summary>
+
+> I don't know whether this is actually needed. I guess it will be when importing/exporting is implemented? Also the extension probably won't have access to the response headers...
+</details>
+
+<details>
+    <summary><a href="docs/faq.md#i-cant-reorder-some-tweets-in-the-deck">Proper reordering of tweets in Masonry mode</a></summary>
 
 > Will require reworking a lot of the code, but if there will be demand for it I'll definitely implement community-made translations with [lingui](https://lingui.dev).
 </details>
@@ -220,6 +230,6 @@ favedeck is open-source software licensed under [AGPL-3.0](LICENSE).
 Thank you:
 
 - My friends for keeping me sane
-- [Open-source authors making this extension possible](package.json)
+- [Open-source authors for making this extension possible](package.json)
 - The authors of React Developer Tools and [this Webpack reverse engineering guide](https://gist.github.com/0xdevalias/8c621c5d09d780b1d321bfdb86d67cdd)
 - You :<wbr/>)

@@ -12,7 +12,5 @@ export const ignoreErrors = (callback: () => void | Promise<void>) => {
 		const result = callback();
 		if (result instanceof Promise) return result.catch((_ex) => {});
 		return result;
-	} catch (ex) {
-		console.warn(ex);
-	}
+	} catch (_ex) {}
 };

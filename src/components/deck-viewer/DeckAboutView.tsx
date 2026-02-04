@@ -54,16 +54,7 @@ export default function DeckAboutView() {
 						target="_blank"
 						rel="noopener"
 						className="underline"
-						href="https://github.com/nedoxff/favedeck"
-					>
-						Donate
-					</a>
-					<Circle width={4} height={4} />
-					<a
-						target="_blank"
-						rel="noopener"
-						className="underline"
-						href="https://github.com/nedoxff/favedeck"
+						href="https://github.com/nedoxff/favedeck/blob/main/docs/faq.md"
 					>
 						FAQ
 					</a>

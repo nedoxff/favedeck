@@ -266,8 +266,8 @@ const injectTweetObserver = () =>
 			injectTweetCallbacks(tweet as HTMLElement);
 			if (components.DeckViewer.isMounted) {
 				const info = getRootNodeFromTweetElement(tweet);
-				if (!info) return;
-				components.DeckViewer.checkTweet(info.rootNode, info.id);
+				if (info.isErr()) return;
+				components.DeckViewer.checkTweet(info.value.rootNode, info.value.id);
 			}
 		};
 
