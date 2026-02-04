@@ -131,13 +131,13 @@ There are some things I'd like to implement in the future but chose not to for t
 > The "selecting" part is harder than the "actions" part. I'm really stubborn about this since I've barely used this feature in Pinterest.
 </details>
 
-<details open>
+<details>
     <summary>Translations (i18n)</summary>
 
 > Not exactly sure how to implement it but there was one idea of using an array of "order"s instead of a singular value like it's currently implemented (the order value controls where the tweet and all its quotes and images are located, so they're kind of inseparable)
 </details>
 
-<details open>
+<details>
     <summary>Detect ratelimits?</summary>
 
 > I don't know whether this is actually needed. I guess it will be when importing/exporting is implemented? Also the extension probably won't have access to the response headers...
