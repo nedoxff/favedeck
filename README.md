@@ -132,7 +132,7 @@ There are some things I'd like to implement in the future but chose not to for t
 </details>
 
 <details>
-    <summary>Translations (i18n)</summary>
+    <summary><a href="docs/faq.md#i-cant-reorder-some-tweets-in-the-deck">Proper reordering of tweets in Masonry mode</a></summary>
 
 > Not exactly sure how to implement it but there was one idea of using an array of "order"s instead of a singular value like it's currently implemented (the order value controls where the tweet and all its quotes and images are located, so they're kind of inseparable)
 </details>
@@ -144,7 +144,7 @@ There are some things I'd like to implement in the future but chose not to for t
 </details>
 
 <details>
-    <summary><a href="docs/faq.md#i-cant-reorder-some-tweets-in-the-deck">Proper reordering of tweets in Masonry mode</a></summary>
+    <summary>Translations (i18n)</summary>
 
 > Will require reworking a lot of the code, but if there will be demand for it I'll definitely implement community-made translations with [lingui](https://lingui.dev).
 </details>
