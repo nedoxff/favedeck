@@ -12,52 +12,42 @@ import DeleteIcon from "~icons/mdi/trash-can-outline";
 import { IconButton } from "../common/IconButton";
 import ConfirmModal from "../modals/ConfirmModal";
 import EditDeckModal from "../modals/EditDeckModal";
-import SortBookmarksModal from "../modals/SortBookmarksModal";
 import { components } from "../wrapper";
 import { TwitterDropdown, TwitterDropdownItem } from "./TwitterDropdown";
 
 export default function DeckDropdown(props: {
 	deck: DatabaseDeck;
+	showSortModal?: () => void;
 	className?: string;
 }) {
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [showSortModal, setShowSortModal] = useState(false);
 
 	return props.deck.id === "all" ? (
-		<>
-			<TwitterDropdown<HTMLButtonElement>
-				trigger={forwardRef(({ isOpen, setOpen }, ref) => (
-					<IconButton
-						ref={ref}
-						onClick={(ev) => {
-							ev.stopPropagation();
-							setOpen(!isOpen);
-						}}
-					>
-						<VerticalMoreIcon width={24} height={24} />
-					</IconButton>
-				))}
-			>
-				{({ setOpen }) => (
-					<>
-						<TwitterDropdownItem
-							icon={<StarIcon width={24} height={24} />}
-							text="Sort"
-							onClick={() => {
-								setShowSortModal(true);
-								setOpen(false);
-							}}
-						/>
-					</>
-				)}
-			</TwitterDropdown>
-			{showSortModal &&
-				createPortal(
-					<SortBookmarksModal onClose={() => setShowSortModal(false)} />,
-					document.body,
-				)}
-		</>
+		<TwitterDropdown<HTMLButtonElement>
+			trigger={forwardRef(({ isOpen, setOpen }, ref) => (
+				<IconButton
+					ref={ref}
+					onClick={(ev) => {
+						ev.stopPropagation();
+						setOpen(!isOpen);
+					}}
+				>
+					<VerticalMoreIcon width={24} height={24} />
+				</IconButton>
+			))}
+		>
+			{({ setOpen }) => (
+				<TwitterDropdownItem
+					icon={<StarIcon width={24} height={24} />}
+					text="Sort"
+					onClick={() => {
+						props.showSortModal?.();
+						setOpen(false);
+					}}
+				/>
+			)}
+		</TwitterDropdown>
 	) : (
 		<>
 			<TwitterDropdown<HTMLButtonElement>

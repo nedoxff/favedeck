@@ -100,10 +100,40 @@ export const getUserEntity = (id: string) =>
 		return user;
 	});
 
+export const bookmarkTweet = (id: string) =>
+	Result.tryPromise(async () => {
+		if (!reduxStore)
+			throw new Error(`can't bookmark tweet ${id}, redux store is undefined`);
+
+		await Promise.resolve(
+			reduxStore.dispatch(webpack.common.redux.api.tweets.bookmark(id)),
+		);
+
+		reduxStore.dispatch({
+			type: "rweb/urt/INJECT_ENTRY",
+			meta: {
+				timelineId: "bookmarks",
+			},
+			payload: {
+				// TODO: not tested (bookmarking is currently not needed)
+				entry: {
+					content: {
+						displayType: "Tweet",
+						id,
+					},
+					entryId: `tweet-${id}`,
+					type: "tweet",
+				},
+				atTop: true,
+			},
+		});
+	});
+
 export const unbookmarkTweet = (id: string) =>
 	Result.tryPromise(async () => {
 		if (!reduxStore)
 			throw new Error(`can't unbookmark tweet ${id}, redux store is undefined`);
+
 		await Promise.resolve(
 			reduxStore.dispatch(webpack.common.redux.api.tweets.unbookmark(id)),
 		);
@@ -158,11 +188,11 @@ export const checkDatabaseTweets = (tweets: DatabaseTweet[]) =>
 
 export const fetchBookmarksTimelineFromCursor = async (
 	cursor: CursorTimelineEntry,
-	count: number = 20,
 ) =>
 	Result.tryPromise(async () => {
 		if (!reduxStore || !webpack.common.redux.api.bookmarksTimeline)
 			return { performed: false };
+
 		return await reduxStore.dispatch<
 			| {
 					performed: false;
@@ -173,7 +203,9 @@ export const fetchBookmarksTimelineFromCursor = async (
 					newTweets: number;
 			  }
 		>(
-			webpack.common.redux.api.bookmarksTimeline.fetchCursor(cursor, { count }),
+			webpack.common.redux.api.bookmarksTimeline.fetchCursor(cursor, {
+				count: (await getSetting("fetchMoreTweetsPerRequest")) ? 100 : 20,
+			}),
 		);
 	});
 

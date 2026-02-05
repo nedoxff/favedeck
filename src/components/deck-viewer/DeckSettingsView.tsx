@@ -35,16 +35,29 @@ export default function DeckSettingsView() {
 				/>
 
 				<ListTile
-					title="Include quoted tweets"
-					description="When on, will include the media of quoted tweets (and quoted tweets of quoted tweets and so on) when browsing a deck in masonry mode."
+					title="Fetch more tweets per request"
+					description={
+						<>
+							Will fetch 100 tweets instead of the regular 20 when using
+							paginated Twitter APIs. Might help with bypassing certain
+							ratelimits.{" "}
+							<b>
+								Only enable if you have a stable internet connection or you're
+								ready to wait for a bit longer.
+							</b>
+						</>
+					}
 					endContent={
 						<Checkbox
-							checked={settings.includeQuoteTweets}
-							onChecked={(ch) => setSetting("includeQuoteTweets", ch)}
+							checked={settings.fetchMoreTweetsPerRequest}
+							onChecked={(ch) => setSetting("fetchMoreTweetsPerRequest", ch)}
 						/>
 					}
 					onClick={() =>
-						setSetting("includeQuoteTweets", !settings.includeQuoteTweets)
+						setSetting(
+							"fetchMoreTweetsPerRequest",
+							!settings.fetchMoreTweetsPerRequest,
+						)
 					}
 				/>
 			</div>

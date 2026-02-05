@@ -18,9 +18,6 @@ You can change the deck's view mode by pressing the three dots either in the Dec
 
 There are some quirks with reordering tweets when using Masonry view mode.
 
-- If a tweet consists of multiple images, they cannot be reordered with each other (the order will reset upon reloading the page)
-- If a tweet is a quote of a different tweet (and the "Include quoted tweets" option is on), then the quoted tweet cannot be reordered with any other tweets in the deck.
-
-This is due to the fact that the quoted tweets and images are still *technically* attached to the same single tweet, meaning that when the page reloads the natural order in which the images were stored will be restored.
+- If a tweet consists of multiple images, they cannot be reordered with each other (the order will reset upon reloading the page).
 
 > This is fix-able and is currently in the [TODOs](../README.md#todo).

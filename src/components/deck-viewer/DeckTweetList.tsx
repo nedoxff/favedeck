@@ -357,12 +357,12 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 	);
 }
 
-const ScrollableTweetWrapper = memo(function ScrollableTweetWrapper(props: {
+const SortableTweetWrapper = memo(function ScrollableTweetWrapper(props: {
 	data: { id: string };
 	index: number;
 	width: number;
 }) {
-	const { ref, isDragging, isDropTarget } = useSortable({
+	const { ref, handleRef, isDragging, isDropTarget } = useSortable({
 		id: props.data.id,
 		index: props.index,
 		data: {
@@ -371,15 +371,28 @@ const ScrollableTweetWrapper = memo(function ScrollableTweetWrapper(props: {
 		} satisfies RegularSortableData,
 	});
 	return (
-		<TweetWrapper
-			ref={ref}
-			id={props.data.id}
-			className={cn(
-				"transition-opacity",
-				isDragging ? "opacity-25" : "opacity-100",
-				isDropTarget ? "ring-4! ring-fd-primary!" : "ring-0",
-			)}
-		/>
+		<div className="relative">
+			{/* TODO: man this is so ugly */}
+			<IconButton
+				ref={handleRef}
+				className="absolute top right-11 top-1.5 opacity-75 z-10 group hover:opacity-100 hover:bg-fd-primary/25! transition-all"
+			>
+				<DragVerticalIcon
+					className="group-hover:text-fd-primary!"
+					width={18}
+					height={18}
+				/>
+			</IconButton>
+			<TweetWrapper
+				ref={ref}
+				id={props.data.id}
+				className={cn(
+					"transition-all",
+					isDragging ? "opacity-25" : "opacity-100",
+					isDropTarget ? "ring-4! ring-fd-primary!" : "ring-0",
+				)}
+			/>
+		</div>
 	);
 });
 
@@ -414,7 +427,7 @@ export function DeckTweetList(props: { deck: DatabaseDeck }) {
 						},
 					}),
 				)}
-				render={ScrollableTweetWrapper}
+				render={SortableTweetWrapper}
 				overlayRenderer={React.memo(
 					({ draggable }) =>
 						draggable.data.type === "regular" &&

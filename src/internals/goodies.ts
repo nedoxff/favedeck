@@ -1,8 +1,7 @@
-import { Result, type UnhandledException } from "better-result";
+import { Result } from "better-result";
 import * as bippy from "bippy";
 import { getProperty } from "dot-prop";
 import { memoize } from "micro-memoize";
-import { getSetting } from "../features/storage/settings";
 import type { RawTweet } from "../types/tweet";
 import { findParentNode, matchers } from "./matchers";
 import { getTweetEntity, getUserEntity, tweetEntityLoaded } from "./redux";
@@ -73,35 +72,29 @@ export type TweetMasonryInfo = {
 export const convertDatabaseTweetToMasonryInfos = async (
 	tweet: string,
 	quality = "small",
-) => {
-	const includeQuoteTweets = await getSetting("includeQuoteTweets");
-	const convertEntity = (
-		id?: string,
-	): Result<TweetMasonryInfo[], UnhandledException> =>
-		Result.gen(function* () {
-			{
-				if (!id || !tweetEntityLoaded(id)) return Result.ok([]);
-				const tweetEntity = yield* getTweetEntity(id);
-				const authorEntity = yield* getUserEntity(tweetEntity.user);
-				return Result.ok([
-					...getMediaInfo(tweetEntity, quality).map((i) => ({
-						author: {
-							id: tweetEntity.user,
-							name: authorEntity.screen_name,
-							profileImage: authorEntity.profile_image_url_https,
-						},
-						id: `${id}-${i.index}`,
-						tweet: id,
-						info: i,
-					})),
-					...(includeQuoteTweets
-						? convertEntity(tweetEntity.quoted_status).unwrapOr([])
-						: []),
-				]);
-			}
-		});
-	return convertEntity(tweet);
-};
+): Promise<Result<TweetMasonryInfo[], Error>> =>
+	Result.gen(async function* () {
+		{
+			if (!tweet || !tweetEntityLoaded(tweet)) return Result.ok([]);
+			const tweetEntity = yield* getTweetEntity(tweet);
+			const authorEntity = yield* getUserEntity(tweetEntity.user);
+			return Result.ok(
+				getMediaInfo(tweetEntity, quality).map(
+					(info) =>
+						({
+							author: {
+								id: tweetEntity.user,
+								name: authorEntity.screen_name,
+								profileImage: authorEntity.profile_image_url_https,
+							},
+							id: `${tweet}-${info.index}`,
+							tweet,
+							info,
+						}) satisfies TweetMasonryInfo,
+				),
+			);
+		}
+	});
 
 export const findTweetFiber = (anyFiber: bippy.Fiber) =>
 	bippy.traverseFiber(

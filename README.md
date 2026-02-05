@@ -134,7 +134,7 @@ There are some things I'd like to implement in the future but chose not to for t
 <details>
     <summary><a href="docs/faq.md#i-cant-reorder-some-tweets-in-the-deck">Proper reordering of tweets in Masonry mode</a></summary>
 
-> Not exactly sure how to implement it but there was one idea of using an array of "order"s instead of a singular value like it's currently implemented (the order value controls where the tweet and all its quotes and images are located, so they're kind of inseparable)
+> Not exactly sure how to implement it but there was one idea of using an array of "order"s instead of a singular value like it's currently implemented (the order value controls where the tweet and all its images are located, so they're kind of inseparable)
 </details>
 
 <details>

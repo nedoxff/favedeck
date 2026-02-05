@@ -234,7 +234,7 @@ export const webpack: WebpackHelper = {
 		},
 		{
 			forceUpdate: (args): boolean =>
-				webpack.findByProperty.cache.g(args)?.v === undefined,
+				webpack.findByProperty.cache.g(args)?.v.isErr() ?? true,
 			isKeyItemEqual: "deep",
 		},
 	),

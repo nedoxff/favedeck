@@ -84,6 +84,20 @@ export const getTweetEntityIds = async (id: string) => {
 	return [id];
 };
 
+export const isTweetBookmarked = async (tweet: string) => {
+	if (tweetEntityLoaded(tweet)) getTweetEntity(tweet).map((e) => e.bookmarked);
+	const dbEntity = await db.entities.get(`tweet-${tweet}`);
+	if (dbEntity)
+		return Result.ok(
+			((await decompressObject(dbEntity.data)) as RawTweet).bookmarked,
+		);
+	return Result.err(
+		new Error(
+			"cannot determine whether tweet is bookmarked (not present in redux nor database)",
+		),
+	);
+};
+
 export const getTweetEntityPayloadFromReduxStore = async (tweet: string) => {
 	const payload: Required<AddEntitiesPayload> = {
 		tweets: {},

@@ -15,7 +15,11 @@ import {
 } from "@/src/features/storage/decks";
 import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { kv } from "@/src/features/storage/kv";
-import { getPotentiallyUngroupedTweets } from "@/src/features/storage/potentially-ungrouped";
+import {
+	addPotentiallyUngroupedTweet,
+	getPotentiallyUngroupedTweets,
+	removePotentiallyUngroupedTweet,
+} from "@/src/features/storage/potentially-ungrouped";
 import {
 	addTweetToDeck,
 	getLatestSortedTweet,
@@ -31,6 +35,7 @@ import {
 } from "@/src/internals/redux";
 import BookmarkIcon from "~icons/mdi/bookmark";
 import CloseIcon from "~icons/mdi/close";
+import DotsIcon from "~icons/mdi/dots-horizontal";
 import LockIcon from "~icons/mdi/lock-outline";
 import PlusIcon from "~icons/mdi/plus";
 import { IconButton } from "../common/IconButton";
@@ -150,21 +155,44 @@ function DraggableTweetCard(props: { id: string; index: number }) {
 	);
 }
 
-function CustomDropCard(props: { id: string; children: ReactNode }) {
+function CustomDropCard(props: {
+	id: string;
+	children: ReactNode;
+	clickAction?: {
+		title: string;
+		onClick?: () => void;
+	};
+}) {
 	const { isDropTarget, ref } = useDroppable({
 		id: props.id,
 		collisionDetector: pointerIntersection,
 	});
 
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: i'm so tired
+		// biome-ignore lint/a11y/useKeyWithClickEvents: i'm so tired
 		<div
 			ref={ref}
 			className={cn(
-				"rounded-xl border-dashed border-2 flex flex-col gap-2 justify-center items-center h-full",
+				"transition-all group rounded-xl border-dashed border-2 flex flex-col gap-2 justify-center items-center h-full",
 				isDropTarget && "border-fd-primary!",
+				props.clickAction &&
+					cn(
+						"hover:border-fd-primary!",
+						props.clickAction.onClick !== undefined
+							? "hover:cursor-pointer!"
+							: "hover:cursor-not-allowed!",
+					),
 			)}
+			role={props.clickAction ? "button" : undefined}
+			onClick={props.clickAction?.onClick}
 		>
 			{props.children}
+			{props.clickAction && (
+				<p className="opacity-75 hidden group-hover:block!">
+					{props.clickAction.title}
+				</p>
+			)}
 		</div>
 	);
 }
@@ -176,6 +204,10 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 	const [hiddenTweets, setHiddenTweets] = useState<string[]>([]);
 	const [allTweets, setAllTweets] = useState<string[]>([]);
 	const [sortedTweets, setSortedTweets] = useState<string[]>([]);
+	const [
+		addedIntentionallyUngroupedTweets,
+		setAddedIntentionallyUngroupedTweets,
+	] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 
 	const [sortedCount, setSortedCount] = useState(0);
@@ -189,6 +221,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		  }
 		| undefined
 	>(undefined);
+	const [showCreateDeckModal, setShowCreateDeckModal] = useState(false);
 
 	const refetchTweetEntries = async () => {
 		setIsLoading(true);
@@ -249,10 +282,8 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		setIsLoading(false);
 	};
 
-	useEffect(() => {
-		// not sure if we can just blindly believe database entries like that
-		// but probably yeah
-		getPotentiallyUngroupedTweets().then((ungroupedTweets) => {
+	const appendUngroupedTweets = (category: "unbookmarked" | "intentional") => {
+		getPotentiallyUngroupedTweets(category).then((ungroupedTweets) => {
 			setAllTweets((current) => {
 				const toAdd = ungroupedTweets
 					.filter(
@@ -264,9 +295,15 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 						addEntities(t.payload);
 						return t.id;
 					});
-				return [...current, ...toAdd];
+				return [...toAdd, ...current];
 			});
 		});
+	};
+
+	useEffect(() => {
+		// not sure if we can just blindly believe database entries like that
+		// but probably yeah
+		appendUngroupedTweets("unbookmarked");
 	}, []);
 
 	useEffect(() => {
@@ -362,15 +399,22 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 											await unbookmarkTweet(tweet);
 											break;
 										}
+										case "later": {
+											await addPotentiallyUngroupedTweet(tweet, "intentional");
+											setAddedIntentionallyUngroupedTweets(false);
+											break;
+										}
 										case "new-deck": {
 											setPendingNewDeckTweet({
 												id: tweet,
 												index: allTweets.indexOf(tweet),
 											});
+											setShowCreateDeckModal(true);
 											break;
 										}
 										default: {
 											await addTweetToDeck(tweet, target);
+											await removePotentiallyUngroupedTweet(tweet);
 											const node = document.querySelector(
 												`div[data-favedeck-id="${tweet}"]`,
 											);
@@ -408,7 +452,33 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 									<BookmarkIcon width={48} height={48} />
 									<p className="text-xl">Remove from bookmarks</p>
 								</CustomDropCard>
-								<CustomDropCard id="new-deck">
+								<CustomDropCard
+									id="later"
+									clickAction={
+										addedIntentionallyUngroupedTweets
+											? {
+													title: "You've already added the tweets!",
+												}
+											: {
+													title: "Click if it's time to deal with them",
+													onClick: () => {
+														appendUngroupedTweets("intentional");
+														setAddedIntentionallyUngroupedTweets(true);
+													},
+												}
+									}
+								>
+									<DotsIcon width={48} height={48} />
+									<p className="text-xl">I'll deal with it later</p>
+								</CustomDropCard>
+								<CustomDropCard
+									id="new-deck"
+									clickAction={{
+										title:
+											"Click to create a new deck without adding any tweets",
+										onClick: () => setShowCreateDeckModal(true),
+									}}
+								>
 									<PlusIcon width={48} height={48} />
 									<p className="text-xl">New deck</p>
 								</CustomDropCard>
@@ -434,17 +504,20 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 					</DragDropProvider>
 				</div>
 			</TwitterModal>
-			{pendingNewDeckTweet && (
+			{showCreateDeckModal && (
 				<CreateDeckModal
 					onClose={(cancelled) => {
-						if (cancelled)
+						setShowCreateDeckModal(false);
+						if (cancelled && pendingNewDeckTweet)
 							setSortedTweets((cur) =>
 								cur.filter((t) => t !== pendingNewDeckTweet.id),
 							);
 						setPendingNewDeckTweet(undefined);
 					}}
-					onCreated={(id) => {
-						addTweetToDeck(pendingNewDeckTweet.id, id);
+					onCreated={async (id) => {
+						if (!pendingNewDeckTweet) return;
+						await addTweetToDeck(pendingNewDeckTweet.id, id);
+						await removePotentiallyUngroupedTweet(id);
 						const node = document.querySelector(
 							`div[data-favedeck-id="${id}"]`,
 						);

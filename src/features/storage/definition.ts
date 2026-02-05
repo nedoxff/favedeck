@@ -29,6 +29,7 @@ export interface DatabaseCompressedEntity {
 export interface DatabasePotentiallyUngroupedTweet {
 	id: string;
 	user: string;
+	category: "unbookmarked" | "intentional";
 	payload: Blob;
 }
 
@@ -48,5 +49,5 @@ db.version(1).stores({
 	decks: "&id, user, order",
 	kv: "&key, value",
 	entities: "&key, type, meta.quoteOf, meta.user",
-	potentiallyUngrouped: "[id+user]",
+	potentiallyUngrouped: "[id+user], [user+category]",
 });

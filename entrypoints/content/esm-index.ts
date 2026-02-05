@@ -1,5 +1,6 @@
 import { Result, type UnhandledException } from "better-result";
 import * as bippy from "bippy";
+import { getProperty } from "dot-prop";
 import { memoize } from "micro-memoize";
 import { getTweetComponentsFromFiber } from "@/src/components/external/Tweet";
 import { components, initializeComponents } from "@/src/components/wrapper";
@@ -74,7 +75,7 @@ const findChirpFontStylesheet = memoize(() => {
 const injectUrlObserver = () =>
 	Result.try(() => {
 		console.log("injecting url observer");
-		webpack.common.history.listen((location, _action) => {
+		webpack.common.history.listen((location, action) => {
 			overrideBookmarksTimelineActions();
 			if (
 				location.pathname.endsWith("bookmarks") &&
@@ -88,18 +89,29 @@ const injectUrlObserver = () =>
 				return;
 			}
 
-			const previousRoute = webpack.common.history._locationsHistory.at(-1);
+			const isPreviousRouteModal = (() => {
+				const index = webpack.common.history._locationsHistory.findIndex(
+					(l) => l.locationKey === location.key,
+				);
+				// default: false
+				if (index === -1) return false;
+				const previous = webpack.common.history._locationsHistory.at(
+					index + (action === "POP" ? 1 : -1),
+				);
+				return previous?.isModalRoute;
+			})();
+
 			const shouldCreateViewer =
 				location.pathname.endsWith("bookmarks") &&
 				!components.DeckViewer.isMounted &&
-				!(previousRoute?.isModalRoute ?? false);
+				!isPreviousRouteModal;
 			console.log(
 				"should create DeckViewer:",
 				location.pathname.endsWith("bookmarks"),
 				'(path ends with "bookmarks") &&',
 				!components.DeckViewer.isMounted,
 				"(DeckViewer is NOT mounted) &&",
-				!(previousRoute?.isModalRoute ?? false),
+				!isPreviousRouteModal,
 				"(previous route is NOT modal) ==",
 				shouldCreateViewer,
 			);
@@ -169,12 +181,7 @@ const overrideBookmarksTimelineActions = (() => {
 					{
 						after: (value) => {
 							// only notify if it actually happened
-							if (
-								value &&
-								typeof value === "object" &&
-								"performed" in value &&
-								value.performed === true
-							)
+							if (getProperty(value, "performed") === true)
 								internalsEventTarget.dispatchBookmarksTimelineFetched();
 						},
 					},

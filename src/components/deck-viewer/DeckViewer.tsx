@@ -1,5 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { forwardRef } from "react";
+import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { TypedEventTarget } from "typescript-event-target";
 import { decksEventTarget } from "@/src/features/events/decks";
@@ -14,6 +15,7 @@ import BackIcon from "~icons/mdi/arrow-left";
 import SettingsIcon from "~icons/mdi/cog-outline";
 import VerticalMoreIcon from "~icons/mdi/dots-vertical";
 import InformationIcon from "~icons/mdi/information-outline";
+import StarIcon from "~icons/mdi/star-four-points-outline";
 import { IconButton } from "../common/IconButton";
 import DeckDropdown from "../dropdown/DeckDropdown";
 import {
@@ -21,6 +23,7 @@ import {
 	TwitterDropdownItem,
 } from "../dropdown/TwitterDropdown";
 import { tweetComponents } from "../external/Tweet";
+import SortBookmarksModal from "../modals/SortBookmarksModal";
 import { components } from "../wrapper";
 import DeckAboutView from "./DeckAboutView";
 import { DeckBoard } from "./DeckBoard";
@@ -66,6 +69,7 @@ function InternalDeckViewer() {
 		() => ["about", "settings"].includes(currentSection ?? ""),
 		[currentSection],
 	);
+	const [showSortModal, setShowSortModal] = useState(false);
 
 	useEffect(() => {
 		const listener = (ev: CustomEvent<string | null>) =>
@@ -138,7 +142,10 @@ function InternalDeckViewer() {
 				</div>
 
 				{currentDeck ? (
-					<DeckDropdown deck={currentDeck} />
+					<DeckDropdown
+						showSortModal={() => setShowSortModal(true)}
+						deck={currentDeck}
+					/>
 				) : (
 					!isSpecialSection && (
 						<TwitterDropdown<HTMLButtonElement>
@@ -156,6 +163,14 @@ function InternalDeckViewer() {
 						>
 							{({ setOpen }) => (
 								<>
+									<TwitterDropdownItem
+										icon={<StarIcon width={24} height={24} />}
+										text="Sort bookmarks"
+										onClick={() => {
+											setShowSortModal(true);
+											setOpen(false);
+										}}
+									/>
 									<TwitterDropdownItem
 										text="Settings"
 										icon={<SettingsIcon width={24} height={24} />}
@@ -189,6 +204,12 @@ function InternalDeckViewer() {
 						</TwitterDropdown>
 					)
 				)}
+
+				{showSortModal &&
+					createPortal(
+						<SortBookmarksModal onClose={() => setShowSortModal(false)} />,
+						document.body,
+					)}
 			</div>
 			<hr className="border-t-2" />
 			{sectionRenderer}

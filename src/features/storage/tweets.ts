@@ -85,7 +85,7 @@ export const removeTweet = (
 			)
 			.delete();
 		if (options.markUngrouped && !(await isTweetInDeck(id)))
-			await addPotentiallyUngroupedTweet(id);
+			await addPotentiallyUngroupedTweet(id, "unbookmarked");
 		const similarTweetsLeft = await db.tweets.where({ id, user }).count();
 		if (similarTweetsLeft === 0) await removeTweetEntityAndRelatives(id);
 		if (deck) tweetsEventTarget.dispatchTweetUndecked(id, deck);
@@ -95,24 +95,32 @@ export const splitTweets = async (
 	entries: TweetTimelineEntry[],
 ): Promise<[TweetTimelineEntry[], TweetTimelineEntry[]]> => {
 	const user = await getUserId();
-	return await db.transaction("r", db.tweets, async () => {
-		const unsorted = (
-			await Promise.all(
-				entries.map(async (entry) => ({
-					value: entry,
-					include:
-						(await db.tweets.where({ id: entry.content.id, user }).count()) <=
-						0,
-				})),
+	return await db.transaction(
+		"r",
+		db.tweets,
+		db.potentiallyUngrouped,
+		async () => {
+			const unsorted = (
+				await Promise.all(
+					entries.map(async (entry) => ({
+						value: entry,
+						include:
+							(await db.tweets.where({ id: entry.content.id, user }).count()) <=
+								0 &&
+							(await db.potentiallyUngrouped
+								.where({ id: entry.content.id, user })
+								.count()) <= 0,
+					})),
+				)
 			)
-		)
-			.filter((obj) => obj.include)
-			.map((obj) => obj.value);
-		const sorted = entries.filter(
-			(e) => !unsorted.some((e1) => e.entryId === e1.entryId),
-		);
-		return [unsorted, sorted];
-	});
+				.filter((obj) => obj.include)
+				.map((obj) => obj.value);
+			const sorted = entries.filter(
+				(e) => !unsorted.some((e1) => e.entryId === e1.entryId),
+			);
+			return [unsorted, sorted];
+		},
+	);
 };
 
 export const getLatestSortedTweet = async (): Promise<

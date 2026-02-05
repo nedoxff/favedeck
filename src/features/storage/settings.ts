@@ -4,12 +4,12 @@ import { kv } from "./kv";
 
 export type FavedeckSettings = {
 	updateStatistics: boolean;
-	includeQuoteTweets: boolean;
+	fetchMoreTweetsPerRequest: boolean;
 };
 
 export const DEFAULT_SETTINGS: FavedeckSettings = {
-	includeQuoteTweets: false,
 	updateStatistics: false,
+	fetchMoreTweetsPerRequest: false,
 };
 
 export const getSetting = async (path: Paths<FavedeckSettings>) =>

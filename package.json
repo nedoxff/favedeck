@@ -1,6 +1,6 @@
 {
 	"name": "favedeck",
-	"description": "categorize your twitter bookmarks like in pinterest!",
+	"description": "Organize Twitter bookmarks like you do in Pinterest!",
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
