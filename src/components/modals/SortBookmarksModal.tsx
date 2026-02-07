@@ -189,7 +189,7 @@ function CustomDropCard(props: {
 		>
 			{props.children}
 			{props.clickAction && (
-				<p className="opacity-75 hidden group-hover:block!">
+				<p className="opacity-75 text-center px-2 hidden group-hover:block!">
 					{props.clickAction.title}
 				</p>
 			)}

@@ -42,8 +42,8 @@ export default function DeckSettingsView() {
 							paginated Twitter APIs. Might help with bypassing certain
 							ratelimits.{" "}
 							<b>
-								Only enable if you have a stable internet connection or you're
-								ready to wait for a bit longer.
+								Only enable this if you have a strong internet connection or
+								you're ready to wait for a bit longer.
 							</b>
 						</>
 					}

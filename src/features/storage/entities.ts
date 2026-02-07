@@ -1,4 +1,5 @@
 import { Result, type UnhandledException } from "better-result";
+import { getProperty } from "dot-prop";
 import { mergician } from "mergician";
 import { compressObject, decompressObject } from "@/src/helpers/compression";
 import {
@@ -102,7 +103,7 @@ export const getTweetEntityPayloadFromReduxStore = async (tweet: string) => {
 	const payload: Required<AddEntitiesPayload> = {
 		tweets: {},
 		users: {},
-		favedeck: { quoteOf: {} },
+		favedeck: { quoteOf: {}, user: {} },
 	};
 	const addTweet = (id: string): Result<void, UnhandledException> =>
 		Result.gen(function* () {
@@ -110,6 +111,7 @@ export const getTweetEntityPayloadFromReduxStore = async (tweet: string) => {
 			const tweetEntity = yield* getTweetEntity(id);
 			payload.tweets[tweetEntity.id_str] = tweetEntity;
 			payload.users[tweetEntity.user] = yield* getUserEntity(tweetEntity.user);
+			payload.favedeck.user[tweetEntity.id_str] = tweetEntity.user;
 			if (tweetEntity.quoted_status) {
 				yield* addTweet(tweetEntity.quoted_status);
 				payload.favedeck.quoteOf[tweetEntity.quoted_status] =
@@ -133,9 +135,19 @@ export const getTweetEntityPayloadFromDatabase = async (id: string) =>
 			);
 		const userEntity: RawTweetUser = await decompressObject(rawUserEntity.data);
 
-		const payload = {
+		const meta = {
+			quoteOf: getProperty(rawTweetEntity.meta, "quoteOf") as
+				| string
+				| undefined,
+			user: getProperty(rawTweetEntity.meta, "user") as string | undefined,
+		};
+		const payload: AddEntitiesPayload = {
 			tweets: { [id]: tweetEntity },
 			users: { [tweetEntity.user]: userEntity },
+			favedeck: {
+				quoteOf: meta.quoteOf ? { [id]: meta.quoteOf } : {},
+				user: meta.user ? { [id]: meta.user } : {},
+			},
 		};
 		return tweetEntity.quoted_status
 			? mergician(

@@ -98,7 +98,7 @@ export default function EditDeckModal(props: {
 						name: deckName,
 						secret: deckSecret,
 						viewMode: deckViewMode,
-						dateModified: new Date(),
+						dateModified: Date.now(),
 					});
 					props.onClose();
 				}}

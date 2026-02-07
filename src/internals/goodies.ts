@@ -127,7 +127,7 @@ export const getRootNodeFromTweetElement = memoize((el: HTMLElement) =>
 		const id = getTweetIdFromFiber(tweetFiber);
 		if (id.isErr())
 			throw new Error("couldn't find tweet id from tweetFiber", {
-				cause: id.error.cause,
+				cause: id.error,
 			});
 		return {
 			rootNode,
@@ -148,7 +148,8 @@ export const pauseTweetVideo = (video: HTMLVideoElement) => {
 	);
 	if (!playerFiber)
 		return Result.err("couldn't find fiber which had the playerApi");
-	// @ts-expect-error
-	playerFiber.memoizedProps.value.playerApi.pause();
-	return Result.ok();
+	return Result.try(() =>
+		// @ts-expect-error
+		playerFiber.memoizedProps.value.playerApi.pause(),
+	).mapError((err) => err.message);
 };

@@ -56,7 +56,7 @@ export const addTweetToDeck = (tweet: string, deck: string) =>
 		};
 
 		await db.tweets.put({
-			dateAdded: new Date(),
+			dateAdded: Date.now(),
 			deck,
 			id: tweet,
 			user: (await getUserId()) ?? "",

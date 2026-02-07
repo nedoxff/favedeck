@@ -1,5 +1,5 @@
 > [!NOTE]
-> This document is much less formal than the [README](../README.md).
+> This document is much less formal than the [README](../README.md). It describes some of the inner workings of the extension and some pitfalls people might stumble upon (if they decide to look at the code).
 
 ## [Ratelimits](#ratelimits)
 

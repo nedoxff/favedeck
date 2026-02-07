@@ -4,7 +4,7 @@ export interface DatabaseTweet {
 	user: string;
 	deck: string;
 	id: string;
-	dateAdded: Date;
+	dateAdded: number;
 	thumbnail?: string;
 	order: number;
 }
@@ -14,7 +14,7 @@ export interface DatabaseDeck {
 	id: string;
 	name: string;
 	secret: boolean;
-	dateModified: Date;
+	dateModified: number;
 	viewMode: "regular" | "masonry";
 	order: number;
 }

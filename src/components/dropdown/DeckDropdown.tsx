@@ -6,12 +6,14 @@ import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { getRootNodeFromTweetElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
 import VerticalMoreIcon from "~icons/mdi/dots-vertical";
+import DownloadIcon from "~icons/mdi/download-outline";
 import EditIcon from "~icons/mdi/pencil-outline";
 import StarIcon from "~icons/mdi/star-four-points-outline";
 import DeleteIcon from "~icons/mdi/trash-can-outline";
 import { IconButton } from "../common/IconButton";
 import ConfirmModal from "../modals/ConfirmModal";
 import EditDeckModal from "../modals/EditDeckModal";
+import ExportDeckModal from "../modals/ExportDeckModal";
 import { components } from "../wrapper";
 import { TwitterDropdown, TwitterDropdownItem } from "./TwitterDropdown";
 
@@ -22,6 +24,7 @@ export default function DeckDropdown(props: {
 }) {
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [showExportModal, setShowExportModal] = useState(false);
 
 	return props.deck.id === "all" ? (
 		<TwitterDropdown<HTMLButtonElement>
@@ -66,6 +69,14 @@ export default function DeckDropdown(props: {
 				{({ setOpen }) => (
 					<>
 						<TwitterDropdownItem
+							icon={<DownloadIcon width={24} height={24} />}
+							text="Export deck"
+							onClick={() => {
+								setShowExportModal(true);
+								setOpen(false);
+							}}
+						/>
+						<TwitterDropdownItem
 							icon={<EditIcon width={24} height={24} />}
 							text="Edit deck"
 							onClick={() => {
@@ -84,6 +95,15 @@ export default function DeckDropdown(props: {
 					</>
 				)}
 			</TwitterDropdown>
+
+			{showExportModal &&
+				createPortal(
+					<ExportDeckModal
+						deck={props.deck}
+						onClose={() => setShowExportModal(false)}
+					/>,
+					document.body,
+				)}
 
 			{showEditModal &&
 				createPortal(

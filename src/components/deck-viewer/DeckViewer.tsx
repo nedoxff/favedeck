@@ -16,6 +16,7 @@ import SettingsIcon from "~icons/mdi/cog-outline";
 import VerticalMoreIcon from "~icons/mdi/dots-vertical";
 import InformationIcon from "~icons/mdi/information-outline";
 import StarIcon from "~icons/mdi/star-four-points-outline";
+import UploadIcon from "~icons/mdi/upload-outline";
 import { IconButton } from "../common/IconButton";
 import DeckDropdown from "../dropdown/DeckDropdown";
 import {
@@ -23,6 +24,7 @@ import {
 	TwitterDropdownItem,
 } from "../dropdown/TwitterDropdown";
 import { tweetComponents } from "../external/Tweet";
+import ImportDeckModal from "../modals/ImportDeckModal";
 import SortBookmarksModal from "../modals/SortBookmarksModal";
 import { components } from "../wrapper";
 import DeckAboutView from "./DeckAboutView";
@@ -70,6 +72,7 @@ function InternalDeckViewer() {
 		[currentSection],
 	);
 	const [showSortModal, setShowSortModal] = useState(false);
+	const [showImportModal, setShowImportModal] = useState(false);
 
 	useEffect(() => {
 		const listener = (ev: CustomEvent<string | null>) =>
@@ -164,6 +167,14 @@ function InternalDeckViewer() {
 							{({ setOpen }) => (
 								<>
 									<TwitterDropdownItem
+										icon={<UploadIcon width={24} height={24} />}
+										text="Import deck"
+										onClick={() => {
+											setShowImportModal(true);
+											setOpen(false);
+										}}
+									/>
+									<TwitterDropdownItem
 										icon={<StarIcon width={24} height={24} />}
 										text="Sort bookmarks"
 										onClick={() => {
@@ -208,6 +219,12 @@ function InternalDeckViewer() {
 				{showSortModal &&
 					createPortal(
 						<SortBookmarksModal onClose={() => setShowSortModal(false)} />,
+						document.body,
+					)}
+
+				{showImportModal &&
+					createPortal(
+						<ImportDeckModal onClose={() => setShowImportModal(false)} />,
 						document.body,
 					)}
 			</div>
@@ -318,17 +335,11 @@ export const DeckViewer: {
 				// pause all videos playing in the timeline just in case
 				queueMicrotask(() => {
 					if (!originalContainer) return;
-					console.time(
-						"pause videos after hiding DeckViewer.originalContainer",
-					);
 					for (const video of originalContainer.querySelectorAll("video")) {
 						const result = pauseTweetVideo(video);
 						if (result.isErr())
 							console.warn("failed to pause video", video, result.error);
 					}
-					console.timeEnd(
-						"pause videos after hiding DeckViewer.originalContainer",
-					);
 				});
 			},
 			get value() {

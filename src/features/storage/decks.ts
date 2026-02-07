@@ -10,7 +10,7 @@ export const ALL_BOOKMARKS_DECK: DatabaseDeck = {
 	name: "All bookmarks",
 	secret: false,
 	user: "",
-	dateModified: new Date(),
+	dateModified: Date.now(),
 	viewMode: "regular",
 	order: Dexie.minKey,
 };
@@ -26,7 +26,7 @@ export const createDeck = async (name: string, secret: boolean) => {
 		name,
 		secret,
 		user: (await getUserId()) ?? "",
-		dateModified: new Date(),
+		dateModified: Date.now(),
 		viewMode: "regular",
 		order: Dexie.minKey,
 	};

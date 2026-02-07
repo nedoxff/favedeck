@@ -19,6 +19,7 @@ export type AddEntitiesPayload = {
 	users?: Record<string, RawTweetUser>;
 	favedeck?: {
 		quoteOf: Record<string, string>;
+		user: Record<string, string>;
 	};
 };
 
