@@ -23,9 +23,6 @@ export default function DeckAboutView() {
 	return (
 		<div className="flex flex-col gap-8 justify-center items-center h-[calc(100vh-3.5rem)]">
 			<div className="flex flex-col w-full items-center justify-center">
-				{/** biome-ignore lint/a11y/useFocusableInteractive: TODO */}
-				{/** biome-ignore lint/a11y/useKeyWithClickEvents: TODO */}
-				{/** biome-ignore lint/a11y/useSemanticElements: TODO */}
 				<div
 					role="button"
 					onClick={() =>

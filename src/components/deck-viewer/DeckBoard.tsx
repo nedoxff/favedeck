@@ -1,7 +1,3 @@
-/** biome-ignore-all lint/a11y/useSemanticElements: TODO */
-/** biome-ignore-all lint/a11y/useFocusableInteractive: TODO */
-/** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
-
 import { move } from "@dnd-kit/helpers";
 import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";

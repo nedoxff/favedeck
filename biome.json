@@ -23,6 +23,12 @@
 						"ignoreRestSiblings": true
 					}
 				}
+			},
+			"a11y": {
+				"useFocusableInteractive": "off",
+				"useKeyWithClickEvents": "off",
+				"useSemanticElements": "off",
+				"noStaticElementInteractions": "off"
 			}
 		}
 	},

@@ -29,6 +29,7 @@ export const {
 	useLayoutEffect,
 	useImperativeHandle,
 	useSyncExternalStore,
+	useDeferredValue,
 	createContext,
 	createElement,
 	cloneElement,

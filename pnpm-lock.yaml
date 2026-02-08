@@ -73,6 +73,9 @@ importers:
       micro-memoize:
         specifier: ^5.1.1
         version: 5.1.1
+      mini-virtual-list:
+        specifier: ^0.3.2
+        version: 0.3.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       pica:
         specifier: ^9.0.1
         version: 9.0.1
@@ -103,9 +106,6 @@ importers:
       typescript-event-target:
         specifier: ^1.1.2
         version: 1.1.2
-      use-debounce:
-        specifier: ^10.1.0
-        version: 10.1.0(react@19.2.4)
       uuid:
         specifier: ^13.0.0
         version: 13.0.0
@@ -1994,6 +1994,12 @@ packages:
     resolution: {integrity: sha512-VP79XUPxV2CigYP3jWwAUFSku2aKqBH7uTAapFWCBqutsbmDo96KY5o8uh6U+/YSIn5OxJnXp73beVkpqMIGhA==}
     engines: {node: '>=18'}
 
+  mini-virtual-list@0.3.2:
+    resolution: {integrity: sha512-NWTgjGenrnaabzTxaeYIzwovXe5V8g/GWmFGA0rP2fecPsuWz4E8UYx4qmOCeA2m+qrDHhpDlBryclGOdzwj2g==}
+    peerDependencies:
+      react: '>=16.8'
+      react-dom: '>=16.8'
+
   minimatch@10.1.1:
     resolution: {integrity: sha512-enIvLvRAFZYXJzkCYG5RKmPfrFArdLv+R+lbQ53BmIMLIry74bjKzX6iHAm8WYamJkhSSEabrWN5D97XnKObjQ==}
     engines: {node: 20 || >=22}
@@ -2577,12 +2583,6 @@ packages:
   update-notifier@7.3.1:
     resolution: {integrity: sha512-+dwUY4L35XFYEzE+OAL3sarJdUioVovq+8f7lcIJ7wnmnYQV5UD1Y/lcwaMSyaQ6Bj3JMj1XSTjZbNLHn/19yA==}
     engines: {node: '>=18'}
-
-  use-debounce@10.1.0:
-    resolution: {integrity: sha512-lu87Za35V3n/MyMoEpD5zJv0k7hCn0p+V/fK2kWD+3k2u3kOCwO593UArbczg1fhfs2rqPEnHpULJ3KmGdDzvg==}
-    engines: {node: '>= 16.0.0'}
-    peerDependencies:
-      react: '*'
 
   utf8-byte-length@1.0.5:
     resolution: {integrity: sha512-Xn0w3MtiQ6zoz2vFyUVruaCL53O/DwUvkEeOvj+uulMm0BkUGYWmBYVyElqZaSLhY6ZD0ulfU3aBra2aVT4xfA==}
@@ -4401,6 +4401,16 @@ snapshots:
 
   mimic-function@5.0.1: {}
 
+  mini-virtual-list@0.3.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+    dependencies:
+      '@essentials/memoize-one': 1.1.0
+      '@essentials/request-timeout': 1.3.0
+      '@react-hook/event': 1.2.6(react@19.2.4)
+      '@react-hook/passive-layout-effect': 1.2.1(react@19.2.4)
+      '@react-hook/throttle': 2.2.0(react@19.2.4)
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+
   minimatch@10.1.1:
     dependencies:
       '@isaacs/brace-expansion': 5.0.0
@@ -5020,10 +5030,6 @@ snapshots:
       pupa: 3.3.0
       semver: 7.7.3
       xdg-basedir: 5.1.0
-
-  use-debounce@10.1.0(react@19.2.4):
-    dependencies:
-      react: 19.2.4
 
   utf8-byte-length@1.0.5: {}
 

@@ -1,7 +1,3 @@
-/** biome-ignore-all lint/a11y/useFocusableInteractive: TODO */
-/** biome-ignore-all lint/a11y/useSemanticElements: TODO */
-/** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
-
 import { Result } from "better-result";
 import * as bippy from "bippy";
 import { useLiveQuery } from "dexie-react-hooks";

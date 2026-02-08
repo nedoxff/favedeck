@@ -25,7 +25,7 @@ import {
 } from "../dropdown/TwitterDropdown";
 import { tweetComponents } from "../external/Tweet";
 import ImportDeckModal from "../modals/ImportDeckModal";
-import SortBookmarksModal from "../modals/SortBookmarksModal";
+import SortBookmarksModal from "../modals/SortBookmarksModal/SortBookmarksModal";
 import { components } from "../wrapper";
 import DeckAboutView from "./DeckAboutView";
 import { DeckBoard } from "./DeckBoard";

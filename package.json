@@ -35,6 +35,7 @@
 		"masonic": "^4.1.0",
 		"mergician": "^2.0.2",
 		"micro-memoize": "^5.1.1",
+		"mini-virtual-list": "^0.3.2",
 		"pica": "^9.0.1",
 		"react": "^19.2.4",
 		"react-confetti-boom": "^2.0.1",
@@ -45,7 +46,6 @@
 		"tailwind-merge": "^3.4.0",
 		"tailwindcss": "^4.1.18",
 		"typescript-event-target": "^1.1.2",
-		"use-debounce": "^10.1.0",
 		"uuid": "^13.0.0",
 		"zustand": "^5.0.10"
 	},

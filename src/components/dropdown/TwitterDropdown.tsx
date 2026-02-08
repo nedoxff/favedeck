@@ -1,6 +1,3 @@
-/** biome-ignore-all lint/a11y/useFocusableInteractive: TODO */
-/** biome-ignore-all lint/a11y/useSemanticElements: TODO */
-/** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
 import type {
 	ForwardRefExoticComponent,
 	MouseEvent,
@@ -10,7 +7,7 @@ import type {
 import { createPortal } from "react-dom";
 
 export function TwitterDropdownItem(props: {
-	icon: ReactNode;
+	icon?: ReactNode;
 	text: string;
 	description?: string;
 	onClick?: (ev: MouseEvent) => void;

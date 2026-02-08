@@ -3,17 +3,12 @@ import { move } from "@dnd-kit/helpers";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { Result } from "better-result";
-import { useLiveQuery } from "dexie-react-hooks";
 import { deepEqual } from "fast-equals";
 import { Masonry, type MasonryProps, useInfiniteLoader } from "masonic";
 import { memoize } from "micro-memoize";
 import React, { memo } from "react";
 import { tweetsEventTarget } from "@/src/features/events/tweets";
-import {
-	getDeckSize,
-	getDeckTweets,
-	updateTweetsOrder,
-} from "@/src/features/storage/decks";
+import { getDeckTweets, updateTweetsOrder } from "@/src/features/storage/decks";
 import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { cn } from "@/src/helpers/cn";
 import {
@@ -45,7 +40,7 @@ function GenericTweetMasonry<T extends { id: string }>(
 		}>;
 	} & Omit<MasonryProps<T>, "items">,
 ) {
-	const deckSize = useLiveQuery(() => getDeckSize(props.deck.id), [], 0);
+	const [totalItems, setTotalItems] = useState<number | undefined>(undefined);
 	const [tweets, setTweets] = useState<T[]>([]);
 	const [initialFetchDone, setInitialFetchDone] = useState(false);
 
@@ -83,26 +78,26 @@ function GenericTweetMasonry<T extends { id: string }>(
 	}, [tweets]);
 
 	const maybeLoadMore = useInfiniteLoader(
-		async (start, stop) => {
-			console.log(
-				"fetching more tweets: total",
-				deckSize,
-				"start",
-				start,
-				"stop",
-				stop,
-			);
+		memoize(async (start, stop) => {
+			console.log("fetching more tweets: start", start, "stop", stop);
 			const newTweets = await props.fetcher(start, stop);
-			setTweets((current) => [
-				...current,
-				...newTweets.filter((t) => !current.some((t1) => deepEqual(t, t1))),
-			]);
-		},
+			setTweets((current) => {
+				const updated = [
+					...current,
+					...newTweets.filter((t) => !current.some((t1) => deepEqual(t, t1))),
+				];
+				if (updated.length === current.length) {
+					console.log("reached the end:", current.length, "items");
+					setTotalItems(current.length);
+				}
+				return updated;
+			});
+		}),
 		{
 			isItemLoaded: (index, items) => !!items[index],
 			threshold: TWEET_LIST_FETCH_THRESHOLD,
 			minimumBatchSize: TWEET_LIST_FETCH_COUNT,
-			totalItems: deckSize,
+			totalItems,
 		},
 	);
 
@@ -288,7 +283,7 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 		<div className="grow p-4">
 			<GenericTweetMasonry<TweetMasonryInfo>
 				deck={props.deck}
-				fetcher={memoize(async (start, stop) =>
+				fetcher={async (start, stop) =>
 					(
 						await Result.gen(async function* () {
 							{
@@ -322,8 +317,8 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 							);
 							return [];
 						},
-					}),
-				)}
+					})
+				}
 				render={DeckMasonryListItem}
 				overlayRenderer={React.memo(
 					({ draggable }) => {
@@ -402,7 +397,7 @@ export function DeckTweetList(props: { deck: DatabaseDeck }) {
 		<div className="grow">
 			<GenericTweetMasonry<{ id: string }>
 				deck={props.deck}
-				fetcher={memoize(async (start, stop) =>
+				fetcher={async (start, stop) =>
 					(
 						await Result.gen(async function* () {
 							const tweets = yield* Result.await(
@@ -425,8 +420,8 @@ export function DeckTweetList(props: { deck: DatabaseDeck }) {
 							);
 							return [];
 						},
-					}),
-				)}
+					})
+				}
 				render={SortableTweetWrapper}
 				overlayRenderer={React.memo(
 					({ draggable }) =>

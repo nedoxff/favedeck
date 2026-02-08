@@ -1,8 +1,14 @@
 import { useLiveQuery } from "dexie-react-hooks";
+import { forwardRef } from "react";
 import { kv } from "@/src/features/storage/kv";
 import { setSetting } from "@/src/features/storage/settings";
+import ChevronDownIcon from "~icons/mdi/chevron-down";
 import Checkbox from "../common/Checkbox";
 import ListTile from "../common/ListTile";
+import {
+	TwitterDropdown,
+	TwitterDropdownItem,
+} from "../dropdown/TwitterDropdown";
 
 export default function DeckSettingsView() {
 	const settings = useLiveQuery(kv.settings.get);
@@ -58,6 +64,63 @@ export default function DeckSettingsView() {
 							"fetchMoreTweetsPerRequest",
 							!settings.fetchMoreTweetsPerRequest,
 						)
+					}
+				/>
+
+				<ListTile
+					title="Preferred bookmarks sort interface"
+					endContent={
+						<TwitterDropdown<HTMLDivElement>
+							trigger={forwardRef(({ isOpen, setOpen }, ref) => (
+								<div
+									role="button"
+									ref={ref}
+									onClick={(ev) => {
+										ev.stopPropagation();
+										setOpen(!isOpen);
+									}}
+									className="p-2 pr-1 rounded-xl hover:shadow-lighten! flex flex-row justify-center items-center gap-2"
+								>
+									<p>
+										{settings.preferredSortBookmarksInterface === "ask"
+											? "Ask every time"
+											: settings.preferredSortBookmarksInterface === "card-game"
+												? "Card Game"
+												: "Masonry"}
+									</p>
+									<ChevronDownIcon width={24} height={24} />
+								</div>
+							))}
+						>
+							{({ setOpen }) => (
+								<>
+									<TwitterDropdownItem
+										text="Ask every time"
+										onClick={() => {
+											setSetting("preferredSortBookmarksInterface", "ask");
+											setOpen(false);
+										}}
+									/>
+									<TwitterDropdownItem
+										text="Card Game"
+										onClick={() => {
+											setSetting(
+												"preferredSortBookmarksInterface",
+												"card-game",
+											);
+											setOpen(false);
+										}}
+									/>
+									<TwitterDropdownItem
+										text="Masonry"
+										onClick={() => {
+											setSetting("preferredSortBookmarksInterface", "masonry");
+											setOpen(false);
+										}}
+									/>
+								</>
+							)}
+						</TwitterDropdown>
 					}
 				/>
 			</div>

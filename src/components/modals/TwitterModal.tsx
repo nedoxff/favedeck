@@ -1,7 +1,3 @@
-/** biome-ignore-all lint/a11y/useFocusableInteractive: TODO */
-/** biome-ignore-all lint/a11y/useSemanticElements: TODO */
-/** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
-
 import type { ReactNode } from "react";
 import { cn } from "@/src/helpers/cn";
 

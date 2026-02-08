@@ -5,11 +5,13 @@ import { kv } from "./kv";
 export type FavedeckSettings = {
 	updateStatistics: boolean;
 	fetchMoreTweetsPerRequest: boolean;
+	preferredSortBookmarksInterface: "ask" | "card-game" | "masonry";
 };
 
 export const DEFAULT_SETTINGS: FavedeckSettings = {
 	updateStatistics: false,
 	fetchMoreTweetsPerRequest: false,
+	preferredSortBookmarksInterface: "ask",
 };
 
 export const getSetting = async (path: Paths<FavedeckSettings>) =>

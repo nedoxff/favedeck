@@ -76,3 +76,25 @@ function DeckTweetList() {
 
 > [!NOTE]
 > The important thing to mention here is that **the popup code is exempt from this hijacking**. It renders React just like it would regularly, which is the reason why `Twitter is being rendered with React vXX.X.X` is displayed in the popup under "Debug Information".
+
+## [`Context`s](#contexts)
+
+**Don't** do:
+
+```ts
+const SomeContext = createContext<string>(":3");
+
+function SomeComponent() {
+	return <SomeContext value=">:3">...</SomeContext>
+}
+```
+
+The Twitter client will throw a cryptic error since this is React v19 syntax. Instead, use `SomeContext.Provider`:
+
+```ts
+const SomeContext = createContext<string>(":3");
+
+function SomeComponent() {
+	return <SomeContext.Provider value=">:3">...</SomeContext.Provider>
+}
+```
