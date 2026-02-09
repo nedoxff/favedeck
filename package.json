@@ -70,8 +70,8 @@
 			"masonic": "patches/masonic.patch"
 		},
 		"onlyBuiltDependencies": [
+			"@swc/core",
 			"esbuild",
-			"sharp",
 			"spawn-sync"
 		]
 	}

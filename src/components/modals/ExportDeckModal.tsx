@@ -77,10 +77,13 @@ export default function ExportDeckModal(props: {
 				}}
 				disabled={isExporting}
 				type="button"
-				className="mt-2 rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center"
+				className="mt-2 flex justify-center items-center rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center"
 			>
 				{isExporting ? (
-					<Spinner size="small" className="border-white/25! border-b-white!" />
+					<Spinner
+						size="small"
+						className="border-[rgba(255,255,255,0.25)]! border-b-white!"
+					/>
 				) : (
 					"Export!"
 				)}
