@@ -78,10 +78,12 @@ It's also possible to export decks if you wish to transfer them to another devic
 ### <h3 align="center">Sort existing bookmarks</h3>
 <p align="center">Organize tweets from your bookmarks with silly interactive interfaces!</p>
 
-<img align="center" src="docs/img/sort-card-game.gif"/>
-<br/><br/>
-<img align="center" src="docs/img/sort-masonry.gif"/>
-<br/><br/>
+<div align="center">
+    <img src="docs/img/sort-card-game.gif"/>
+    <br/>
+    <img src="docs/img/sort-masonry.gif"/>
+</div>
+<br/>
 <p align="center"><i>and more stuff I probably forgot to include...</i></p>
 
 ## [Motivation/Implementation](#motivation-implementation)
