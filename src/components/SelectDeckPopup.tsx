@@ -67,20 +67,22 @@ function ActionsCard(props: { tweet: string }) {
 					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-15! hover:shadow-lighten! rounded-xl"
 					onClick={async () => {
 						components.SelectDeckPopup.hide();
-						(
-							await Result.gen(async function* () {
-								yield* Result.await(unbookmarkTweet(props.tweet));
-								yield* Result.await(
-									removeTweet(props.tweet, undefined, { markUngrouped: false }),
-								);
-								return Result.ok();
-							})
-						).match({
-							ok: () =>
-								console.log("successfully unbookmarked tweet", props.tweet),
-							err: () =>
-								console.error("failed to unbookmark tweet", props.tweet),
+						const removeResult = await Result.gen(async function* () {
+							yield* Result.await(unbookmarkTweet(props.tweet));
+							yield* Result.await(
+								removeTweet(props.tweet, undefined, { markUngrouped: false }),
+							);
+							return Result.ok();
 						});
+						if (removeResult.isOk())
+							console.log("successfully unbookmarked tweet", props.tweet);
+						else {
+							console.error("failed to unbookmark tweet", props.tweet);
+							components.Toast.error(
+								"Failed to unbookmark tweet",
+								removeResult.error,
+							);
+						}
 					}}
 				>
 					<BookmarkIcon width={24} height={24} />
@@ -98,6 +100,10 @@ function ActionsCard(props: { tweet: string }) {
 									props.tweet,
 									"to newly created deck",
 									deck,
+									result.error,
+								);
+								components.Toast.error(
+									`Failed to save tweet to newly created deck`,
 									result.error,
 								);
 							}

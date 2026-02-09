@@ -2,6 +2,7 @@ import { Result } from "better-result";
 import type { Fiber } from "bippy";
 import { getProperty } from "dot-prop";
 import { mergician } from "mergician";
+import { tweetsEventTarget } from "../features/events/tweets";
 import type { DatabaseTweet } from "../features/storage/definition";
 import {
 	getTweetEntityIds,
@@ -147,6 +148,7 @@ export const unbookmarkTweet = (id: string) =>
 				[id]: true,
 			},
 		});
+		tweetsEventTarget.dispatchTweetUnbookmarked(id);
 	});
 
 // fetches the tweets, updates entities in the database

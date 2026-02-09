@@ -229,12 +229,12 @@ const initializeWebpack = async () =>
 		document.documentElement.style.setProperty("--fd-mask", maskColor);
 		document.documentElement.style.setProperty("--fd-danger", dangerColor);
 
-		console.log(
-			`primary color: ${primaryColor} (${theme._activeTheme.primaryColorName})`,
-		);
-		console.log(`bg color: ${bgColor}`);
-		console.log(`mask (modal) color: ${maskColor}`);
-		console.log(`danger color: ${dangerColor}`);
+		console.log("colors", {
+			primaryColor,
+			bgColor,
+			maskColor,
+			dangerColor,
+		});
 
 		websiteMessenger.sendMessage("syncIcon", primaryColor);
 		return Result.ok();

@@ -5,6 +5,7 @@ import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { deckImporterExporter } from "@/src/features/storage/import-export/decks";
 import Alert from "../common/Alert";
 import Spinner from "../common/Spinner";
+import { components } from "../wrapper";
 import { TwitterModal } from "./TwitterModal";
 
 export default function ExportDeckModal(props: {
@@ -59,7 +60,11 @@ export default function ExportDeckModal(props: {
 									: sanitizedName;
 							a.click();
 							URL.revokeObjectURL(url);
+
 							props.onClose();
+							components.Toast.success(
+								`Successfully exported "${props.deck.name}"`,
+							);
 							return;
 						}
 

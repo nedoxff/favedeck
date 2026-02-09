@@ -1,8 +1,11 @@
 import type { DragDropEvents } from "@dnd-kit/react";
+import { Result } from "better-result";
+import Confetti from "react-confetti-boom";
 import { internalsEventTarget } from "@/src/features/events/internals";
 import { kv } from "@/src/features/storage/kv";
 import {
 	addPotentiallyUngroupedTweet,
+	checkPotentiallyUngroupedTweets,
 	getPotentiallyUngroupedTweets,
 	removePotentiallyUngroupedTweet,
 } from "@/src/features/storage/potentially-ungrouped";
@@ -39,7 +42,9 @@ import {
 export default function SortBookmarksModal(props: { onClose: () => void }) {
 	const {
 		allTweets,
+		isDone,
 		reset,
+		setIsDone,
 		setAllTweets,
 		setSortedTweets,
 		setAddedIntentionallyUngroupedTweets,
@@ -64,16 +69,36 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 	const initialFetchDoneRef = useRef(false);
 	const closingRef = useRef(false);
 	const stateCursorUsedRef = useRef(false);
+	const previousBookmarksTimelineEntriesCountRef = useRef(-1);
+
 	const [pendingNewDeckTweet, setPendingNewDeckTweet] = useState<
 		PendingNewDeckTweet | undefined
 	>(undefined);
 	const [showCreateDeckModal, setShowCreateDeckModal] = useState(false);
 
 	const refetchTweetEntries = async (force?: boolean) => {
-		setIsFetchingTweets(true);
+		const modalState = useSortBookmarksState.getState();
+		if (modalState.isDone) return;
+
 		const rawEntries = getBookmarksTimelineEntries().filter(
 			(entry) => entry.type === "tweet",
 		);
+
+		if (
+			previousBookmarksTimelineEntriesCountRef.current === rawEntries.length
+		) {
+			if (
+				modalState.allTweets.length === modalState.sortedTweets.length ||
+				modalState.allTweets.length === 0
+			) {
+				console.log("sorted all bookmarks!");
+				setIsDone(true);
+			}
+			setIsFetchingTweets(false);
+			return;
+		} else previousBookmarksTimelineEntriesCountRef.current = rawEntries.length;
+
+		setIsFetchingTweets(true);
 		const [unsortedEntries, sortedEntries] = await splitTweets(rawEntries);
 		const state = await kv.sortBookmarksState.get();
 
@@ -128,21 +153,27 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		setIsFetchingTweets(false);
 	};
 
-	const appendUngroupedTweets = (category: "unbookmarked" | "intentional") => {
-		getPotentiallyUngroupedTweets(category).then((ungroupedTweets) => {
-			setAllTweets((current) => {
-				const toAdd = ungroupedTweets
-					.filter(
-						(t) =>
-							!(t.id in (t.payload.favedeck?.quoteOf ?? {})) &&
-							!current.includes(t.id),
-					)
-					.map((t) => {
-						addEntities(t.payload);
-						return t.id;
-					});
-				return [...toAdd, ...current];
-			});
+	const appendUngroupedTweets = async (
+		category: "unbookmarked" | "intentional",
+	) => {
+		const ungroupedTweets = await checkPotentiallyUngroupedTweets(
+			await getPotentiallyUngroupedTweets(category),
+		);
+		setSortedTweets((current) =>
+			current.filter((t) => !ungroupedTweets.some((ut) => ut.id === t)),
+		);
+		setAllTweets((current) => {
+			const toAdd = ungroupedTweets
+				.filter(
+					(t) =>
+						!(t.id in (t.payload.favedeck?.quoteOf ?? {})) &&
+						!current.includes(t.id),
+				)
+				.map((t) => {
+					addEntities(t.payload);
+					return t.id;
+				});
+			return [...toAdd, ...current];
 		});
 	};
 
@@ -216,8 +247,9 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 	}, []);
 
 	const actions: SortBookmarksActions = {
-		appendIntentionallyUngroupedTweets: () => {
-			appendUngroupedTweets("intentional");
+		appendIntentionallyUngroupedTweets: async () => {
+			await appendUngroupedTweets("intentional");
+			setIsDone(false);
 			setAddedIntentionallyUngroupedTweets(true);
 		},
 		onDragEnd: async (ev) => {
@@ -228,10 +260,14 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 				const tweet = ev.operation.source.id.toString();
 				const target = ev.operation.target.id.toString();
 
-				try {
+				const result = await Result.tryPromise(async () => {
 					switch (target) {
 						case "unbookmark": {
-							await unbookmarkTweet(tweet);
+							const unbookmarkResult = await unbookmarkTweet(tweet);
+							if (unbookmarkResult.isErr())
+								throw Error(`failed to unbookmark tweet`, {
+									cause: unbookmarkResult.error,
+								});
 							break;
 						}
 						case "later": {
@@ -248,7 +284,11 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 							break;
 						}
 						default: {
-							await addTweetToDeck(tweet, target);
+							const addResult = await addTweetToDeck(tweet, target);
+							if (addResult.isErr())
+								throw Error("failed to add tweet to deck", {
+									cause: addResult.error,
+								});
 							await removePotentiallyUngroupedTweet(tweet);
 							const node = document.querySelector(
 								`div[data-favedeck-id="${tweet}"]`,
@@ -260,8 +300,14 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 					}
 
 					setSortedTweets((cur) => [...cur, tweet]);
-				} catch (err) {
-					console.error(`failed to drop ${tweet} into ${target}`, err);
+				});
+
+				if (result.isErr()) {
+					console.error(`failed to drop ${tweet} into ${target}`, result.error);
+					components.Toast.error(
+						"Failed to process the dropped tweet",
+						result.error,
+					);
 				}
 			}
 		},
@@ -295,7 +341,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 
 	return (
 		<>
-			<TwitterModal className="p-0 w-[95%] h-[95%]" onClose={onClose}>
+			<TwitterModal className="p-0 w-[95%] h-[95%] relative" onClose={onClose}>
 				<div className="flex flex-row justify-between items-center pt-8 px-8">
 					<div className="flex flex-row gap-4 items-center">
 						<IconButton onClick={onClose}>
@@ -305,6 +351,17 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 					</div>
 				</div>
 				{body}
+				{isDone && (
+					<Confetti
+						className="absolute w-full h-full pointer-events-none"
+						mode="boom"
+						particleCount={50}
+						launchSpeed={2.5}
+						y={1.0}
+						x={0.5}
+						effectCount={1}
+					/>
+				)}
 			</TwitterModal>
 			{showCreateDeckModal && (
 				<CreateDeckModal

@@ -4,6 +4,7 @@ import { cn } from "@/src/helpers/cn";
 import UploadIcon from "~icons/mdi/tray-arrow-up";
 import Alert from "../common/Alert";
 import Spinner from "../common/Spinner";
+import { components } from "../wrapper";
 import { TwitterModal } from "./TwitterModal";
 
 function ImportDeckModalDropzone(props: { onDropped: (file: File) => void }) {
@@ -59,8 +60,12 @@ export default function ImportDeckModal(props: { onClose: () => void }) {
 						deckImporterExporter.import(file).then((result) => {
 							console.timeEnd(`import deck from ${file.name}`);
 							setIsImporting(false);
-							if (result.isOk()) props.onClose();
-							else setError(`${result.error}`);
+							if (result.isOk()) {
+								props.onClose();
+								components.Toast.success(
+									`Successfully imported "${result.value.name}"`,
+								);
+							} else setError(`${result.error}`);
 						});
 					}}
 				/>

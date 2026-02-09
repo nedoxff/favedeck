@@ -22,7 +22,7 @@ const InternalMasonryTweet = memo(
 );
 
 function InternalMasonryList() {
-	const { allTweets, sortedTweets, refetchTweetEntries } =
+	const { allTweets, sortedTweets, setIsDone, refetchTweetEntries } =
 		useSortBookmarksState();
 
 	const displayedTweets = useMemo(
@@ -43,6 +43,10 @@ function InternalMasonryList() {
 	const maybeLoadMore = useInfiniteLoader(loader, {
 		isItemLoaded: (index, items) => !!items[index],
 	});
+
+	useEffect(() => {
+		if (displayedTweets.length === 0) setIsDone(true);
+	}, [displayedTweets]);
 
 	const container = useRef<HTMLDivElement>(null);
 	const scrollInfo = useScroller(container);

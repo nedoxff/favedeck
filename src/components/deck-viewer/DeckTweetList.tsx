@@ -315,6 +315,7 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 								stop,
 								err,
 							);
+							components.Toast.error("Failed to fetch items", err);
 							return [];
 						},
 					})
@@ -418,6 +419,7 @@ export function DeckTweetList(props: { deck: DatabaseDeck }) {
 								stop,
 								err,
 							);
+							components.Toast.error("Failed to fetch items", err);
 							return [];
 						},
 					})

@@ -6,11 +6,12 @@ import { createPortal } from "react-dom";
 import { decksEventTarget } from "@/src/features/events/decks";
 import {
 	getDeckSize,
+	getDecksCount,
 	getDeckThumbnails,
 	getUserDecksAutomatically,
 	updateDecksOrder,
 } from "@/src/features/storage/decks";
-import { type DatabaseDeck, db } from "@/src/features/storage/definition";
+import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { cn } from "@/src/helpers/cn";
 import { webpack } from "@/src/internals/webpack";
 import MoreIcon from "~icons/mdi/dots-horizontal";
@@ -99,7 +100,7 @@ function DeckBoardItem(props: { deck: DatabaseDeck; index: number }) {
 
 function NewDeckBoardItem() {
 	const [showModal, setShowModal] = useState(false);
-	const decksCount = useLiveQuery(() => db.decks.count(), [], 0);
+	const decksCount = useLiveQuery(getDecksCount, [], 0);
 
 	return (
 		<>

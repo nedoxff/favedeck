@@ -58,12 +58,30 @@ Tweets inside decks can also be reordered, "undecked" (removed from said deck), 
 
 <br clear="left"/><br/>
 
+<img align="right" width="55%" src="docs/img/transfer.gif"/>
+
+### Private, really
+
+favedeck makes **zero** requests when decking tweets. Everything is stored locally.
+
+It's also possible to export decks if you wish to transfer them to another device.
+
+[You can read more about this in the Privacy Policy.](PRIVACY.md)
+
+> [!NOTE]
+> Automatically syncing decks between devices/accounts is not supported. 
+> 
+> Partially because this would require hosting a server (which I don't have the resources for), and partially because this would raise a lot more privacy concerns.
+
+<br clear="right"/><br/>
+
 ### <h3 align="center">Sort existing bookmarks</h3>
-<p align="center">Organize tweets from your bookmarks with a silly interactive interface similar to card games!</p>
+<p align="center">Organize tweets from your bookmarks with silly interactive interfaces!</p>
 
-<img align="center" src="docs/img/sort.gif"/>
-
-<br/>
+<img align="center" src="docs/img/sort-card-game.gif"/>
+<br/><br/>
+<img align="center" src="docs/img/sort-masonry.gif"/>
+<br/><br/>
 <p align="center"><i>and more stuff I probably forgot to include...</i></p>
 
 ## [Motivation/Implementation](#motivation-implementation)
@@ -80,10 +98,6 @@ In contrast, favedeck hacks directly into the Twitter website and changes UI ele
 > You can check whether anything broke by using the popup:
 >
 > <img width="50%" src="docs/img/popup.png"/>
-
-### But is it private?
-
-Yes! The "decking" feature makes **zero API requests** and everything is stored **locally**. [You can read more in the Privacy Policy](PRIVACY.md).
 
 ## [Compatibility](#compatibility)
 
@@ -112,9 +126,9 @@ Due to this, some features of favedeck are also ratelimited, and some stuff in [
 There are some things I'd like to implement in the future but chose not to for the first version of the extension:
 
 <details>
-    <summary>Importing/exporting decks</summary>
+    <summary>Importing decks between different accounts</summary>
 
-> Technically, implementing the import/export action itself is not complicated, but due to Twitter's ratelimits there's no simple way of transferring bookmarks between different accounts if there are more than 500 of them (besides, if you get close to sending hundreds of requests per second I'm sure Twitter's servers are likely to ban the account, but I don't want to test that).
+> Due to Twitter's ratelimits there's no simple way of transferring bookmarks between different accounts if there are more than 500 of them (besides, if you get close to sending hundreds of requests per second I'm sure Twitter's servers are likely to ban the account, but I don't want to test that).
 > 
 > One solution I had in mind is to "fake" the bookmarks, so that they would appear in the decks but not in the "All bookmarks" section, but that seems more like a hack than a solution.
 </details>

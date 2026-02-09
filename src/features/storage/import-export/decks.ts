@@ -39,7 +39,7 @@ type DeckImporterExporterMeta = {
 const VERSION = 1;
 export const deckImporterExporter: MigrationSystem<Blob> & {
 	export: (id: string) => Promise<Result<Blob, Error>>;
-	import: (blob: Blob) => Promise<Result<void, Error>>;
+	import: (blob: Blob) => Promise<Result<DatabaseDeck, Error>>;
 } = (() => {
 	const migrations = createMigrationSystem<Blob>({
 		determineVersion: async (blob) =>
@@ -199,21 +199,20 @@ export const deckImporterExporter: MigrationSystem<Blob> & {
 						`Exporter doesn't match the user ID (${user} ≠ ${meta.exporter})`,
 					);
 
-				const deck = JSON.parse(
-					await readEntry("db/deck.json"),
-				) as DatabaseDeck;
+				let deck = JSON.parse(await readEntry("db/deck.json")) as DatabaseDeck;
 
 				if ((await getDeck(deck.id))?.dateModified ?? 0 >= deck.dateModified)
 					throw new Error(
 						"The deck already seems to have been imported and/or modified. If you wish to overwrite it, please delete the deck before importing.",
 					);
 
-				await db.decks.put({
+				deck = {
 					...deck,
 					user,
 					dateModified: Date.now(),
 					order: Dexie.minKey,
-				});
+				};
+				await db.decks.put(deck);
 
 				for (const entry of entries.filter((e) =>
 					e.filename.startsWith("db/tweets/"),
@@ -246,6 +245,8 @@ export const deckImporterExporter: MigrationSystem<Blob> & {
 					await putTweetEntity(tweet, user, tweetsMeta.quoteOf[tweet.id_str]);
 					await removePotentiallyUngroupedTweet(tweet.id_str);
 				}
+
+				return deck;
 			}),
 	};
 })();

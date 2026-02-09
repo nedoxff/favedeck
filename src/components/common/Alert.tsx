@@ -1,15 +1,17 @@
 import type { ReactNode } from "react";
 import { cn } from "@/src/helpers/cn";
 import WarningIcon from "~icons/mdi/alert-outline";
+import CheckIcon from "~icons/mdi/check-circle-outline";
 import ErrorIcon from "~icons/mdi/close-circle-outline";
 import InformationIcon from "~icons/mdi/information-outline";
 
 export default function Alert(props: {
-	type: "info" | "warning" | "error";
+	type: "info" | "warning" | "error" | "success";
 	title?: ReactNode;
 	description?: ReactNode;
 	showIcon?: boolean;
 	className?: string;
+	endContent?: ReactNode;
 }) {
 	const Icon = (() => {
 		switch (props.type) {
@@ -19,6 +21,8 @@ export default function Alert(props: {
 				return WarningIcon;
 			case "error":
 				return ErrorIcon;
+			case "success":
+				return CheckIcon;
 		}
 	})();
 
@@ -31,14 +35,19 @@ export default function Alert(props: {
 			)}
 		>
 			{(props.showIcon ?? true) === true && (
-				<div className="h-full flex pr-2">
+				<div className="h-full flex justify-center items-center pl-1 pr-3">
 					<Icon width={36} height={36} />
 				</div>
 			)}
-			<div className="grow">
+			<div className="grow flex flex-col">
 				{props.title}
 				{props.description}
 			</div>
+			{props.endContent && (
+				<div className="h-full pl-2 flex justify-center items-center">
+					{props.endContent}
+				</div>
+			)}
 		</div>
 	);
 }

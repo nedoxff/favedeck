@@ -6,6 +6,7 @@ export interface SortBookmarksState {
 	sortedTweets: string[];
 	addedIntentionallyUngroupedTweets: boolean;
 	isFetchingTweets: boolean;
+	isDone: boolean;
 
 	reset: () => void;
 	refetchTweetEntries: (force?: boolean) => Promise<void>;
@@ -13,6 +14,7 @@ export interface SortBookmarksState {
 		callback: SortBookmarksState["refetchTweetEntries"],
 	) => void;
 
+	setIsDone: (done: boolean) => void;
 	setAllTweets: (updater: (current: string[]) => string[]) => void;
 	setSortedTweets: (updater: (current: string[]) => string[]) => void;
 	setAddedIntentionallyUngroupedTweets: (added: boolean) => void;
@@ -23,12 +25,13 @@ export interface SortBookmarksActions {
 	onDragOver: DragDropEvents["dragover"];
 	onDragEnd: DragDropEvents["dragend"];
 	addTweetToNewDeck: (tweet?: PendingNewDeckTweet) => void;
-	appendIntentionallyUngroupedTweets: () => void;
+	appendIntentionallyUngroupedTweets: () => Promise<void>;
 }
 
 export const useSortBookmarksState = create<SortBookmarksState>((set) => ({
 	addedIntentionallyUngroupedTweets: false,
 	isFetchingTweets: false,
+	isDone: false,
 	allTweets: [],
 	sortedTweets: [],
 
@@ -37,12 +40,14 @@ export const useSortBookmarksState = create<SortBookmarksState>((set) => ({
 			allTweets: [],
 			sortedTweets: [],
 			isFetchingTweets: false,
+			isDone: false,
 			addedIntentionallyUngroupedTweets: false,
 			refetchTweetEntries: async () => {},
 		}),
 	refetchTweetEntries: async () => {},
 	setRefetchTweetEntries: (callback) => set({ refetchTweetEntries: callback }),
 
+	setIsDone: (done) => set({ isDone: done }),
 	setAddedIntentionallyUngroupedTweets: (added) =>
 		set({ addedIntentionallyUngroupedTweets: added }),
 	setIsFetchingTweets: (isFetching) => set({ isFetchingTweets: isFetching }),

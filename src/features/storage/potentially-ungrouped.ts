@@ -1,7 +1,11 @@
 import { mergician } from "mergician";
 import { compressObject, decompressObject } from "@/src/helpers/compression";
 import { getUserId } from "@/src/internals/foolproof";
-import type { AddEntitiesPayload } from "@/src/internals/redux";
+import {
+	type AddEntitiesPayload,
+	getTweetEntity,
+	tweetEntityLoaded,
+} from "@/src/internals/redux";
 import { db } from "./definition";
 import {
 	getTweetEntityPayloadFromDatabase,
@@ -25,7 +29,7 @@ export const addPotentiallyUngroupedTweet = async (
 		category,
 		")",
 	);
-	await db.potentiallyUngrouped.add({
+	await db.potentiallyUngrouped.put({
 		id,
 		user: (await getUserId()) ?? "",
 		payload: await compressObject(
@@ -59,4 +63,20 @@ export const getPotentiallyUngroupedTweets = async (
 			})),
 		)
 	).flat();
+};
+
+export const checkPotentiallyUngroupedTweets = async (
+	tweets: DatabaseDecompressedPotentiallyUngroupedTweet[],
+): Promise<DatabaseDecompressedPotentiallyUngroupedTweet[]> => {
+	const unbookmarked = tweets.filter((tweet) => {
+		if (!tweetEntityLoaded(tweet.id)) return false;
+		return getTweetEntity(tweet.id).match({
+			ok: (entity) => !entity.bookmarked,
+			err: () => false,
+		});
+	});
+	const rest = tweets.filter((t) => !unbookmarked.some((ut) => ut.id === t.id));
+	for (const tweet of unbookmarked)
+		await removePotentiallyUngroupedTweet(tweet.id);
+	return rest;
 };

@@ -41,6 +41,11 @@ export const deleteDeck = async (deckId: string) => {
 	await Promise.all(tweets.map((tweet) => removeTweet(tweet.id, deckId)));
 };
 
+export const getDecksCount = async () =>
+	await db.decks
+		.where("user")
+		.equals((await getUserId()) ?? "")
+		.count();
 export const getUserDecks = (userId: string) =>
 	db.decks.where("user").equals(userId).sortBy("order");
 export const getUserDecksAutomatically = async () =>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import Spinner from "@/entrypoints/popup/components/Spinner";
 import MartenLogo from "@/public/img/icons/marten-colored.svg?react";
 import SimpleTooltip from "@/src/components/common/SimpleTooltip";
+import Spinner from "@/src/components/common/Spinner";
 import { cn } from "@/src/helpers/cn";
 import type {
 	ExtensionDebugInfo,
@@ -24,10 +24,6 @@ function DashboardStateGroup(props: {
 }) {
 	const [copiedReport, setCopiedReport] = useState(false);
 	const group = props.state.groups[props.group];
-	useEffect(() => {
-		if (group.status === "error") console.error(group.error);
-	}, [group]);
-
 	const title = useMemo(() => {
 		switch (props.group) {
 			case "webpack":
