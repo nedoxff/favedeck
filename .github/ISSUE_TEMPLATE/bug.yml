@@ -3,7 +3,6 @@ title: "[bug] "
 labels: ["bug"]
 assignees:
   - nedoxff
-type: bug
 body:
   - type: textarea
     id: cause
