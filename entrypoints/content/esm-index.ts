@@ -377,8 +377,6 @@ const inject = async () => {
 	extensionState.groups.fiberObserver = mapResult(injectFiberObserver());
 	extensionState.groups.urlObserver = mapResult(injectUrlObserver());
 	extensionState.groups.tweetObserver = mapResult(injectTweetObserver());
-
-	components.Toast.error("meow", new Error("bark", { cause: "moo" }));
 };
 
 if (document.readyState === "complete") inject();

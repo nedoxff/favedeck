@@ -124,7 +124,7 @@ export const Toast = (() => {
 					</span>{" "}
 					or{" "}
 					<a
-						href={`https://github.com/nedoxff/favedeck/issues/new?template=bug.yaml&error=${encodeURIComponent(report)}`}
+						href={`https://github.com/nedoxff/favedeck/issues/new?template=bug.yml&error=${encodeURIComponent(report)}`}
 						className="underline cursor-pointer"
 					>
 						create a bug report
