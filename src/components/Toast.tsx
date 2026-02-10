@@ -3,8 +3,12 @@ import { createRoot, type Root } from "react-dom/client";
 import { v6 } from "uuid";
 import { create } from "zustand/react";
 import CloseIcon from "~icons/mdi/close";
+import { createErrorReport } from "../helpers/reports";
+import { getRawExtensionState } from "../helpers/state";
+import { getDebugInfo } from "../internals/foolproof";
 import Alert from "./common/Alert";
 import { IconButton } from "./common/IconButton";
+import { components } from "./wrapper";
 
 function ToastContainer() {
 	const { toasts, removeToast } = useToastsState();
@@ -99,7 +103,35 @@ export const Toast = (() => {
 
 	return {
 		error(title, error, ms = undefined) {
-			createToast("error", title, `${error}`, ms);
+			const report = createErrorReport(
+				title,
+				error,
+				getRawExtensionState(),
+				getDebugInfo(),
+			);
+			createToast(
+				"error",
+				title,
+				<p>
+					<span
+						className="underline cursor-pointer"
+						onClick={async () => {
+							await navigator.clipboard.writeText(report);
+							components.Toast.success("Copied error report to the clipboard");
+						}}
+					>
+						Copy error report
+					</span>{" "}
+					or{" "}
+					<a
+						href={`https://github.com/nedoxff/favedeck/issues/new?template=bug.yaml&error=${encodeURIComponent(report)}`}
+						className="underline cursor-pointer"
+					>
+						create a bug report
+					</a>
+				</p>,
+				ms,
+			);
 		},
 		info(message, ms = undefined) {
 			createToast("info", message, undefined, ms);

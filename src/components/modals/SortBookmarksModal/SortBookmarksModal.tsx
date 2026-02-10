@@ -9,10 +9,7 @@ import {
 	getPotentiallyUngroupedTweets,
 	removePotentiallyUngroupedTweet,
 } from "@/src/features/storage/potentially-ungrouped";
-import {
-	type FavedeckSettings,
-	setSetting,
-} from "@/src/features/storage/settings";
+import { setSetting } from "@/src/features/storage/settings";
 import {
 	addTweetToDeck,
 	getLatestSortedTweet,
@@ -43,7 +40,9 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 	const {
 		allTweets,
 		isDone,
+		selectedInterface,
 		reset,
+		setSelectedInterface,
 		setIsDone,
 		setAllTweets,
 		setSortedTweets,
@@ -51,10 +50,6 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		setIsFetchingTweets,
 		setRefetchTweetEntries,
 	} = useSortBookmarksState();
-
-	const [selectedInterface, setSelectedInterface] = useState<
-		FavedeckSettings["preferredSortBookmarksInterface"] | undefined
-	>(undefined);
 
 	useEffect(() => {
 		kv.settings
@@ -76,7 +71,10 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 	>(undefined);
 	const [showCreateDeckModal, setShowCreateDeckModal] = useState(false);
 
-	const refetchTweetEntries = async (force?: boolean) => {
+	const refetchTweetEntries = async (
+		force?: boolean,
+		fromCallback?: boolean,
+	) => {
 		const modalState = useSortBookmarksState.getState();
 		if (modalState.isDone) return;
 
@@ -85,7 +83,8 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		);
 
 		if (
-			previousBookmarksTimelineEntriesCountRef.current === rawEntries.length
+			previousBookmarksTimelineEntriesCountRef.current === rawEntries.length &&
+			(fromCallback ?? false)
 		) {
 			if (
 				modalState.allTweets.length === modalState.sortedTweets.length ||
@@ -114,6 +113,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		// ungrouped (would end up in db.potentiallyUngrouped and get caught) or grouped (we don't need it)
 		if (unsortedEntries.length === 0 || (force ?? false)) {
 			const shouldUseCursor =
+				modalState.selectedInterface !== "masonry" &&
 				state &&
 				(rawEntries.at(-1)?.sortIndex ?? "") <=
 					state.latestSortedTweet.sortIndex;
@@ -191,7 +191,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 	}, []);
 
 	useEffect(() => {
-		const listener = () => refetchTweetEntries();
+		const listener = () => refetchTweetEntries(false, true);
 		internalsEventTarget.addEventListener(
 			"bookmarks-timeline-fetched",
 			listener,
@@ -215,30 +215,32 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		closingRef.current = true;
 		// remember last cursor
 		(async () => {
-			const state = await kv.sortBookmarksState.get();
-			const latestSortedTweet = await getLatestSortedTweet();
+			if (useSortBookmarksState.getState().selectedInterface !== "masonry") {
+				const state = await kv.sortBookmarksState.get();
+				const latestSortedTweet = await getLatestSortedTweet();
 
-			const previousCursor = getBottomBookmarksTimelineCursor(-2);
-			const currentCursor = getBottomBookmarksTimelineCursor(-1);
+				const previousCursor = getBottomBookmarksTimelineCursor(-2);
+				const currentCursor = getBottomBookmarksTimelineCursor(-1);
 
-			if (
-				latestSortedTweet &&
-				previousCursor &&
-				currentCursor &&
-				getBottomBookmarksTimelineCursor()?.entryId !==
-					state?.currentCursor.entryId
-			) {
-				console.log(
-					"saving new state",
-					previousCursor,
-					currentCursor,
-					latestSortedTweet,
-				);
-				await kv.sortBookmarksState.set({
-					previousCursor,
-					currentCursor,
-					latestSortedTweet,
-				});
+				if (
+					latestSortedTweet &&
+					previousCursor &&
+					currentCursor &&
+					getBottomBookmarksTimelineCursor()?.entryId !==
+						state?.currentCursor.entryId
+				) {
+					console.log(
+						"saving new state",
+						previousCursor,
+						currentCursor,
+						latestSortedTweet,
+					);
+					await kv.sortBookmarksState.set({
+						previousCursor,
+						currentCursor,
+						latestSortedTweet,
+					});
+				}
 			}
 
 			reset();

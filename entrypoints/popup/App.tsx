@@ -3,6 +3,7 @@ import MartenLogo from "@/public/img/icons/marten-colored.svg?react";
 import SimpleTooltip from "@/src/components/common/SimpleTooltip";
 import Spinner from "@/src/components/common/Spinner";
 import { cn } from "@/src/helpers/cn";
+import { createDebugInfoReport } from "@/src/helpers/reports";
 import type {
 	ExtensionDebugInfo,
 	ExtensionState,
@@ -13,10 +14,7 @@ import CheckIcon from "~icons/mdi/check";
 import Circle from "~icons/mdi/circle";
 import SadEmoji from "~icons/mdi/emoticon-sad-outline";
 import { usePopupState } from "./helpers/state";
-import {
-	createDebugInfoReport,
-	createErrorReportForExtensionGroup,
-} from "./helpers/utils";
+import { createErrorReportForExtensionGroup } from "./helpers/utils";
 
 function DashboardStateGroup(props: {
 	state: ExtensionState;
@@ -182,7 +180,7 @@ function Dashboard(props: {
 								onClick={async () => {
 									if (!props.debugInfo) return;
 									await navigator.clipboard.writeText(
-										createDebugInfoReport(props.debugInfo),
+										createDebugInfoReport(props.state, props.debugInfo),
 									);
 									setCopiedDebugInformation(true);
 									setTimeout(() => setCopiedDebugInformation(false), 1000);

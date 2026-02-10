@@ -1,0 +1,25 @@
+name: Bug Report
+title: "[bug] "
+labels: ["bug"]
+assignees:
+  - nedoxff
+type: bug
+body:
+  - type: textarea
+    id: cause
+    attributes:
+      label: When or how did the error occur?
+  - type: textarea
+    id: error
+    attributes:
+      label: Error
+      description: This should be filled automatically if you pressed the "Create bug report" button.
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chromium-based (Chrome, Helium, Opera, etc.)
+        - Firefox-based (Firefox, Zen, etc.)
+        - Other
+    

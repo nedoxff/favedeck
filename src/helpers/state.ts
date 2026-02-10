@@ -33,7 +33,10 @@ export type ExtensionState = {
 
 export type ExtensionDebugInfo = {
 	reactVersion?: string;
-	globalMetadata?: Omit<GlobalMetadata, "cookies" | "tags">;
+	globalMetadata?: Omit<
+		GlobalMetadata,
+		"cookies" | "tags" | "userId" | "userHash"
+	>;
 };
 
 const EXTENSION_GROUPS_STATE_IDENTITY = Symbol("extension-state-proxy-target");

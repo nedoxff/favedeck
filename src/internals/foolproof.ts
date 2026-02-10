@@ -4,6 +4,8 @@
 
 import type { Fiber } from "bippy";
 import { memoize } from "micro-memoize";
+import type { ExtensionDebugInfo } from "../helpers/state";
+import { webpack } from "./webpack";
 
 export const getUserId = memoize(async (tweetFiber?: Fiber) => {
 	// window.__META_DATA__ has a lot of goodies
@@ -31,3 +33,17 @@ export const getUserId = memoize(async (tweetFiber?: Fiber) => {
 
 	return undefined;
 });
+
+export const getDebugInfo = (): ExtensionDebugInfo => {
+	if (!window.__META_DATA__)
+		return { reactVersion: webpack.common.react.React.version };
+
+	const { cookies, tags, userId, userHash, ...globalMetadata } =
+		window.__META_DATA__;
+	return {
+		reactVersion: webpack.common
+			? webpack.common.react.React.version
+			: undefined,
+		globalMetadata,
+	};
+};

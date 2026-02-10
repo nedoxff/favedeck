@@ -14,11 +14,11 @@ import { createTweetObserver, waitForSelector } from "@/src/helpers/observer";
 import {
 	EXTENSION_GROUP_ERROR,
 	EXTENSION_GROUP_OK,
-	type ExtensionDebugInfo,
 	extensionState,
 	type GroupState,
 	getRawExtensionState,
 } from "@/src/helpers/state";
+import { getDebugInfo } from "@/src/internals/foolproof";
 import { getRootNodeFromTweetElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
 import {
@@ -33,19 +33,6 @@ import {
 const initializeMessageListener = () =>
 	Result.try(() => {
 		websiteMessenger.onMessage("syncPopup", () => {
-			const getDebugInfo = (): ExtensionDebugInfo => {
-				if (!window.__META_DATA__)
-					return { reactVersion: webpack.common.react.React.version };
-
-				const { cookies, tags, ...globalMetadata } = window.__META_DATA__;
-				return {
-					reactVersion: webpack.common
-						? webpack.common.react.React.version
-						: undefined,
-					globalMetadata,
-				};
-			};
-
 			return {
 				debugInfo: getDebugInfo(),
 				state: getRawExtensionState(),
@@ -390,6 +377,8 @@ const inject = async () => {
 	extensionState.groups.fiberObserver = mapResult(injectFiberObserver());
 	extensionState.groups.urlObserver = mapResult(injectUrlObserver());
 	extensionState.groups.tweetObserver = mapResult(injectTweetObserver());
+
+	components.Toast.error("meow", new Error("bark", { cause: "moo" }));
 };
 
 if (document.readyState === "complete") inject();

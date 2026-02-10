@@ -1,9 +1,13 @@
 import type { DragDropEvents } from "@dnd-kit/react";
 import { create } from "zustand";
+import type { FavedeckSettings } from "@/src/features/storage/settings";
 
 export interface SortBookmarksState {
 	allTweets: string[];
 	sortedTweets: string[];
+	selectedInterface:
+		| FavedeckSettings["preferredSortBookmarksInterface"]
+		| undefined;
 	addedIntentionallyUngroupedTweets: boolean;
 	isFetchingTweets: boolean;
 	isDone: boolean;
@@ -14,6 +18,9 @@ export interface SortBookmarksState {
 		callback: SortBookmarksState["refetchTweetEntries"],
 	) => void;
 
+	setSelectedInterface: (
+		newInterface: FavedeckSettings["preferredSortBookmarksInterface"],
+	) => void;
 	setIsDone: (done: boolean) => void;
 	setAllTweets: (updater: (current: string[]) => string[]) => void;
 	setSortedTweets: (updater: (current: string[]) => string[]) => void;
@@ -34,11 +41,13 @@ export const useSortBookmarksState = create<SortBookmarksState>((set) => ({
 	isDone: false,
 	allTweets: [],
 	sortedTweets: [],
+	selectedInterface: undefined,
 
 	reset: () =>
 		set({
 			allTweets: [],
 			sortedTweets: [],
+			selectedInterface: undefined,
 			isFetchingTweets: false,
 			isDone: false,
 			addedIntentionallyUngroupedTweets: false,
@@ -47,6 +56,8 @@ export const useSortBookmarksState = create<SortBookmarksState>((set) => ({
 	refetchTweetEntries: async () => {},
 	setRefetchTweetEntries: (callback) => set({ refetchTweetEntries: callback }),
 
+	setSelectedInterface: (newInterface) =>
+		set({ selectedInterface: newInterface }),
 	setIsDone: (done) => set({ isDone: done }),
 	setAddedIntentionallyUngroupedTweets: (added) =>
 		set({ addedIntentionallyUngroupedTweets: added }),
