@@ -1,0 +1,15 @@
+name: Feature request
+title: "[feature] "
+description: Have ideas for how the extension can be improved? Drop them here!
+labels: ["feature"]
+assignees:
+  - nedoxff
+body:
+  - type: markdown
+    attributes:
+      value: Before submitting the feature request, please verify that something similar is not mentioned in the [TODOs](https://github.com/nedoxff/favedeck?tab=readme-ov-file#todo) or in the issue tracker.
+  - type: textarea
+    id: cause
+    attributes:
+      label: What would you like to see get implemented?
+    
