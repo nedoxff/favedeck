@@ -109,7 +109,7 @@ function NewDeckBoardItem() {
 				onClick={() => setShowModal(true)}
 				className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
 			>
-				<div className="grow rounded-xl overflow-hidden relative border-dashed border-2 border-white! flex justify-center items-center opacity-50">
+				<div className="grow rounded-xl overflow-hidden relative border-dashed border-2 border-fd-fg! flex justify-center items-center opacity-50">
 					<PlusIcon width={36} height={36} />
 				</div>
 				<div className="pointer-events-none">
@@ -145,7 +145,7 @@ function AllBookmarksDeckBoardItem() {
 			}}
 			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
 		>
-			<div className="grow rounded-xl overflow-hidden relative border-dashed border-2 border-white! flex justify-center items-center opacity-50">
+			<div className="grow rounded-xl overflow-hidden relative border-dashed border-2 border-fd-fg! flex justify-center items-center opacity-50">
 				<MoreIcon width={36} height={36} />
 			</div>
 			<div className="pointer-events-none">

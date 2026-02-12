@@ -285,13 +285,7 @@ function InternalSelectDeckPopup(props: {
 	}, [decks]);
 
 	return (
-		<div
-			className="bg-fd-bg p-2 rounded-xl gap-1 flex flex-col w-sm"
-			style={{
-				boxShadow:
-					"rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px",
-			}}
-		>
+		<div className="bg-fd-bg p-2 rounded-xl gap-1 flex flex-col w-sm shadow-twitter!">
 			<div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
 				{(decks ?? []).map((d) => (
 					<DeckCard key={d.id} deck={d} tweet={props.tweet} />

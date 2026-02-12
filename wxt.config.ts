@@ -32,6 +32,15 @@ export default defineConfig({
 		permissions: ["storage", "tabs", "clipboardWrite"],
 		host_permissions: ["*://*.x.com/*", "*://*.twitter.com/*"],
 		web_accessible_resources: [{ resources: ["img/**"], matches: ["*://*/*"] }],
+		browser_specific_settings: {
+			gecko: {
+				id: "favedeck@nedoxff.marten",
+				// @ts-expect-error
+				data_collection_permissions: {
+					required: ["authenticationInfo"],
+				},
+			},
+		},
 	},
 	manifestVersion: 3,
 });

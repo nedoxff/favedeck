@@ -193,6 +193,7 @@ const initializeWebpack = async () =>
 				"--fd-bg",
 				th.colors.navigationBackground,
 			);
+			document.documentElement.style.setProperty("--fd-fg", th.colors.text);
 			document.documentElement.style.setProperty(
 				"--fd-mask",
 				th.colors.maskColor,
@@ -208,17 +209,20 @@ const initializeWebpack = async () =>
 		const primaryColor =
 			theme._activeTheme.colors[theme._activeTheme.primaryColorName];
 		const bgColor = theme._activeTheme.colors.navigationBackground;
+		const fgColor = theme._activeTheme.colors.text;
 		const maskColor = theme._activeTheme.colors.maskColor;
 		const dangerColor = theme._activeTheme.colors.red500;
 
 		document.documentElement.style.setProperty("--fd-primary", primaryColor);
 		document.documentElement.style.setProperty("--fd-bg", bgColor);
+		document.documentElement.style.setProperty("--fd-fg", fgColor);
 		document.documentElement.style.setProperty("--fd-mask", maskColor);
 		document.documentElement.style.setProperty("--fd-danger", dangerColor);
 
 		console.log("colors", {
 			primaryColor,
 			bgColor,
+			fgColor,
 			maskColor,
 			dangerColor,
 		});

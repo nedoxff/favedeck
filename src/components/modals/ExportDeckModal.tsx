@@ -96,7 +96,7 @@ export default function ExportDeckModal(props: {
 			<button
 				onClick={props.onClose}
 				type="button"
-				className="rounded-full w-full text-white font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center"
+				className="rounded-full w-full text-fd-fg font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center"
 			>
 				Cancel
 			</button>

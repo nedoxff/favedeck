@@ -201,7 +201,7 @@ function Dashboard(props: {
 								type="button"
 								disabled={copiedDebugInformation}
 								className={
-									"rounded-full cursor-pointer font-bold py-2 px-6 text-center bg-fd-primary disabled:bg-fd-primary/90 hover:bg-fd-primary/90"
+									"rounded-full cursor-pointer font-bold py-2 px-6 text-center text-white bg-fd-primary disabled:bg-fd-primary/90 hover:bg-fd-primary/90"
 								}
 							>
 								{copiedDebugInformation ? "Copied!" : "Copy debug information"}
@@ -257,7 +257,7 @@ function OpenTwitterButton(props: { className?: string; hasTheme: boolean }) {
 			}}
 			type="button"
 			className={cn(
-				"rounded-full cursor-pointer text-white font-bold py-2 px-6 text-center",
+				"rounded-full cursor-pointer font-bold py-2 px-6 text-center",
 				props.hasTheme
 					? "text-fd-fg bg-fd-primary hover:bg-fd-primary/90"
 					: "text-white bg-[#1D9BF0] hover:bg-[#1D9BF0]/90",

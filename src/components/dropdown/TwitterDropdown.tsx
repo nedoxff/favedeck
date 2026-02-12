@@ -113,10 +113,8 @@ export function TwitterDropdown<T extends HTMLElement>(props: {
 				createPortal(
 					<div className="favedeck-root">
 						<div
-							className="bg-fd-bg max-w-sm rounded-xl flex flex-col absolute opacity-0 top-0 left-0 overflow-hidden"
+							className="bg-fd-bg max-w-sm rounded-xl flex flex-col absolute opacity-0 top-0 left-0 overflow-hidden shadow-twitter!"
 							style={{
-								boxShadow:
-									"rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px 1px",
 								zIndex: props.zIndex ? props.zIndex.toString() : "0",
 							}}
 							ref={containerRef}

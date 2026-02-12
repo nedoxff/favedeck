@@ -14,22 +14,46 @@
 	font-family:
 		"TwitterChirp", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
 		Helvetica, Arial, sans-serif;
+
+	--internal-shadow-lighten: inset 0 0 0 10em rgba(255, 255, 255, 0.15);
+	--internal-shadow-darken: inset 0 0 0 10em rgba(0, 0, 0, 0.15);
+	--internal-shadow-twitter:
+		rgba(255, 255, 255, 0.2) 0px 0px 15px, rgba(255, 255, 255, 0.15) 0px 0px 3px
+		1px;
+}
+
+:root[data-theme="light"] {
+	--internal-shadow-lighten: inset 0 0 0 10em rgba(0, 0, 0, 0.15);
+	--internal-shadow-darken: inset 0 0 0 10em rgba(255, 255, 255, 0.15);
+	--internal-shadow-twitter:
+		rgba(101, 119, 134, 0.2) 0px 0px 15px, rgba(101, 119, 134, 0.15) 0px 0px 3px
+		1px;
 }
 
 @theme {
-	--shadow-lighten: inset 0 0 0 10em rgba(255, 255, 255, 0.15);
-	--shadow-darken: inset 0 0 0 10em rgba(0, 0, 0, 0.15);
+	--color-fd-bg-15: color-mix(in srgb, var(--fd-bg), white 15%);
+	--color-fd-bg-20: color-mix(in srgb, var(--fd-bg), white 20%);
+	--color-fd-bg-25: color-mix(in srgb, var(--fd-bg), white 25%);
 }
 
 @theme inline {
 	--color-fd-primary: var(--fd-primary);
 	--color-fd-bg: var(--fd-bg);
+	--color-fd-fg: var(--fd-fg);
 	--color-fd-mask: var(--fd-mask);
 	--color-fd-danger: var(--fd-danger);
 
-	--color-fd-bg-15: color-mix(in srgb, var(--fd-bg), white 15%);
-	--color-fd-bg-20: color-mix(in srgb, var(--fd-bg), white 20%);
-	--color-fd-bg-25: color-mix(in srgb, var(--fd-bg), white 25%);
+	--shadow-lighten: var(--internal-shadow-lighten);
+	--shadow-darken: var(--internal-shadow-darken);
+	--shadow-twitter: var(--internal-shadow-twitter);
+}
+
+@layer theme {
+	:root[data-theme="light"] {
+		--color-fd-bg-15: color-mix(in srgb, var(--fd-bg), black 15%);
+		--color-fd-bg-20: color-mix(in srgb, var(--fd-bg), black 20%);
+		--color-fd-bg-25: color-mix(in srgb, var(--fd-bg), black 25%);
+	}
 }
 
 .scroll-shadow {

@@ -29,7 +29,7 @@ export default function ConfirmModal(props: {
 			<button
 				onClick={props.onCancelled}
 				type="button"
-				className="rounded-full w-full text-white font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center"
+				className="rounded-full w-full text-fd-fg font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center"
 			>
 				{props.cancelText ?? "Cancel"}
 			</button>

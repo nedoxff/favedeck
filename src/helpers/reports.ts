@@ -6,6 +6,7 @@ const SILLIES = [
 	"Oops...",
 	"I guess it's time for a new version!",
 	"I'm pretty sure it's a typo.",
+	"git push me a sandwich", // - adamthedog
 ];
 
 const pad = (str: string) =>
