@@ -1,20 +1,25 @@
-import { createErrorReport } from "@/src/helpers/reports";
-import type { ExtensionStateGroups } from "@/src/helpers/state";
+import {
+	createDebugInfoReport,
+	createErrorReport,
+} from "@/src/helpers/reports";
 import { usePopupState } from "./state";
 
-export const createErrorReportForExtensionGroup = (
-	group: keyof Omit<ExtensionStateGroups, symbol>,
-) => {
+export const createErrorReportForExtensionGroups = () => {
 	const { debugInfo, state } = usePopupState.getState();
-	const groupState = usePopupState.getState().state?.groups?.[group];
-	if (!debugInfo || !state || !groupState || groupState.status !== "error")
+	if (!debugInfo || !state)
 		throw new Error(
 			"invalid group passed to createErrorReportForExtensionGroup or debugInfo wasn't present",
 		);
-	return createErrorReport(
-		`Extension group "${group}" failed to load`,
-		groupState.error,
-		state,
-		debugInfo,
+	const errorGroups = Object.entries(state.groups).filter(
+		(e) => e[1].status === "error",
 	);
+	if (errorGroups.length === 0) throw new Error("no error groups detected");
+	return `${errorGroups
+		.map((g) =>
+			createErrorReport(
+				`Extension group ${g[0]} failed to load`,
+				(g[1] as { status: "error"; error: unknown }).error,
+			),
+		)
+		.join("\n\n")}\n\n${createDebugInfoReport(state, debugInfo)}`;
 };

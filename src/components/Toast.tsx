@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { v6 } from "uuid";
 import { create } from "zustand/react";
 import CloseIcon from "~icons/mdi/close";
-import { createErrorReport } from "../helpers/reports";
+import { createDebugInfoReport, createErrorReport } from "../helpers/reports";
 import { getRawExtensionState } from "../helpers/state";
 import { getDebugInfo } from "../internals/foolproof";
 import Alert from "./common/Alert";
@@ -103,12 +103,10 @@ export const Toast = (() => {
 
 	return {
 		error(title, error, ms = undefined) {
-			const report = createErrorReport(
-				title,
-				error,
+			const report = `${createErrorReport(title, error)}\n\n${createDebugInfoReport(
 				getRawExtensionState(),
 				getDebugInfo(),
-			);
+			)}`;
 			createToast(
 				"error",
 				title,

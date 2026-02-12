@@ -134,7 +134,7 @@ export const webpack: WebpackHelper = {
 						.module,
 					ReactDOM: (yield* webpack.findByProperty<
 						ReactDOMType & ReactDOMClientType
-					>("createPortal", "ReactDOM")).module,
+					>("createPorta", "ReactDOM")).module,
 					JSXRuntime: (yield* webpack.findByProperty<ReactJSXRuntimeType>(
 						"jsx",
 						"react/jsx-runtime",

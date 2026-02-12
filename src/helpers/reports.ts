@@ -1,3 +1,4 @@
+import { isTaggedError, TaggedError } from "better-result";
 import type { ExtensionDebugInfo, ExtensionState } from "./state";
 
 const SILLIES = [
@@ -10,24 +11,28 @@ const pad = (str: string) =>
 		.split("\n")
 		.map((line) => `    ${line}`)
 		.join("\n");
-const stringifyError = (error: unknown): string => {
-	if (!(error instanceof Error)) return `${error}`;
-	return `${error.name}: ${error.message}\n${pad(error.stack ?? "no stack available")}${error.cause ? `\n[caused by] ${stringifyError(error.cause)}` : ""}`;
+
+const toError = (error: unknown) => {
+	return error &&
+		typeof error === "object" &&
+		"name" in error &&
+		"stack" in error
+		? Object.assign(new Error(), error)
+		: error;
 };
 
-export const createErrorReport = (
-	title: string,
-	error: unknown,
-	state: ExtensionState,
-	debugInfo: ExtensionDebugInfo,
-) => {
+const stringifyError = (error: unknown): string => {
+	const convertedError = toError(error);
+	if (!(convertedError instanceof Error)) return `${error}`;
+	return `${convertedError.name}: ${convertedError.message}\n${pad(convertedError.stack ?? "no stack available")}${convertedError.cause ? `\n[caused by] ${stringifyError(convertedError.cause)}` : ""}`;
+};
+
+export const createErrorReport = (title: string, error: unknown) => {
 	return `${SILLIES[Math.floor(Math.random() * SILLIES.length)]}
 
 --- Error ---
 ${title}
-${stringifyError(error)}
-
-${createDebugInfoReport(state, debugInfo)}`;
+${stringifyError(error)}`;
 };
 
 export const createDebugInfoReport = (

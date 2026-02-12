@@ -14,13 +14,12 @@ import CheckIcon from "~icons/mdi/check";
 import Circle from "~icons/mdi/circle";
 import SadEmoji from "~icons/mdi/emoticon-sad-outline";
 import { usePopupState } from "./helpers/state";
-import { createErrorReportForExtensionGroup } from "./helpers/utils";
+import { createErrorReportForExtensionGroups } from "./helpers/utils";
 
 function DashboardStateGroup(props: {
 	state: ExtensionState;
 	group: keyof Omit<ExtensionStateGroups, symbol>;
 }) {
-	const [copiedReport, setCopiedReport] = useState(false);
 	const group = props.state.groups[props.group];
 	const title = useMemo(() => {
 		switch (props.group) {
@@ -106,26 +105,10 @@ Without it, you can still deck tweets, but you won't be able to view them."
 					<div className="flex flex-row items-center">
 						<AlertIcon width={24} />
 						<p>Error</p>
-						<button
-							onClick={async () => {
-								await navigator.clipboard.writeText(
-									createErrorReportForExtensionGroup(props.group),
-								);
-								setCopiedReport(true);
-								setTimeout(() => setCopiedReport(false), 1000);
-							}}
-							type="button"
-							disabled={copiedReport}
-							className={
-								"ml-2 rounded-full cursor-pointer text-sm font-bold py-1 px-4 text-center bg-fd-primary disabled:bg-fd-primary/90 hover:bg-fd-primary/90"
-							}
-						>
-							{copiedReport ? "Copied!" : "Copy error report"}
-						</button>
 					</div>
 				);
 		}
-	}, [props.group, group, copiedReport]);
+	}, [group.status]);
 
 	return (
 		<div className="flex flex-row items-center gap-2">
@@ -140,17 +123,44 @@ function Dashboard(props: {
 	debugInfo?: ExtensionDebugInfo;
 }) {
 	const [copiedDebugInformation, setCopiedDebugInformation] = useState(false);
+	const errorBanner = useMemo(() => {
+		if (props.state.fine) return null;
+		try {
+			const report = createErrorReportForExtensionGroups();
+			return (
+				<p className="mt-2 font-semibold text-center bg-fd-danger/25 p-2 rounded-md">
+					The extension is not guaranteed to work properly!
+					<br />
+					<span
+						onClick={() => {
+							navigator.clipboard.writeText(report);
+						}}
+						className="underline cursor-pointer"
+					>
+						Copy error report
+					</span>{" "}
+					or{" "}
+					<a
+						target="_blank"
+						rel="noopener"
+						href={`https://github.com/nedoxff/favedeck/issues/new?template=bug.yml&error=${encodeURIComponent(report)}`}
+						className="underline cursor-pointer"
+					>
+						create a bug report
+					</a>
+				</p>
+			);
+		} catch (_ex) {
+			return null;
+		}
+	}, [props.state]);
 	return (
 		<div className="w-md bg-fd-bg flex flex-col">
 			<div className="p-4 flex flex-col gap-4">
 				<details open className="text-fd-fg">
 					<summary className="font-medium text-xl">State</summary>
 
-					{!props.state.fine && (
-						<p className="mt-2 font-semibold text-center bg-fd-danger/25 p-2 rounded-md">
-							The extension is not guaranteed to work properly!
-						</p>
-					)}
+					{errorBanner}
 					<div className="flex flex-col mt-2 gap-1">
 						{Object.keys(props.state.groups).map((key) => (
 							<DashboardStateGroup
