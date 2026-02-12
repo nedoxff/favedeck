@@ -123,44 +123,47 @@ function Dashboard(props: {
 	debugInfo?: ExtensionDebugInfo;
 }) {
 	const [copiedDebugInformation, setCopiedDebugInformation] = useState(false);
-	const errorBanner = useMemo(() => {
-		if (props.state.fine) return null;
-		try {
-			const report = createErrorReportForExtensionGroups();
-			return (
-				<p className="mt-2 font-semibold text-center bg-fd-danger/25 p-2 rounded-md">
-					The extension is not guaranteed to work properly!
-					<br />
-					<span
-						onClick={() => {
-							navigator.clipboard.writeText(report);
-						}}
-						className="underline cursor-pointer"
-					>
-						Copy error report
-					</span>{" "}
-					or{" "}
-					<a
-						target="_blank"
-						rel="noopener"
-						href={`https://github.com/nedoxff/favedeck/issues/new?template=bug.yml&error=${encodeURIComponent(report)}`}
-						className="underline cursor-pointer"
-					>
-						create a bug report
-					</a>
-				</p>
-			);
-		} catch (_ex) {
-			return null;
-		}
-	}, [props.state]);
+	const [copiedErrorReport, setCopiedErrorReport] = useState(false);
+
 	return (
 		<div className="w-md bg-fd-bg flex flex-col">
 			<div className="p-4 flex flex-col gap-4">
 				<details open className="text-fd-fg">
 					<summary className="font-medium text-xl">State</summary>
 
-					{errorBanner}
+					{!props.state.fine && (
+						<p className="mt-2 font-semibold text-center bg-fd-danger/25 p-2 rounded-md">
+							The extension is not guaranteed to work properly!
+							<br />
+							<span
+								onClick={() => {
+									try {
+										navigator.clipboard.writeText(
+											createErrorReportForExtensionGroups(),
+										);
+										setCopiedErrorReport(true);
+										setTimeout(() => setCopiedErrorReport(false), 1000);
+									} catch (_ex) {}
+								}}
+								className="underline cursor-pointer"
+							>
+								{copiedErrorReport ? "Copied!" : "Copy error report"}
+							</span>{" "}
+							or{" "}
+							<span
+								onClick={() => {
+									try {
+										browser.tabs.create({
+											url: `https://github.com/nedoxff/favedeck/issues/new?template=bug.yml&error=${encodeURIComponent(createErrorReportForExtensionGroups())}`,
+										});
+									} catch (_ex) {}
+								}}
+								className="underline cursor-pointer"
+							>
+								create a bug report
+							</span>
+						</p>
+					)}
 					<div className="flex flex-col mt-2 gap-1">
 						{Object.keys(props.state.groups).map((key) => (
 							<DashboardStateGroup

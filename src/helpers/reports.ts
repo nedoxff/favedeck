@@ -1,9 +1,11 @@
-import { isTaggedError, TaggedError } from "better-result";
 import type { ExtensionDebugInfo, ExtensionState } from "./state";
 
 const SILLIES = [
 	"Good luck debugging that.",
 	"It's probably something silly, isn't it?",
+	"Oops...",
+	"I guess it's time for a new version!",
+	"I'm pretty sure it's a typo.",
 ];
 
 const pad = (str: string) =>

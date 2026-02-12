@@ -1,5 +1,6 @@
 import FoldersLogo from "@/public/img/icons/folders-colored.svg?react";
 import MartenLogo from "@/public/img/icons/marten-colored.svg?react";
+import Cat from "~icons/mdi/cat";
 import Circle from "~icons/mdi/circle";
 import SimpleTooltip from "../common/SimpleTooltip";
 
@@ -12,6 +13,15 @@ const splashes = [
 	</p>,
 	<p className="text-2xl" key="typescript">
 		Now with 200% more TypeScript!
+	</p>,
+	<p className="text-2xl" key="lorem-ipsum">
+		<SimpleTooltip content="This isn't actually a placeholder text.">
+			Lorem ipsum dolor sit amet
+		</SimpleTooltip>
+	</p>,
+	<Cat key="cat" width={48} height={48} />,
+	<p className="text-2xl" key="max-decks">
+		9007199254740991 decks might be enough...
 	</p>,
 ];
 
