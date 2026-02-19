@@ -60,7 +60,7 @@ function InternalMasonryList() {
 	const resizeObserver = useResizeObserver(positioner);
 
 	return (
-		<div className="w-2/5 overflow-scroll px-8" ref={container}>
+		<div className="w-2/5 min-w-2/5 overflow-scroll px-8" ref={container}>
 			<tweetComponents.ContextBridge>
 				{useMasonry({
 					positioner,

@@ -5,8 +5,8 @@
 </h1>
 
 <p align="center">
-    <a href="https://http.cat/404"><img height="60" src="docs/img/get-chrome.png"/></a>
-    <a href="https://http.cat/404"><img height="60" src="docs/img/get-firefox.png"/></a>
+    <a href="https://dub.sh/fdchrome"><img height="60" src="docs/img/get-chrome.png"/></a>
+    <a href="https://dub.sh/fdfirefox"><img height="60" src="docs/img/get-firefox.png"/></a>
 </p>
 
 <p align="center">
