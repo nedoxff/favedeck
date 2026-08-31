@@ -3,8 +3,14 @@ import { tweetComponents } from "@/src/components/external/Tweet";
 
 interface TweetsEventMap {
 	"components-available": Event;
-	"tweet-bookmarked": CustomEvent<string>;
-	"tweet-unbookmarked": CustomEvent<string>;
+	"tweet-interacted": CustomEvent<{
+		tweet: string;
+		category: "bookmarks" | "likes";
+	}>;
+	"tweet-uninteracted": CustomEvent<{
+		tweet: string;
+		category: "bookmarks" | "likes";
+	}>;
 	"tweet-decked": CustomEvent<{ tweet: string; deck: string }>;
 	"tweet-undecked": CustomEvent<{ tweet: string; deck: string }>;
 }
@@ -18,17 +24,22 @@ class TweetsEventTarget extends TypedEventTarget<TweetsEventMap> {
 		);
 	}
 
-	public dispatchTweetBookmarked(id: string) {
+	public dispatchTweetInteracted(id: string, category: "bookmarks" | "likes") {
 		this.dispatchTypedEvent(
-			"tweet-bookmarked",
-			new CustomEvent("tweet-bookmarked", { detail: id }),
+			"tweet-interacted",
+			new CustomEvent("tweet-interacted", { detail: { tweet: id, category } }),
 		);
 	}
 
-	public dispatchTweetUnbookmarked(id: string) {
+	public dispatchTweetUninteracted(
+		id: string,
+		category: "bookmarks" | "likes",
+	) {
 		this.dispatchTypedEvent(
-			"tweet-unbookmarked",
-			new CustomEvent("tweet-unbookmarked", { detail: id }),
+			"tweet-uninteracted",
+			new CustomEvent("tweet-uninteracted", {
+				detail: { tweet: id, category },
+			}),
 		);
 	}
 

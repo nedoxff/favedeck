@@ -19,7 +19,7 @@ export default function EditDeckModal(props: {
 			<p className="font-bold text-2xl">Edit deck</p>
 			<p className="opacity-75">Name</p>
 			<input
-				className={`caret-fd-primary! py-2 px-4 placeholder:opacity-50! rounded-full w-full border-2 hover:border-fd-primary!`}
+				className={`caret-fd-primary! py-2 px-4 placeholder:opacity-50! rounded-full w-full border-2 border-fd-border hover:border-fd-primary!`}
 				placeholder="Enter deck name..."
 				type="text"
 				value={deckName}
@@ -104,14 +104,14 @@ export default function EditDeckModal(props: {
 				}}
 				disabled={deckName.length === 0}
 				type="button"
-				className="mt-2 rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center"
+				className="mt-2 rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center! cursor-pointer disabled:cursor-not-allowed"
 			>
 				Save
 			</button>
 			<button
 				onClick={props.onClose}
 				type="button"
-				className="rounded-full w-full text-fd-fg font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center"
+				className="rounded-full w-full text-fd-fg font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center! cursor-pointer"
 			>
 				Cancel
 			</button>

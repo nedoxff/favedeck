@@ -18,7 +18,7 @@ export default function ConfirmModal(props: {
 				type="button"
 				onClick={props.onConfirmed}
 				className={cn(
-					"rounded-full w-full text-white font-bold disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center",
+					"rounded-full w-full text-white font-bold disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center! cursor-pointer",
 					(props.confirmIsDangerous ?? false)
 						? "bg-fd-danger!"
 						: "bg-fd-primary!",
@@ -29,7 +29,7 @@ export default function ConfirmModal(props: {
 			<button
 				onClick={props.onCancelled}
 				type="button"
-				className="rounded-full w-full text-fd-fg font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center"
+				className="rounded-full w-full text-fd-fg font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center! cursor-pointer"
 			>
 				{props.cancelText ?? "Cancel"}
 			</button>

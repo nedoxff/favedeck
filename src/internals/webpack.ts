@@ -3,7 +3,7 @@ import { type Memoized, memoize } from "micro-memoize";
 import { WebpackNotFoundError } from "../helpers/errors";
 import type { TwitterThemeModule } from "../types/theme";
 import type { CursorTimelineEntry } from "../types/timeline";
-import type { ReduxDispatchAction } from "./redux";
+import { fallbackTimelines, type ReduxDispatchAction } from "./redux";
 
 type ReactType = typeof import("react");
 type ReactDOMType = typeof import("react-dom");
@@ -54,13 +54,15 @@ type WebpackCache = Record<string, WebpackCacheEntry>;
 export type ReduxTweetsAPIType = {
 	bookmark: (id: string) => ReduxDispatchAction;
 	unbookmark: (id: string) => ReduxDispatchAction;
+	like: (id: string) => ReduxDispatchAction;
+	unlike: (id: string) => ReduxDispatchAction;
 	fetchOne: (id: string) => ReduxDispatchAction;
 	fetchOneIfNeeded: (id: string) => ReduxDispatchAction;
 	fetchMany: (ids: string[]) => ReduxDispatchAction;
 	fetchManyIfNeeded: (ids: string[]) => ReduxDispatchAction;
 };
 
-export type ReduxBookmarksTimelineAPIType = {
+export type ReduxTimelineAPIType = {
 	fetchCursor: (
 		cursor: CursorTimelineEntry,
 		options: {
@@ -70,6 +72,8 @@ export type ReduxBookmarksTimelineAPIType = {
 	fetchBottom: () => ReduxDispatchAction;
 	fetchTop: () => ReduxDispatchAction;
 	fetchInitialOrTop: () => ReduxDispatchAction;
+	perfKey: string;
+	timelineId: string;
 };
 
 export type FindByPropertyOptions = {
@@ -105,7 +109,8 @@ export type WebpackHelper = {
 		redux: {
 			api: {
 				tweets: ReduxTweetsAPIType;
-				bookmarksTimeline?: ReduxBookmarksTimelineAPIType;
+				bookmarksTimeline?: ReduxTimelineAPIType;
+				favoritesTimeline?: ReduxTimelineAPIType;
 			};
 		};
 		theme: TwitterThemeModule;
@@ -154,13 +159,23 @@ export const webpack: WebpackHelper = {
 						)).module,
 						get bookmarksTimeline() {
 							return webpack
-								.findByProperty<ReduxBookmarksTimelineAPIType>(
-									"timelineId",
+								.findByProperty<ReduxTimelineAPIType>(
+									"perfKey",
 									"bookmarks timeline urt store (redux)",
-									{ maxDepth: 1, value: "bookmarks" },
+									{ maxDepth: 1, value: "bookmarksGraphQL" },
 								)
 								.map((r) => r.module)
-								.unwrapOr(undefined);
+								.unwrapOr(fallbackTimelines.bookmarksTimeline);
+						},
+						get favoritesTimeline() {
+							return webpack
+								.findByProperty<ReduxTimelineAPIType>(
+									"perfKey",
+									"favorites timeline urt store (redux)",
+									{ maxDepth: 1, value: "likes-GraphQL" },
+								)
+								.map((r) => r.module)
+								.unwrapOr(fallbackTimelines.likesTimeline);
 						},
 					},
 				},

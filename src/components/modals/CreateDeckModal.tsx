@@ -5,6 +5,7 @@ import { TwitterModal } from "./TwitterModal";
 export default function CreateDeckModal(props: {
 	onClose: (cancelled: boolean) => void;
 	onCreated?: (id: string) => void | Promise<void>;
+	category: "bookmarks" | "likes"
 }) {
 	const [deckName, setDeckName] = useState("");
 	const [deckSecret, setDeckSecret] = useState(false);
@@ -14,7 +15,7 @@ export default function CreateDeckModal(props: {
 			<p className="font-bold text-2xl">New deck</p>
 			<p className="opacity-75">Enter the name for your new deck:</p>
 			<input
-				className={`caret-fd-primary! py-2 px-4 placeholder:opacity-50! rounded-full w-full border-2 hover:border-fd-primary!`}
+				className={`caret-fd-primary! py-2 px-4 placeholder:opacity-50! rounded-full w-full border-fd-border border-2 hover:border-fd-primary!`}
 				placeholder="Enter deck name..."
 				type="text"
 				value={deckName}
@@ -30,20 +31,20 @@ export default function CreateDeckModal(props: {
 			</div>
 			<button
 				onClick={async () => {
-					const id = await createDeck(deckName, deckSecret);
+					const id = await createDeck(deckName, deckSecret, props.category);
 					await props.onCreated?.(id);
 					props.onClose(false);
 				}}
 				disabled={deckName.length === 0}
 				type="button"
-				className="rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center"
+				className="rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center!"
 			>
 				Create
 			</button>
 			<button
 				onClick={() => props.onClose(true)}
 				type="button"
-				className="rounded-full w-full text-fd-fg font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center"
+				className="rounded-full w-full text-fd-fg font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center!"
 			>
 				Cancel
 			</button>

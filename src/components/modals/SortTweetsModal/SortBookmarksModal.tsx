@@ -2,6 +2,7 @@ import type { DragDropEvents } from "@dnd-kit/react";
 import { Result } from "better-result";
 import Confetti from "react-confetti-boom";
 import { internalsEventTarget } from "@/src/features/events/internals";
+import type { DatabasePotentiallyUngroupedTweet } from "@/src/features/storage/definition";
 import { kv } from "@/src/features/storage/kv";
 import {
 	addPotentiallyUngroupedTweet,
@@ -15,14 +16,18 @@ import {
 	getLatestSortedTweet,
 	splitTweets,
 } from "@/src/features/storage/tweets";
+import { getUserId } from "@/src/internals/foolproof";
 import {
 	addEntities,
-	fetchBookmarksTimelineFromCursor,
-	getBookmarksTimelineEntries,
-	getBottomBookmarksTimelineCursor,
+	fetchTimelineFromCursor,
+	getBottomTimelineCursor,
+	getTimelineEntries,
 	unbookmarkTweet,
+	unlikeTweet,
 } from "@/src/internals/redux";
+import { webpack } from "@/src/internals/webpack";
 import CloseIcon from "~icons/mdi/close";
+import { DeckCategoryContext } from "../../common/contexts";
 import { IconButton } from "../../common/IconButton";
 import { components } from "../../wrapper";
 import CreateDeckModal from "../CreateDeckModal";
@@ -32,11 +37,14 @@ import MasonryInterface from "./MasonryInterface";
 import SelectSortBookmarksInterface from "./SelectInterface";
 import {
 	type PendingNewDeckTweet,
-	type SortBookmarksActions,
-	useSortBookmarksState,
+	type SortTweetsActions,
+	useSortTweetsState,
 } from "./state";
 
-export default function SortBookmarksModal(props: { onClose: () => void }) {
+export default function SortBookmarksModal(props: {
+	onClose: () => void;
+	category: "bookmarks" | "likes";
+}) {
 	const {
 		allTweets,
 		isDone,
@@ -49,7 +57,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		setAddedIntentionallyUngroupedTweets,
 		setIsFetchingTweets,
 		setRefetchTweetEntries,
-	} = useSortBookmarksState();
+	} = useSortTweetsState();
 
 	useEffect(() => {
 		kv.settings
@@ -75,10 +83,14 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		force?: boolean,
 		fromCallback?: boolean,
 	) => {
-		const modalState = useSortBookmarksState.getState();
+		const timelineId =
+			props.category === "bookmarks"
+				? "bookmarks"
+				: `favorites-${(await getUserId()) ?? ""}`;
+		const modalState = useSortTweetsState.getState();
 		if (modalState.isDone) return;
 
-		const rawEntries = getBookmarksTimelineEntries().filter(
+		const rawEntries = getTimelineEntries(timelineId).filter(
 			(entry) => entry.type === "tweet",
 		);
 
@@ -98,8 +110,11 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		} else previousBookmarksTimelineEntriesCountRef.current = rawEntries.length;
 
 		setIsFetchingTweets(true);
-		const [unsortedEntries, sortedEntries] = await splitTweets(rawEntries);
-		const state = await kv.sortBookmarksState.get();
+		const [unsortedEntries, sortedEntries] = await splitTweets(
+			rawEntries,
+			props.category,
+		);
+		const state = await kv.sortTweetsState.get();
 
 		// while i'm not asleep...
 		// the "cursor" is the last api call where the user stopped sorting bookmarks.
@@ -117,6 +132,11 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 				state &&
 				(rawEntries.at(-1)?.sortIndex ?? "") <=
 					state.latestSortedTweet.sortIndex;
+			const timelineProvider =
+				props.category === "bookmarks"
+					? webpack.common.redux.api.bookmarksTimeline
+					: webpack.common.redux.api.favoritesTimeline;
+
 			if (
 				shouldUseCursor &&
 				state.previousCursor &&
@@ -127,11 +147,12 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 					state.previousCursor,
 				);
 				stateCursorUsedRef.current = true;
-				await fetchBookmarksTimelineFromCursor(state.previousCursor);
+				await fetchTimelineFromCursor(timelineProvider, state.previousCursor);
 			} else {
-				const bottomCursor = getBottomBookmarksTimelineCursor();
+				const bottomCursor = getBottomTimelineCursor(timelineId);
 				console.log("no unsorted entries, fetching from bottom", bottomCursor);
-				if (bottomCursor) await fetchBookmarksTimelineFromCursor(bottomCursor);
+				if (bottomCursor)
+					await fetchTimelineFromCursor(timelineProvider, bottomCursor);
 			}
 			return;
 		}
@@ -154,10 +175,11 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 	};
 
 	const appendUngroupedTweets = async (
-		category: "unbookmarked" | "intentional",
+		category: DatabasePotentiallyUngroupedTweet["category"],
 	) => {
 		const ungroupedTweets = await checkPotentiallyUngroupedTweets(
 			await getPotentiallyUngroupedTweets(category),
+			category,
 		);
 		setSortedTweets((current) =>
 			current.filter((t) => !ungroupedTweets.some((ut) => ut.id === t)),
@@ -187,20 +209,16 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 	useEffect(() => {
 		// not sure if we can just blindly believe database entries like that
 		// but probably yeah
-		appendUngroupedTweets("unbookmarked");
+		appendUngroupedTweets(
+			props.category === "bookmarks" ? "unbookmarked" : "unliked",
+		);
 	}, []);
 
 	useEffect(() => {
 		const listener = () => refetchTweetEntries(false, true);
-		internalsEventTarget.addEventListener(
-			"bookmarks-timeline-fetched",
-			listener,
-		);
+		internalsEventTarget.addEventListener("timeline-fetched", listener);
 		return () =>
-			internalsEventTarget.removeEventListener(
-				"bookmarks-timeline-fetched",
-				listener,
-			);
+			internalsEventTarget.removeEventListener("timeline-fetched", listener);
 	}, []);
 
 	const handleTweetOpacity = (
@@ -215,18 +233,22 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		closingRef.current = true;
 		// remember last cursor
 		(async () => {
-			if (useSortBookmarksState.getState().selectedInterface !== "masonry") {
-				const state = await kv.sortBookmarksState.get();
-				const latestSortedTweet = await getLatestSortedTweet();
+			if (useSortTweetsState.getState().selectedInterface !== "masonry") {
+				const state = await kv.sortTweetsState.get();
+				const latestSortedTweet = await getLatestSortedTweet(props.category);
+				const timelineId =
+					props.category === "bookmarks"
+						? "bookmarks"
+						: `favorites-${(await getUserId()) ?? ""}`;
 
-				const previousCursor = getBottomBookmarksTimelineCursor(-2);
-				const currentCursor = getBottomBookmarksTimelineCursor(-1);
+				const previousCursor = getBottomTimelineCursor(timelineId, -2);
+				const currentCursor = getBottomTimelineCursor(timelineId, -1);
 
 				if (
 					latestSortedTweet &&
 					previousCursor &&
 					currentCursor &&
-					getBottomBookmarksTimelineCursor()?.entryId !==
+					getBottomTimelineCursor(timelineId)?.entryId !==
 						state?.currentCursor.entryId
 				) {
 					console.log(
@@ -235,7 +257,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 						currentCursor,
 						latestSortedTweet,
 					);
-					await kv.sortBookmarksState.set({
+					await kv.sortTweetsState.set({
 						previousCursor,
 						currentCursor,
 						latestSortedTweet,
@@ -248,9 +270,13 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 		})();
 	}, []);
 
-	const actions: SortBookmarksActions = {
+	const actions: SortTweetsActions = {
 		appendIntentionallyUngroupedTweets: async () => {
-			await appendUngroupedTweets("intentional");
+			await appendUngroupedTweets(
+				props.category === "bookmarks"
+					? "intentional_bookmarks"
+					: "intentional_likes",
+			);
 			setIsDone(false);
 			setAddedIntentionallyUngroupedTweets(true);
 		},
@@ -264,16 +290,24 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 
 				const result = await Result.tryPromise(async () => {
 					switch (target) {
-						case "unbookmark": {
-							const unbookmarkResult = await unbookmarkTweet(tweet);
-							if (unbookmarkResult.isErr())
-								throw Error(`failed to unbookmark tweet`, {
-									cause: unbookmarkResult.error,
+						case "uninteract": {
+							const uninteractResult =
+								props.category === "bookmarks"
+									? await unbookmarkTweet(tweet)
+									: await unlikeTweet(tweet);
+							if (uninteractResult.isErr())
+								throw Error(`failed to remove tweet`, {
+									cause: uninteractResult.error,
 								});
 							break;
 						}
 						case "later": {
-							await addPotentiallyUngroupedTweet(tweet, "intentional");
+							await addPotentiallyUngroupedTweet(
+								tweet,
+								props.category === "bookmarks"
+									? "intentional_bookmarks"
+									: "intentional_likes",
+							);
 							setAddedIntentionallyUngroupedTweets(false);
 							break;
 						}
@@ -291,7 +325,10 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 								throw Error("failed to add tweet to deck", {
 									cause: addResult.error,
 								});
-							await removePotentiallyUngroupedTweet(tweet);
+							await removePotentiallyUngroupedTweet(
+								tweet,
+								props.category === "bookmarks" ? ["unbookmarked"] : ["unliked"],
+							);
 							const node = document.querySelector(
 								`div[data-favedeck-id="${tweet}"]`,
 							);
@@ -301,6 +338,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 						}
 					}
 
+					internalsEventTarget.dispatchTweetSorted(tweet);
 					setSortedTweets((cur) => [...cur, tweet]);
 				});
 
@@ -342,14 +380,16 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 	}, [selectedInterface]);
 
 	return (
-		<>
+		<DeckCategoryContext.Provider value={props.category}>
 			<TwitterModal className="p-0 w-[95%] h-[95%] relative" onClose={onClose}>
 				<div className="flex flex-row justify-between items-center pt-8 px-8">
 					<div className="flex flex-row gap-4 items-center">
 						<IconButton onClick={onClose}>
 							<CloseIcon width={24} height={24} />
 						</IconButton>
-						<p className="font-bold text-2xl">Sort bookmarks</p>
+						<p className="font-bold text-2xl">
+							Sort {props.category === "bookmarks" ? "bookmarks" : "likes"}
+						</p>
 					</div>
 				</div>
 				{body}
@@ -367,6 +407,7 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 			</TwitterModal>
 			{showCreateDeckModal && (
 				<CreateDeckModal
+					category={props.category}
 					onClose={(cancelled) => {
 						setShowCreateDeckModal(false);
 						if (cancelled && pendingNewDeckTweet)
@@ -378,7 +419,10 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 					onCreated={async (id) => {
 						if (!pendingNewDeckTweet) return;
 						await addTweetToDeck(pendingNewDeckTweet.id, id);
-						await removePotentiallyUngroupedTweet(id);
+						await removePotentiallyUngroupedTweet(
+							id,
+							props.category === "bookmarks" ? ["unbookmarked"] : ["unliked"],
+						);
 						const node = document.querySelector(
 							`div[data-favedeck-id="${id}"]`,
 						);
@@ -386,6 +430,6 @@ export default function SortBookmarksModal(props: { onClose: () => void }) {
 					}}
 				/>
 			)}
-		</>
+		</DeckCategoryContext.Provider>
 	);
 }

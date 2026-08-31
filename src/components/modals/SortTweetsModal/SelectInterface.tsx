@@ -4,6 +4,7 @@ import CardsIcon from "~icons/mdi/cards";
 import MasonryIcon from "~icons/mdi/view-dashboard";
 import Alert from "../../common/Alert";
 import Checkbox from "../../common/Checkbox";
+import { DeckCategoryContext } from "../../common/contexts";
 
 function InterfaceCard(props: {
 	icon: ForwardRefExoticComponent<SVGProps<SVGSVGElement>>;
@@ -15,7 +16,7 @@ function InterfaceCard(props: {
 		<div
 			role="button"
 			onClick={props.onClick}
-			className="rounded-xl w-2/5 p-8 flex flex-col gap-2 justify-center items-center border-2 cursor-pointer hover:border-fd-primary! transition-all"
+			className="rounded-xl w-2/5 p-8 flex flex-col gap-2 justify-center items-center border-fd-border border-2 cursor-pointer hover:border-fd-primary! transition-all"
 		>
 			<props.icon width={48} height={48} />
 			<p className="text-2xl font-semibold text-center">{props.title}</p>
@@ -33,11 +34,13 @@ export default function SelectSortBookmarksInterface(props: {
 		remember: boolean,
 	) => void;
 }) {
+	const category = useContext(DeckCategoryContext);
 	const [rememberChoice, setRememberChoice] = useState(false);
 	return (
 		<div className="w-full h-full flex flex-col gap-4 justify-center items-center">
 			<p className="font-bold text-3xl">
-				How would you like to sort bookmarks?
+				How would you like to sort{" "}
+				{category === "bookmarks" ? "bookmarks" : "likes"}?
 			</p>
 			<div className="flex flex-row justify-center gap-2">
 				<InterfaceCard
@@ -85,8 +88,8 @@ export default function SelectSortBookmarksInterface(props: {
 						>
 							This interface is subject to Twitter's ratelimits.
 						</a>{" "}
-						Please use it sparingly, or you might not be able to browse
-						bookmarks at all!
+						Use sparingly, or you might not be able to browse{" "}
+						{category === "bookmarks" ? "bookmarks" : "likes"} at all!
 					</p>
 				}
 			/>

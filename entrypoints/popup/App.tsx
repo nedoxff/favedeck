@@ -221,7 +221,7 @@ function Dashboard(props: {
 							type="button"
 							onClick={() => {
 								browser.tabs.update({
-									url: "https://x.com/i/bookmarks#fd-settings",
+									url: "https://x.com/i/history#fd-settings",
 								});
 								window.close();
 							}}
@@ -234,7 +234,7 @@ function Dashboard(props: {
 							type="button"
 							onClick={() => {
 								browser.tabs.update({
-									url: "https://x.com/i/bookmarks#fd-about",
+									url: "https://x.com/i/history#fd-about",
 								});
 								window.close();
 							}}

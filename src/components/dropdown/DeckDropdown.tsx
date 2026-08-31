@@ -1,8 +1,14 @@
+import { useLiveQuery } from "dexie-react-hooks";
 import { forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { decksEventTarget } from "@/src/features/events/decks";
-import { deleteDeck, getAllDeckTweets } from "@/src/features/storage/decks";
+import {
+	deleteDeck,
+	getAllDeckTweets,
+	getDeckSize,
+} from "@/src/features/storage/decks";
 import type { DatabaseDeck } from "@/src/features/storage/definition";
+import { websiteMessenger } from "@/src/helpers/messaging/content";
 import { getRootNodeFromTweetElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
 import VerticalMoreIcon from "~icons/mdi/dots-vertical";
@@ -12,8 +18,8 @@ import StarIcon from "~icons/mdi/star-four-points-outline";
 import DeleteIcon from "~icons/mdi/trash-can-outline";
 import { IconButton } from "../common/IconButton";
 import ConfirmModal from "../modals/ConfirmModal";
+import DownloadDeckModal from "../modals/DownloadDeckModal";
 import EditDeckModal from "../modals/EditDeckModal";
-import ExportDeckModal from "../modals/ExportDeckModal";
 import { components } from "../wrapper";
 import { TwitterDropdown, TwitterDropdownItem } from "./TwitterDropdown";
 
@@ -24,9 +30,10 @@ export default function DeckDropdown(props: {
 }) {
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [showExportModal, setShowExportModal] = useState(false);
+	const [showDownloadModal, setShowDownloadModal] = useState(false);
+	const deckSize = useLiveQuery(() => getDeckSize(props.deck.id));
 
-	return props.deck.id === "all" ? (
+	return props.deck.id.startsWith("all-") ? (
 		<TwitterDropdown<HTMLButtonElement>
 			trigger={forwardRef(({ isOpen, setOpen }, ref) => (
 				<IconButton
@@ -68,14 +75,16 @@ export default function DeckDropdown(props: {
 			>
 				{({ setOpen }) => (
 					<>
-						<TwitterDropdownItem
-							icon={<DownloadIcon width={24} height={24} />}
-							text="Export deck"
-							onClick={() => {
-								setShowExportModal(true);
-								setOpen(false);
-							}}
-						/>
+						{deckSize !== 0 && (
+							<TwitterDropdownItem
+								icon={<DownloadIcon width={24} height={24} />}
+								text="Download deck"
+								onClick={() => {
+									setShowDownloadModal(true);
+									setOpen(false);
+								}}
+							/>
+						)}
 						<TwitterDropdownItem
 							icon={<EditIcon width={24} height={24} />}
 							text="Edit deck"
@@ -96,11 +105,17 @@ export default function DeckDropdown(props: {
 				)}
 			</TwitterDropdown>
 
-			{showExportModal &&
+			{showDownloadModal &&
 				createPortal(
-					<ExportDeckModal
+					<DownloadDeckModal
 						deck={props.deck}
-						onClose={() => setShowExportModal(false)}
+						onClose={() => {
+							setShowDownloadModal(false);
+							websiteMessenger.sendMessage("deckDownloader:forward", {
+								type: "toggleContinuousUpdates",
+								data: { enabled: false },
+							});
+						}}
 					/>,
 					document.body,
 				)}

@@ -1,7 +1,7 @@
 import "@/assets/popup.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { messenger } from "@/src/helpers/messaging-extension.ts";
+import { messenger } from "@/src/helpers/messaging/extension.ts";
 import App from "./App.tsx";
 import { usePopupState } from "./helpers/state.ts";
 import { popupStorage } from "./helpers/storage.ts";

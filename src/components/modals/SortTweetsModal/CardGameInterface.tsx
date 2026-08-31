@@ -1,13 +1,14 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getUserDecksAutomatically } from "@/src/features/storage/decks";
+import { DeckCategoryContext } from "../../common/contexts";
 import Spinner from "../../common/Spinner";
 import { tweetComponents } from "../../external/Tweet";
 import { CustomCardRow, DeckItem, DraggableTweetCard } from "./common";
-import { type SortBookmarksActions, useSortBookmarksState } from "./state";
+import { type SortTweetsActions, useSortTweetsState } from "./state";
 
 export default function CardGameInterface(props: {
-	actions: SortBookmarksActions;
+	actions: SortTweetsActions;
 }) {
 	const {
 		allTweets,
@@ -16,8 +17,13 @@ export default function CardGameInterface(props: {
 		refetchTweetEntries,
 		setAllTweets,
 		setSortedTweets,
-	} = useSortBookmarksState();
-	const userDecks = useLiveQuery(getUserDecksAutomatically, [], []);
+	} = useSortTweetsState();
+	const deckCategory = useContext(DeckCategoryContext);
+	const userDecks = useLiveQuery(
+		async () => await getUserDecksAutomatically(deckCategory),
+		[deckCategory],
+		[],
+	);
 
 	useEffect(() => {
 		if (sortedTweets.length === 5) {
@@ -34,7 +40,7 @@ export default function CardGameInterface(props: {
 				onDragEnd={props.actions.onDragEnd}
 			>
 				<div className="h-[60%] flex flex-row gap-4">
-					<div className="basis-3/4 overflow-scroll scroll-shadow">
+					<div className="basis-3/4 overflow-auto overscroll-contain scroll-shadow">
 						<div className="flex flex-row flex-wrap">
 							{userDecks.map((ud) => (
 								<DeckItem key={ud.id} deck={ud} />
@@ -49,7 +55,7 @@ export default function CardGameInterface(props: {
 					{isFetchingTweets ? (
 						<div className="h-[40%] w-full flex flex-col justify-center items-center gap-2">
 							<Spinner size="large" />
-							<p className="text-lg">Loading more bookmarks</p>
+							<p className="text-lg">Loading more {deckCategory === "bookmarks" ? "bookmarks": "likes"}</p>
 						</div>
 					) : (
 						allTweets

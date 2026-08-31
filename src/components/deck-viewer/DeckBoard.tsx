@@ -62,8 +62,8 @@ function DeckBoardItem(props: { deck: DatabaseDeck; index: number }) {
 				decksEventTarget.setCurrentDeck(props.deck.id);
 				webpack.common.history.push({
 					hash: `#fd-${props.deck.id}`,
-					pathname: "/i/bookmarks",
-					state: "from-deck-view",
+					pathname: props.deck.category === "bookmarks" ? "/i/history": "/i/history/likes",
+					state: {fromDeckView: true},
 				});
 			}}
 			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl bg-fd-bg"
@@ -98,9 +98,13 @@ function DeckBoardItem(props: { deck: DatabaseDeck; index: number }) {
 	);
 }
 
-function NewDeckBoardItem() {
+function NewDeckBoardItem(props: { category: "bookmarks" | "likes" }) {
 	const [showModal, setShowModal] = useState(false);
-	const decksCount = useLiveQuery(getDecksCount, [], 0);
+	const decksCount = useLiveQuery(
+		() => getDecksCount(props.category),
+		[props.category],
+		0,
+	);
 
 	return (
 		<>
@@ -123,25 +127,38 @@ function NewDeckBoardItem() {
 			</div>
 			{showModal &&
 				createPortal(
-					<CreateDeckModal onClose={() => setShowModal(false)} />,
+					<CreateDeckModal
+						category={props.category}
+						onClose={() => setShowModal(false)}
+					/>,
 					document.body,
 				)}
 		</>
 	);
 }
 
-function AllBookmarksDeckBoardItem() {
+function AllItemsDeckBoardItem(props: { category: "bookmarks" | "likes" }) {
 	return (
 		<div
 			role="button"
 			onClick={(ev) => {
 				ev.preventDefault();
-				decksEventTarget.setCurrentDeck("all");
-				webpack.common.history.push({
-					hash: "#fd-all",
-					pathname: "/i/bookmarks",
-					state: "from-deck-view",
-				});
+				decksEventTarget.setCurrentDeck(
+					props.category === "bookmarks" ? "all-bookmarks" : "all-likes",
+				);
+				webpack.common.history.push(
+					props.category === "bookmarks"
+						? {
+								hash: "#fd-all-bookmarks",
+								pathname: "/i/history",
+								state: {fromDeckView: true},
+							}
+						: {
+								hash: "#fd-all-likes",
+								pathname: "/i/history/likes",
+								state: {fromDeckView: true},
+							},
+				);
 			}}
 			className="grow shrink basis-[45%] max-w-[calc(50%-8px)] h-60 hover:cursor-pointer group w-full flex flex-col gap-2 p-2 hover:shadow-lighten! rounded-2xl"
 		>
@@ -149,17 +166,19 @@ function AllBookmarksDeckBoardItem() {
 				<MoreIcon width={36} height={36} />
 			</div>
 			<div className="pointer-events-none">
-				<p className="font-bold text-xl">All bookmarks</p>
-				<p className="opacity-50">like all of them</p>
+				<p className="font-bold text-xl">
+					{props.category === "bookmarks" ? "All bookmarks" : "All likes"}
+				</p>
+				<p className="opacity-50">like in regular twitter</p>
 			</div>
 		</div>
 	);
 }
 
-export function DeckBoard() {
+export function DeckBoard(props: { category: "bookmarks" | "likes" }) {
 	const userDecks = useLiveQuery(
-		getUserDecksAutomatically,
-		[],
+		async () => await getUserDecksAutomatically(props.category),
+		[props.category],
 		[] as DatabaseDeck[],
 	);
 	const [tempDecks, setTempDecks] = useState(userDecks);
@@ -175,8 +194,8 @@ export function DeckBoard() {
 					<DeckBoardItem key={deck.id} deck={deck} index={index} />
 				))}
 			</DragDropProvider>
-			<AllBookmarksDeckBoardItem />
-			<NewDeckBoardItem />
+			<AllItemsDeckBoardItem category={props.category} />
+			<NewDeckBoardItem category={props.category} />
 		</div>
 	);
 }

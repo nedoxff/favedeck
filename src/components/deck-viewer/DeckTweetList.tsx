@@ -24,6 +24,8 @@ import { webpack } from "@/src/internals/webpack";
 import BookmarkIcon from "~icons/mdi/bookmark";
 import DragVerticalIcon from "~icons/mdi/drag-vertical";
 import SadSmileyIcon from "~icons/mdi/emoticon-sad-outline";
+import LikeIcon from "~icons/mdi/heart";
+import { DeckCategoryContext } from "../common/contexts";
 import { IconButton } from "../common/IconButton";
 import { TweetWrapper } from "../external/TweetWrapper";
 import { components } from "../wrapper";
@@ -46,9 +48,12 @@ function GenericTweetMasonry<T extends { id: string }>(
 
 	const [changesCount, setChangesCount] = useState(0);
 	useEffect(() => {
-		const unbookmarkedListener = (ev: CustomEvent<string>) => {
+		const uninteractedListener = (
+			ev: CustomEvent<{ tweet: string; category: "bookmarks" | "likes" }>,
+		) => {
+			if (ev.detail.category !== props.deck.category) return;
 			setTweets((tweets) =>
-				tweets.filter((tweet) => !tweet.id.startsWith(ev.detail)),
+				tweets.filter((tweet) => !tweet.id.startsWith(ev.detail.tweet)),
 			);
 			setChangesCount((c) => c + 1);
 		};
@@ -64,14 +69,14 @@ function GenericTweetMasonry<T extends { id: string }>(
 		};
 
 		tweetsEventTarget.addEventListener(
-			"tweet-unbookmarked",
-			unbookmarkedListener,
+			"tweet-uninteracted",
+			uninteractedListener,
 		);
 		tweetsEventTarget.addEventListener("tweet-undecked", undeckedListener);
 		return () => {
 			tweetsEventTarget.removeEventListener(
-				"tweet-unbookmarked",
-				unbookmarkedListener,
+				"tweet-uninteracted",
+				uninteractedListener,
 			);
 			tweetsEventTarget.removeEventListener("tweet-undecked", undeckedListener);
 		};
@@ -175,6 +180,8 @@ const DeckMasonryListItem = memo(function DeckMasonryListItem(props: {
 		} satisfies MasonrySortableData,
 	});
 	const url = `/${props.data.author.name}/status/${props.data.tweet}${props.data.info.type === "photo" ? `/photo/${props.data.info.index}` : ""}`;
+	const deckCategory = useContext(DeckCategoryContext);
+
 	return (
 		<article
 			ref={ref}
@@ -266,11 +273,16 @@ const DeckMasonryListItem = memo(function DeckMasonryListItem(props: {
 							? components.SelectDeckPopup.hide()
 							: components.SelectDeckPopup.show(
 									ev.currentTarget,
+									deckCategory,
 									"masonry-cell",
 								);
 					}}
 				>
-					<BookmarkIcon className="text-fd-primary" width={24} height={24} />
+					{deckCategory === "bookmarks" ? (
+						<BookmarkIcon className="text-fd-primary" width={24} height={24} />
+					) : (
+						<LikeIcon className="text-fd-primary" width={24} height={24} />
+					)}
 				</IconButton>
 			</div>
 		</article>
@@ -281,74 +293,77 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 	// note: thank your past self for implementing react proxies.
 	return (
 		<div className="grow p-4">
-			<GenericTweetMasonry<TweetMasonryInfo>
-				deck={props.deck}
-				fetcher={async (start, stop) =>
-					(
-						await Result.gen(async function* () {
-							{
-								// TODO: checkDatabaseTweets probably not needed here?
-								const newTweets = await getDeckTweets(
-									props.deck.id,
-									start,
-									stop - start + 1,
-								);
-								yield* Result.await(addEntitiesFromDatabaseTweets(newTweets));
-								const infos: TweetMasonryInfo[] = [];
-								for (const tweet of newTweets) {
-									infos.push(
-										...(yield* Result.await(
-											convertDatabaseTweetToMasonryInfos(tweet.id),
-										)),
+			<DeckCategoryContext.Provider value={props.deck.category}>
+				<GenericTweetMasonry<TweetMasonryInfo>
+					deck={props.deck}
+					fetcher={async (start, stop) =>
+						(
+							await Result.gen(async function* () {
+								{
+									// TODO: checkDatabaseTweets probably not needed here?
+									const newTweets = await getDeckTweets(
+										props.deck.id,
+										start,
+										stop - start + 1,
 									);
+									yield* Result.await(addEntitiesFromDatabaseTweets(newTweets));
+									const infos: TweetMasonryInfo[] = [];
+									for (const tweet of newTweets) {
+										infos.push(
+											...(yield* Result.await(
+												convertDatabaseTweetToMasonryInfos(tweet.id),
+											)),
+										);
+									}
+									return Result.ok(infos);
 								}
-								return Result.ok(infos);
-							}
+							})
+						).match({
+							ok: (v) => v,
+							err: (err) => {
+								console.error(
+									"failed to fetch items for DeckMasonryList from",
+									start,
+									"to",
+									stop,
+									err,
+								);
+								components.Toast.error("Failed to fetch items", err);
+								return [];
+							},
 						})
-					).match({
-						ok: (v) => v,
-						err: (err) => {
-							console.error(
-								"failed to fetch items for DeckMasonryList from",
-								start,
-								"to",
-								stop,
-								err,
+					}
+					render={DeckMasonryListItem}
+					overlayRenderer={React.memo(
+						({ draggable }) => {
+							const mediaInfo: MediaInfo = draggable.data.info.info;
+							return (
+								draggable.data.type === "masonry" &&
+								!draggable.isDropping && (
+									<img
+										src={
+											mediaInfo.type !== "photo"
+												? mediaInfo.thumbnail
+												: mediaInfo.url
+										}
+										width={draggable.data.width}
+										height={
+											mediaInfo.height *
+											(draggable.data.width / mediaInfo.width)
+										}
+										alt="meow"
+										className="rounded-2xl"
+									/>
+								)
 							);
-							components.Toast.error("Failed to fetch items", err);
-							return [];
 						},
-					})
-				}
-				render={DeckMasonryListItem}
-				overlayRenderer={React.memo(
-					({ draggable }) => {
-						const mediaInfo: MediaInfo = draggable.data.info.info;
-						return (
-							draggable.data.type === "masonry" &&
-							!draggable.isDropping && (
-								<img
-									src={
-										mediaInfo.type !== "photo"
-											? mediaInfo.thumbnail
-											: mediaInfo.url
-									}
-									width={draggable.data.width}
-									height={
-										mediaInfo.height * (draggable.data.width / mediaInfo.width)
-									}
-									alt="meow"
-									className="rounded-2xl"
-								/>
-							)
-						);
-					},
-					(prev, next) => prev.draggable.id === next.draggable.id,
-				)}
-				columnGutter={8}
-				rowGutter={8}
-				columnCount={2}
-			/>
+						(prev, next) => prev.draggable.id === next.draggable.id,
+					)}
+					columnGutter={8}
+					rowGutter={8}
+					columnCount={2}
+				/>
+			</DeckCategoryContext.Provider>
 		</div>
 	);
 }
@@ -371,7 +386,7 @@ const SortableTweetWrapper = memo(function ScrollableTweetWrapper(props: {
 			{/* TODO: man this is so ugly */}
 			<IconButton
 				ref={handleRef}
-				className="absolute top right-11 top-1.5 opacity-75 z-10 group hover:opacity-100 hover:bg-fd-primary/25! transition-all"
+				className="absolute top left-5.5 top-16 z-1 opacity-75 group hover:opacity-100 hover:bg-fd-primary/25! transition-all"
 			>
 				<DragVerticalIcon
 					className="group-hover:text-fd-primary!"

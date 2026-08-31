@@ -6,16 +6,24 @@ export type FavedeckSettings = {
 	updateStatistics: boolean;
 	fetchMoreTweetsPerRequest: boolean;
 	preferredSortBookmarksInterface: "ask" | "card-game" | "masonry";
+	autoBackupPreference: "disabled" | "hour" | "day" | "week";
+	showDeckPopupForLikes: boolean;
 };
 
 export const DEFAULT_SETTINGS: FavedeckSettings = {
 	updateStatistics: false,
 	fetchMoreTweetsPerRequest: false,
 	preferredSortBookmarksInterface: "ask",
+	autoBackupPreference: "day",
+	showDeckPopupForLikes: false,
 };
 
 export const getSetting = async (path: Paths<FavedeckSettings>) =>
-	getProperty((await kv.settings.get()) ?? DEFAULT_SETTINGS, path);
+	getProperty(
+		(await kv.settings.get()) ?? DEFAULT_SETTINGS,
+		path,
+		getProperty(DEFAULT_SETTINGS, path),
+	);
 
 export const setSetting = async <T extends Paths<FavedeckSettings>>(
 	path: T,

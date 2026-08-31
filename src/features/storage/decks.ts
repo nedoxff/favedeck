@@ -6,21 +6,43 @@ import { type DatabaseDeck, db } from "./definition";
 import { removeTweet } from "./tweets";
 
 export const ALL_BOOKMARKS_DECK: DatabaseDeck = {
-	id: "all",
+	id: "all-bookmarks",
 	name: "All bookmarks",
 	secret: false,
 	user: "",
 	dateModified: Date.now(),
 	viewMode: "regular",
 	order: Dexie.minKey,
+	category: "bookmarks",
+};
+
+export const ALL_LIKES_DECK: DatabaseDeck = {
+	id: "all-likes",
+	name: "All likes",
+	secret: false,
+	user: "",
+	dateModified: Date.now(),
+	viewMode: "regular",
+	order: Dexie.minKey,
+	category: "likes",
 };
 
 export const getDeck = async (id: string) => {
-	if (id === "all") return ALL_BOOKMARKS_DECK;
-	return await db.decks.get(id);
+	switch (id) {
+		case "all-bookmarks":
+			return ALL_BOOKMARKS_DECK;
+		case "all-likes":
+			return ALL_LIKES_DECK;
+		default:
+			return await db.decks.get(id);
+	}
 };
 
-export const createDeck = async (name: string, secret: boolean) => {
+export const createDeck = async (
+	name: string,
+	secret: boolean,
+	category: "bookmarks" | "likes",
+) => {
 	const deck: DatabaseDeck = {
 		id: v6(),
 		name,
@@ -29,6 +51,7 @@ export const createDeck = async (name: string, secret: boolean) => {
 		dateModified: Date.now(),
 		viewMode: "regular",
 		order: Dexie.minKey,
+		category,
 	};
 	await db.decks.put(deck);
 	decksEventTarget.dispatchDeckCreated(deck);
@@ -37,19 +60,25 @@ export const createDeck = async (name: string, secret: boolean) => {
 
 export const deleteDeck = async (deckId: string) => {
 	const tweets = await getAllDeckTweets(deckId).toArray();
-	await db.decks.delete(deckId);
 	await Promise.all(tweets.map((tweet) => removeTweet(tweet.id, deckId)));
+	await db.decks.delete(deckId);
 };
 
-export const getDecksCount = async () =>
+export const getDecksCount = async (category: "bookmarks" | "likes") =>
 	await db.decks
 		.where("user")
 		.equals((await getUserId()) ?? "")
+		.and((d) => d.category === category)
 		.count();
-export const getUserDecks = (userId: string) =>
-	db.decks.where("user").equals(userId).sortBy("order");
-export const getUserDecksAutomatically = async () =>
-	await getUserDecks((await getUserId()) ?? "");
+export const getUserDecks = (userId: string, category: "bookmarks" | "likes") =>
+	db.decks
+		.where("user")
+		.equals(userId)
+		.and((d) => d.category === category)
+		.sortBy("order");
+export const getUserDecksAutomatically = async (
+	category: "bookmarks" | "likes",
+) => await getUserDecks((await getUserId()) ?? "", category);
 
 export const getDeckSize = (deckId: string) =>
 	db.tweets.where({ deck: deckId }).count();

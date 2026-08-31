@@ -1,3 +1,7 @@
+allowBuilds:
+  '@swc/core': true
+  esbuild: false
+  spawn-sync: true
 onlyBuiltDependencies:
   - esbuild
   - spawn-sync

@@ -1,14 +1,28 @@
 import { TypedEventTarget } from "typescript-event-target";
+import type { AutoBackupResponseMessage } from "@/src/isolated-or-background/auto-backup/root";
 
 interface InternalsEventMap {
-	"bookmarks-timeline-fetched": Event;
+	"timeline-fetched": Event;
+	"tweet-sorted": CustomEvent<string>;
+	"auto-backup-message": CustomEvent<AutoBackupResponseMessage>;
 }
 
 class InternalsEventTarget extends TypedEventTarget<InternalsEventMap> {
-	public dispatchBookmarksTimelineFetched() {
+	public dispatchTimelineFetched() {
+		this.dispatchTypedEvent("timeline-fetched", new Event("timeline-fetched"));
+	}
+
+	public dispatchTweetSorted(id: string) {
 		this.dispatchTypedEvent(
-			"bookmarks-timeline-fetched",
-			new Event("bookmarks-timeline-fetched"),
+			"tweet-sorted",
+			new CustomEvent("tweet-sorted", { detail: id }),
+		);
+	}
+
+	public dispatchAutoBackupMessage(message: AutoBackupResponseMessage) {
+		this.dispatchTypedEvent(
+			"auto-backup-message",
+			new CustomEvent("auto-backup-message", { detail: message }),
 		);
 	}
 }

@@ -26,7 +26,7 @@ function ImportDeckModalDropzone(props: { onDropped: (file: File) => void }) {
 		<div
 			{...getRootProps()}
 			className={cn(
-				"rounded-xl border-dashed cursor-pointer border-2 flex flex-col justify-center items-center p-4 my-2 gap-1 transition-all",
+				"rounded-xl border-dashed cursor-pointer border-2 border-fd-border flex flex-col justify-center items-center p-4 my-2 gap-1 transition-all",
 				isDragActive && isDragAccept && "border-fd-primary!",
 				isDragActive && isDragReject && "border-fd-danger!",
 			)}
@@ -88,7 +88,7 @@ export default function ImportDeckModal(props: { onClose: () => void }) {
 			<button
 				onClick={props.onClose}
 				type="button"
-				className="rounded-full w-full text-fd-fg font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center"
+				className="rounded-full w-full text-fd-fg font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center! cursor-pointer"
 			>
 				Cancel
 			</button>

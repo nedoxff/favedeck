@@ -13,7 +13,7 @@ import { getSetting } from "../features/storage/settings";
 import { removeTweet } from "../features/storage/tweets";
 import type { CursorTimelineEntry, TimelineEntry } from "../types/timeline";
 import type { RawTweet, RawTweetUser } from "../types/tweet";
-import { webpack } from "./webpack";
+import { type ReduxTimelineAPIType, webpack } from "./webpack";
 
 export type AddEntitiesPayload = {
 	tweets?: Record<string, RawTweet>;
@@ -38,6 +38,11 @@ let reduxStore:
 			dispatch: <T = void>(action: ReduxDispatchAction) => T | Promise<T>;
 	  }
 	| undefined;
+
+export const fallbackTimelines: {
+	bookmarksTimeline?: ReduxTimelineAPIType;
+	likesTimeline?: ReduxTimelineAPIType;
+} = {};
 
 export const setReduxStoreFromFiber = (fiber: Fiber) =>
 	Result.try(() => {
@@ -148,7 +153,27 @@ export const unbookmarkTweet = (id: string) =>
 				[id]: true,
 			},
 		});
-		tweetsEventTarget.dispatchTweetUnbookmarked(id);
+		tweetsEventTarget.dispatchTweetUninteracted(id, "bookmarks");
+	});
+
+export const unlikeTweet = (id: string) =>
+	Result.tryPromise(async () => {
+		if (!reduxStore)
+			throw new Error(`can't unlike tweet ${id}, redux store is undefined`);
+
+		await Promise.resolve(
+			reduxStore.dispatch(webpack.common.redux.api.tweets.unlike(id)),
+		);
+		reduxStore.dispatch({
+			type: "rweb/urt/REMOVE_TWEETS",
+			meta: {
+				timelineId: "likes",
+			},
+			payload: {
+				[id]: true,
+			},
+		});
+		tweetsEventTarget.dispatchTweetUninteracted(id, "likes");
 	});
 
 // fetches the tweets, updates entities in the database
@@ -176,11 +201,11 @@ export const checkDatabaseTweets = (tweets: DatabaseTweet[]) =>
 		for (const tweet of payload.result) {
 			if (!(tweet in tweetEntities)) continue;
 			// TODO: this is potentially undesired?
-			if (!tweetEntities[tweet].bookmarked) {
+			if (!tweetEntities[tweet].bookmarked && !tweetEntities[tweet].favorited) {
 				console.log(
 					"wiping tweet",
 					tweet,
-					"since it became unbookmarked (and favedeck didn't notice)",
+					"since it became unbookmarked and/or unfavorited (and favedeck didn't notice)",
 				);
 				newTweets = newTweets.filter((nt) => nt.id !== tweet);
 				await removeTweet(tweet, undefined, { markUngrouped: false });
@@ -189,12 +214,12 @@ export const checkDatabaseTweets = (tweets: DatabaseTweet[]) =>
 		return newTweets;
 	});
 
-export const fetchBookmarksTimelineFromCursor = async (
+export const fetchTimelineFromCursor = async (
+	timeline: ReduxTimelineAPIType | undefined,
 	cursor: CursorTimelineEntry,
 ) =>
 	Result.tryPromise(async () => {
-		if (!reduxStore || !webpack.common.redux.api.bookmarksTimeline)
-			return { performed: false };
+		if (!reduxStore || !timeline) return { performed: false };
 
 		return await reduxStore.dispatch<
 			| {
@@ -206,29 +231,27 @@ export const fetchBookmarksTimelineFromCursor = async (
 					newTweets: number;
 			  }
 		>(
-			webpack.common.redux.api.bookmarksTimeline.fetchCursor(cursor, {
+			timeline.fetchCursor(cursor, {
 				count: (await getSetting("fetchMoreTweetsPerRequest")) ? 100 : 20,
 			}),
 		);
 	});
 
-export const getBookmarksTimelineEntries = (): TimelineEntry[] => {
-	return (
-		(getProperty(reduxStore?.getState(), "urt.bookmarks.entries") as
-			| TimelineEntry[]
-			| undefined) ?? []
-	);
-};
+export const getTimelineEntries = (timelineId: string): TimelineEntry[] =>
+	(getProperty(reduxStore?.getState(), `urt.${timelineId}.entries`) as
+		| TimelineEntry[]
+		| undefined) ?? [];
 
 // this is a really specific function but it returns
 // the last suitable cursor to use for the "sort bookmarks" modal,
 // that is the last "top" cursor present in the timeline's entries.
 // note: using the "bottom" cursor would meaning skipping the 20 tweets that
 // come before the cursor, so we would basically unnecessarily skip tweets. don't use that
-export const getBottomBookmarksTimelineCursor = (
+export const getBottomTimelineCursor = (
+	timelineId: string,
 	distance = -1,
 ): CursorTimelineEntry | undefined => {
-	return getBookmarksTimelineEntries()
+	return getTimelineEntries(timelineId)
 		.filter(
 			(e) => e.type === "timelineCursor" && e.content.cursorType === "Bottom",
 		)

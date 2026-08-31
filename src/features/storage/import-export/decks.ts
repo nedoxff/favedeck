@@ -243,7 +243,10 @@ export const deckImporterExporter: MigrationSystem<Blob> & {
 						await readEntry(`entities/users/${tweet.user}.json`),
 					);
 					await putTweetEntity(tweet, user, tweetsMeta.quoteOf[tweet.id_str]);
-					await removePotentiallyUngroupedTweet(tweet.id_str);
+					await removePotentiallyUngroupedTweet(
+						tweet.id_str,
+						deck.category === "bookmarks" ? ["unbookmarked"] : ["unliked"],
+					);
 				}
 
 				return deck;

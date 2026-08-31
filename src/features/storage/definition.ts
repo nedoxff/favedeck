@@ -16,6 +16,7 @@ export interface DatabaseDeck {
 	secret: boolean;
 	dateModified: number;
 	viewMode: "regular" | "masonry";
+	category: "bookmarks" | "likes";
 	order: number;
 }
 
@@ -29,7 +30,11 @@ export interface DatabaseCompressedEntity {
 export interface DatabasePotentiallyUngroupedTweet {
 	id: string;
 	user: string;
-	category: "unbookmarked" | "intentional";
+	category:
+		| "unbookmarked"
+		| "unliked"
+		| "intentional_bookmarks"
+		| "intentional_likes";
 	payload: Blob;
 }
 
@@ -40,7 +45,7 @@ export const db = new Dexie("favedeck") as Dexie & {
 	entities: EntityTable<DatabaseCompressedEntity, "key">;
 	potentiallyUngrouped: Table<
 		DatabasePotentiallyUngroupedTweet,
-		[string, string]
+		[string, string, string]
 	>;
 };
 
@@ -51,3 +56,16 @@ db.version(1).stores({
 	entities: "&key, type, meta.quoteOf, meta.user",
 	potentiallyUngrouped: "[id+user], [user+category]",
 });
+
+db.version(2)
+	.stores({
+		potentiallyUngrouped: "[id+user+category], [user+category]",
+	})
+	.upgrade(async (tx) => {
+		await tx
+			.table<DatabaseDeck>("decks")
+			.toCollection()
+			.modify((deck) => {
+				deck.category = "bookmarks";
+			});
+	});

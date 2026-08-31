@@ -11,7 +11,7 @@ export const IconButton = forwardRef<
 			type="button"
 			ref={ref}
 			className={cn(
-				"rounded-full aspect-square flex justify-center items-center p-2 h-fit hover:shadow-lighten!",
+				"rounded-full aspect-square flex justify-center items-center p-2 h-fit hover:shadow-lighten! cursor-pointer",
 				className,
 			)}
 			{...otherProps}

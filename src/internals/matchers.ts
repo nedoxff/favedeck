@@ -14,6 +14,11 @@ export const matchers = {
 			el.dataset.testid === "bookmark" ||
 			el.dataset.testid === "removeBookmark",
 	},
+	likeButton: {
+		querySelector: "button[data-testid=like], button[data-testid=unlike]",
+		matcher: (el: HTMLElement) =>
+			el.dataset.testid === "like" || el.dataset.testid === "unlike",
+	},
 	primaryColumn: {
 		querySelector: "div[data-testid=primaryColumn]",
 		matcher: (el: HTMLElement) => el.dataset.testid === "primaryColumn",

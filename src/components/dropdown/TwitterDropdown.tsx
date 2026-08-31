@@ -19,7 +19,7 @@ export function TwitterDropdownItem(props: {
 				ev.stopPropagation();
 				props.onClick?.(ev);
 			}}
-			className="pointer-events-auto py-3 px-4 flex flex-row gap-3 w-full items-center hover:shadow-lighten!"
+			className="pointer-events-auto cursor-pointer py-3 px-4 flex flex-row gap-3 w-full items-center hover:shadow-lighten!"
 		>
 			{props.icon}
 			<div className="flex flex-col gap-1 grow min-w-0">

@@ -1,6 +1,6 @@
 import { ignoreErrors } from "@/src/helpers/errors";
-import { websiteMessenger } from "@/src/helpers/messaging-content";
-import { messenger } from "@/src/helpers/messaging-extension";
+import { websiteMessenger } from "@/src/helpers/messaging/content";
+import { messenger } from "@/src/helpers/messaging/extension";
 import { generateColoredIconBundle } from "@/src/isolated-or-background/icon-generator";
 
 export default defineContentScript({
@@ -21,8 +21,32 @@ export default defineContentScript({
 			ignoreErrors(() => messenger.sendMessage("setState", message.data)),
 		);
 
+		websiteMessenger.onMessage("deckDownloader:forward", (message) =>
+			ignoreErrors(() =>
+				messenger.sendMessage("deckDownloader:event", message.data),
+			),
+		);
+
+		websiteMessenger.onMessage("autoBackup:forward", (message) =>
+			ignoreErrors(() =>
+				messenger.sendMessage("autoBackup:event", message.data),
+			),
+		);
+
 		messenger.onMessage("syncPopup", () =>
 			websiteMessenger.sendMessage("syncPopup"),
+		);
+
+		messenger.onMessage("deckDownloader:forwardUpdate", (message) =>
+			ignoreErrors(() =>
+				websiteMessenger.sendMessage("deckDownloader:update", message.data),
+			),
+		);
+
+		messenger.onMessage("autoBackup:forward", (message) =>
+			ignoreErrors(() =>
+				websiteMessenger.sendMessage("autoBackup:receive", message.data),
+			),
 		);
 	},
 });

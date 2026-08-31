@@ -82,7 +82,7 @@ export default function ExportDeckModal(props: {
 				}}
 				disabled={isExporting}
 				type="button"
-				className="mt-2 flex justify-center items-center rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center"
+				className="mt-2 flex justify-center items-center rounded-full w-full text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center! cursor-pointer disabled:cursor-not-allowed"
 			>
 				{isExporting ? (
 					<Spinner
@@ -96,7 +96,7 @@ export default function ExportDeckModal(props: {
 			<button
 				onClick={props.onClose}
 				type="button"
-				className="rounded-full w-full text-fd-fg font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center"
+				className="rounded-full w-full text-fd-fg font-bold bg-fd-bg-15! hover:shadow-lighten! py-2 px-4 text-center! cursor-pointer"
 			>
 				Cancel
 			</button>

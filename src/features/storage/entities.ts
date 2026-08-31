@@ -114,8 +114,8 @@ export const getTweetEntityPayloadFromReduxStore = async (tweet: string) => {
 			payload.favedeck.user[tweetEntity.id_str] = tweetEntity.user;
 			if (tweetEntity.quoted_status) {
 				yield* addTweet(tweetEntity.quoted_status);
-				payload.favedeck.quoteOf[tweetEntity.quoted_status] =
-					tweetEntity.id_str;
+				payload.favedeck.quoteOf[tweetEntity.id_str] =
+					tweetEntity.quoted_status;
 			}
 			return Result.ok();
 		});

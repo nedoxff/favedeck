@@ -7,9 +7,9 @@ import { components, initializeComponents } from "@/src/components/wrapper";
 import { decksEventTarget } from "@/src/features/events/decks";
 import { internalsEventTarget } from "@/src/features/events/internals";
 import { kv } from "@/src/features/storage/kv";
-import { DEFAULT_SETTINGS } from "@/src/features/storage/settings";
-import type { WebpackNotFoundError } from "@/src/helpers/errors";
-import { websiteMessenger } from "@/src/helpers/messaging-content";
+import { DEFAULT_SETTINGS, getSetting } from "@/src/features/storage/settings";
+import { ignoreErrors, type WebpackNotFoundError } from "@/src/helpers/errors";
+import { websiteMessenger } from "@/src/helpers/messaging/content";
 import { createTweetObserver, waitForSelector } from "@/src/helpers/observer";
 import {
 	EXTENSION_GROUP_ERROR,
@@ -22,13 +22,12 @@ import { getDebugInfo } from "@/src/internals/foolproof";
 import { getRootNodeFromTweetElement } from "@/src/internals/goodies";
 import { matchers } from "@/src/internals/matchers";
 import {
+	fallbackTimelines,
 	type ReduxDispatchAction,
 	setReduxStoreFromFiber,
 } from "@/src/internals/redux";
-import {
-	type ReduxBookmarksTimelineAPIType,
-	webpack,
-} from "@/src/internals/webpack";
+import { type ReduxTimelineAPIType, webpack } from "@/src/internals/webpack";
+import type { AutoBackupResponseMessage } from "@/src/isolated-or-background/auto-backup/root";
 
 const initializeMessageListener = () =>
 	Result.try(() => {
@@ -44,6 +43,58 @@ const initializeMessageListener = () =>
 					: undefined,
 			};
 		});
+
+		websiteMessenger.onMessage("autoBackup:receive", (message) =>
+			internalsEventTarget.dispatchAutoBackupMessage(message.data),
+		);
+
+		const initialBackupListener = (
+			event: CustomEvent<AutoBackupResponseMessage>,
+		) => {
+			if (event.detail.type !== "receiveTimestamp") return;
+			const handle = async (timestamp: number) => {
+				const preference = await getSetting("autoBackupPreference");
+				if (preference === "disabled") return;
+
+				if (timestamp === -1) {
+					components.BackupDetectedModal.performAutoBackup();
+					return;
+				}
+
+				const lastTimestamp = await kv.lastBackupTimestamp.get();
+				if (!lastTimestamp) {
+					components.BackupDetectedModal.show(timestamp);
+					return;
+				}
+
+				const factualDifference = timestamp - lastTimestamp;
+				const requiredDifference =
+					1000 *
+					60 *
+					60 *
+					(preference === "hour" ? 1 : preference === "day" ? 24 : 24 * 7);
+				if (factualDifference >= requiredDifference)
+					components.BackupDetectedModal.performAutoBackup();
+			};
+
+			handle(event.detail.data).then(() =>
+				internalsEventTarget.removeEventListener(
+					"auto-backup-message",
+					initialBackupListener,
+				),
+			);
+		};
+		internalsEventTarget.addEventListener(
+			"auto-backup-message",
+			initialBackupListener,
+		);
+
+		ignoreErrors(() =>
+			websiteMessenger.sendMessage("autoBackup:forward", {
+				type: "requestTimestamp",
+				data: {},
+			}),
+		);
 	});
 
 const findChirpFontStylesheet = memoize(() => {
@@ -62,58 +113,63 @@ const findChirpFontStylesheet = memoize(() => {
 const injectUrlObserver = () =>
 	Result.try(() => {
 		console.log("injecting url observer");
-		webpack.common.history.listen((location, action) => {
-			overrideBookmarksTimelineActions();
-			if (
-				location.pathname.endsWith("bookmarks") &&
-				components.DeckViewer.isMounted
-			) {
-				decksEventTarget.setCurrentDeck(
-					location.hash && location.hash.length !== 0
-						? location.hash.substring(4)
-						: null,
-				);
-				return;
-			}
+		webpack.common.history.listen((location, action) =>
+			queueMicrotask(() => {
+				overrideBookmarksTimelineActions();
+				if (
+					location.pathname.includes("history") &&
+					components.DeckViewer.isMounted
+				) {
+					decksEventTarget.setCurrentDeck(
+						location.hash && location.hash.length !== 0
+							? location.hash.substring(4)
+							: null,
+					);
+					return;
+				}
 
-			const isPreviousRouteModal = (() => {
-				const index = webpack.common.history._locationsHistory.findIndex(
-					(l) => l.locationKey === location.key,
-				);
-				// default: false
-				if (index === -1) return false;
-				const previous = webpack.common.history._locationsHistory.at(
-					index + (action === "POP" ? 1 : -1),
-				);
-				return previous?.isModalRoute;
-			})();
+				const isPreviousRouteModal = (() => {
+					const index = webpack.common.history._locationsHistory.findIndex(
+						(l) => l.locationKey === location.key,
+					);
+					// default: false
+					if (index === -1) return false;
+					const previous = webpack.common.history._locationsHistory.at(
+						index + (action === "POP" ? 1 : -1),
+					);
+					return previous?.isModalRoute;
+				})();
 
-			const shouldCreateViewer =
-				location.pathname.endsWith("bookmarks") &&
-				!components.DeckViewer.isMounted &&
-				!isPreviousRouteModal;
-			console.log(
-				"should create DeckViewer:",
-				location.pathname.endsWith("bookmarks"),
-				'(path ends with "bookmarks") &&',
-				!components.DeckViewer.isMounted,
-				"(DeckViewer is NOT mounted) &&",
-				!isPreviousRouteModal,
-				"(previous route is NOT modal) ==",
-				shouldCreateViewer,
-			);
-			if (shouldCreateViewer) components.DeckViewer.create();
-		});
+				const shouldCreateViewer =
+					location.pathname.includes("history") &&
+					!components.DeckViewer.isMounted &&
+					!isPreviousRouteModal;
+				console.log(
+					"should create DeckViewer:",
+					location.pathname.includes("history"),
+					'(path ends with "history") &&',
+					!components.DeckViewer.isMounted,
+					"(DeckViewer is NOT mounted) &&",
+					!isPreviousRouteModal,
+					"(previous route is NOT modal) ==",
+					shouldCreateViewer,
+				);
+				if (shouldCreateViewer)
+					components.DeckViewer.create(
+						location.pathname.endsWith("history/likes") ? "likes" : "bookmarks",
+					);
+			}),
+		);
 
 		const initialRoute = webpack.common.history._locationsHistory.find(
 			(l) => l.locationKey === "initialRwebLocationKey",
 		);
 
-		const hash = webpack.common.history._history.location.pathname.endsWith(
-			"bookmarks",
+		const hash = webpack.common.history._history.location.pathname.includes(
+			"history",
 		)
 			? (webpack.common.history._history.location.hash ?? null)
-			: initialRoute?.locationPathname.endsWith("bookmarks")
+			: initialRoute?.locationPathname.includes("history")
 				? new URL(initialRoute?.locationPathname).hash
 				: null;
 
@@ -121,17 +177,21 @@ const injectUrlObserver = () =>
 			decksEventTarget.setCurrentDeck(
 				hash.length === 0 ? null : hash.substring(4),
 			);
-			queueMicrotask(components.DeckViewer.create);
+			queueMicrotask(() =>
+				components.DeckViewer.create(
+					location.pathname.endsWith("history/likes") ? "likes" : "bookmarks",
+				),
+			);
 		}
 
 		overrideBookmarksTimelineActions();
 	});
 
 const overrideBookmarksTimelineActions = (() => {
-	let overridden = false;
+	let overriddenBookmarks = false;
+	let overriddenLikes = false;
 	return () => {
-		if (overridden || !webpack.common.redux.api.bookmarksTimeline) return;
-		overridden = true;
+		if (overriddenBookmarks && overriddenLikes) return;
 
 		const overrideReduxAction = <T extends Record<string, unknown>>(
 			obj: T,
@@ -155,25 +215,32 @@ const overrideBookmarksTimelineActions = (() => {
 			});
 		};
 
-		if (webpack.common.redux.api.bookmarksTimeline) {
-			for (const key of [
-				"fetchBottom",
-				"fetchCursor",
-				"fetchTop",
-				"fetchInitialOrTop",
-			])
-				overrideReduxAction(
-					webpack.common.redux.api.bookmarksTimeline,
-					key as keyof ReduxBookmarksTimelineAPIType,
-					{
+		const applyForTimeline = (timeline: "bookmarks" | "likes") => {
+			const provider =
+				timeline === "bookmarks"
+					? webpack.common.redux.api.bookmarksTimeline
+					: webpack.common.redux.api.favoritesTimeline;
+			if (provider) {
+				for (const key of [
+					"fetchBottom",
+					"fetchCursor",
+					"fetchTop",
+					"fetchInitialOrTop",
+				])
+					overrideReduxAction(provider, key as keyof ReduxTimelineAPIType, {
 						after: (value) => {
 							// only notify if it actually happened
 							if (getProperty(value, "performed") === true)
-								internalsEventTarget.dispatchBookmarksTimelineFetched();
+								internalsEventTarget.dispatchTimelineFetched();
 						},
-					},
-				);
-		}
+					});
+				if (timeline === "bookmarks") overriddenBookmarks = true;
+				else overriddenLikes = true;
+			}
+		};
+
+		applyForTimeline("bookmarks");
+		applyForTimeline("likes");
 	};
 })();
 
@@ -212,12 +279,14 @@ const initializeWebpack = async () =>
 		const fgColor = theme._activeTheme.colors.text;
 		const maskColor = theme._activeTheme.colors.maskColor;
 		const dangerColor = theme._activeTheme.colors.red500;
+		const borderColor = theme._activeTheme.colors.borderColor;
 
 		document.documentElement.style.setProperty("--fd-primary", primaryColor);
 		document.documentElement.style.setProperty("--fd-bg", bgColor);
 		document.documentElement.style.setProperty("--fd-fg", fgColor);
 		document.documentElement.style.setProperty("--fd-mask", maskColor);
 		document.documentElement.style.setProperty("--fd-danger", dangerColor);
+		document.documentElement.style.setProperty("--fd-border", borderColor);
 
 		console.log("colors", {
 			primaryColor,
@@ -225,6 +294,7 @@ const initializeWebpack = async () =>
 			fgColor,
 			maskColor,
 			dangerColor,
+			borderColor,
 		});
 
 		websiteMessenger.sendMessage("syncIcon", primaryColor);
@@ -238,29 +308,70 @@ const injectTweetObserver = () =>
 		const injectTweetCallbacks = async (tweet: HTMLElement) => {
 			if ("favedeck" in tweet.dataset) return;
 			tweet.dataset.favedeck = "injected";
+			const injectLikes = await getSetting("showDeckPopupForLikes");
 
-			const bookmarkButton = (await waitForSelector(
-				tweet,
-				matchers.bookmarkButton.querySelector,
-			)) as HTMLButtonElement;
+			await Promise.all([
+				(async () => {
+					const bookmarkButton = (await waitForSelector(
+						tweet,
+						matchers.bookmarkButton.querySelector,
+						5000,
+					)) as HTMLButtonElement | undefined;
+					if (!bookmarkButton) return;
 
-			bookmarkButton.addEventListener(
-				"click",
-				(ev) => {
-					if (bookmarkButton.dataset.testid === "removeBookmark") {
-						ev.stopPropagation();
-						ev.stopImmediatePropagation();
-						ev.preventDefault();
-					}
-					if (
-						components.SelectDeckPopup.initiator === bookmarkButton &&
-						bookmarkButton.dataset.testid === "removeBookmark"
-					)
-						components.SelectDeckPopup.hide();
-					else components.SelectDeckPopup.show(bookmarkButton, "tweet");
-				},
-				true,
-			);
+					bookmarkButton.addEventListener(
+						"click",
+						(ev) => {
+							if (bookmarkButton.dataset.testid === "removeBookmark") {
+								ev.stopPropagation();
+								ev.stopImmediatePropagation();
+								ev.preventDefault();
+							}
+							if (
+								components.SelectDeckPopup.initiator === bookmarkButton &&
+								bookmarkButton.dataset.testid === "removeBookmark"
+							)
+								components.SelectDeckPopup.hide();
+							else
+								components.SelectDeckPopup.show(
+									bookmarkButton,
+									"bookmarks",
+									"tweet",
+								);
+						},
+						true,
+					);
+				})(),
+				(async () => {
+					const likeButton = (await waitForSelector(
+						tweet,
+						matchers.likeButton.querySelector,
+						5000,
+					)) as HTMLButtonElement | undefined;
+					if (!likeButton) return;
+
+					likeButton.addEventListener(
+						"click",
+						(ev) => {
+							if (!injectLikes && decksEventTarget.currentDeck !== "all-likes")
+								return;
+							if (likeButton.dataset.testid === "unlike") {
+								ev.stopPropagation();
+								ev.stopImmediatePropagation();
+								ev.preventDefault();
+							}
+							if (
+								components.SelectDeckPopup.initiator === likeButton &&
+								likeButton.dataset.testid === "unlike"
+							)
+								components.SelectDeckPopup.hide();
+							else
+								components.SelectDeckPopup.show(likeButton, "likes", "tweet");
+						},
+						true,
+					);
+				})(),
+			]);
 		};
 
 		const handleTweet = (tweet: HTMLElement) => {
@@ -292,7 +403,7 @@ const injectTweetObserver = () =>
 
 const checkPrimaryColumn = (el: HTMLElement) => {
 	if (
-		!webpack.common.history._history.location.pathname.endsWith("bookmarks") ||
+		!webpack.common.history._history.location.pathname.includes("history") ||
 		document.querySelector("#favedeck-viewer") !== null
 	)
 		return;
@@ -330,6 +441,27 @@ const injectFiberObserver = () =>
 					}
 
 					if (
+						Object.hasOwn(fiber.memoizedProps ?? {}, "module") &&
+						Object.hasOwn(fiber.memoizedProps.module ?? {}, "timelineId")
+					) {
+						const module = fiber.memoizedProps.module as ReduxTimelineAPIType;
+						if (
+							module.perfKey === "bookmarksGraphQL" &&
+							!fallbackTimelines.bookmarksTimeline
+						) {
+							console.log("found bookmarks timeline from fiber observer");
+							fallbackTimelines.bookmarksTimeline = module;
+						}
+						if (
+							module.perfKey === "likes-GraphQL" &&
+							!fallbackTimelines.likesTimeline
+						) {
+							console.log("found likes timeline from fiber observer");
+							fallbackTimelines.likesTimeline = module;
+						}
+					}
+
+					if (
 						typeof fiber.memoizedProps === "object" &&
 						fiber.memoizedProps !== null &&
 						"data-testid" in fiber.memoizedProps &&
@@ -352,6 +484,7 @@ const injectFiberObserver = () =>
 			},
 		});
 	});
+
 console.log("hello from esm content script!");
 
 (async () => {

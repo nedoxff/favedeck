@@ -65,7 +65,7 @@ export const TweetWrapper = React.memo(
 		return (
 			<div
 				ref={ref}
-				className={cn("*:static! *:transform-none fd-tweet-wrapper", className)}
+				className={cn("*:static! *:transform-none! fd-tweet-wrapper", className)}
 				{...rest}
 			>
 				<tweetComponents.Tweet

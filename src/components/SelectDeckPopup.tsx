@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import BookmarkIcon from "~icons/mdi/bookmark";
+import LikeIcon from "~icons/mdi/heart";
 import LockIcon from "~icons/mdi/lock";
 import PlusIcon from "~icons/mdi/plus";
 import { decksEventTarget } from "../features/events/decks";
@@ -21,7 +22,7 @@ import {
 } from "../features/storage/tweets";
 import { findTweetFiber, getTweetIdFromFiber } from "../internals/goodies";
 import { findParentNode, matchers } from "../internals/matchers";
-import { unbookmarkTweet } from "../internals/redux";
+import { unbookmarkTweet, unlikeTweet } from "../internals/redux";
 import CreateDeckModal from "./modals/CreateDeckModal";
 import { components } from "./wrapper";
 
@@ -49,14 +50,17 @@ const saveTweet = async (tweet: string, deck: string) => {
 	return Result.ok();
 };
 
-function ActionsCard(props: { tweet: string }) {
+function ActionsCard(props: {
+	tweet: string;
+	category: "bookmarks" | "likes";
+}) {
 	const [showNewDeckModal, setShowNewDeckModal] = useState(false);
 	return (
 		<>
 			<div className="flex flex-row gap-2 p-1 h-20">
 				<div
 					role="button"
-					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-15! hover:shadow-lighten! rounded-xl"
+					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-15! hover:shadow-lighten! rounded-xl cursor-pointer"
 					onClick={() => setShowNewDeckModal(true)}
 				>
 					<PlusIcon width={24} height={24} />
@@ -64,34 +68,61 @@ function ActionsCard(props: { tweet: string }) {
 				</div>
 				<div
 					role="button"
-					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-15! hover:shadow-lighten! rounded-xl"
+					className="p-2 flex flex-col grow justify-center items-center gap-1 bg-fd-bg-15! hover:shadow-lighten! rounded-xl cursor-pointer"
 					onClick={async () => {
 						components.SelectDeckPopup.hide();
 						const removeResult = await Result.gen(async function* () {
-							yield* Result.await(unbookmarkTweet(props.tweet));
+							yield* Result.await(
+								props.category === "bookmarks"
+									? unbookmarkTweet(props.tweet)
+									: unlikeTweet(props.tweet),
+							);
 							yield* Result.await(
 								removeTweet(props.tweet, undefined, { markUngrouped: false }),
 							);
+
+							if (!(await isTweetInDeck(props.tweet, props.category))) {
+								const node = document.querySelector(
+									`div[data-favedeck-id="${props.tweet}"]`,
+								);
+								if (node)
+									components.DeckViewer.checkTweet(
+										node as HTMLElement,
+										props.tweet,
+									);
+							}
+
 							return Result.ok();
 						});
 						if (removeResult.isOk())
-							console.log("successfully unbookmarked tweet", props.tweet);
+							console.log("successfully removed tweet", props.tweet);
 						else {
-							console.error("failed to unbookmark tweet", props.tweet);
+							console.error("failed to removed tweet", props.tweet);
 							components.Toast.error(
-								"Failed to unbookmark tweet",
+								props.category === "bookmarks"
+									? "Failed to unbookmark tweet"
+									: "Failed to unlike tweet",
 								removeResult.error,
 							);
 						}
 					}}
 				>
-					<BookmarkIcon width={24} height={24} />
-					<p className="text-sm text-center">Remove from bookmarks</p>
+					{props.category === "bookmarks" ? (
+						<BookmarkIcon width={24} height={24} />
+					) : (
+						<LikeIcon width={24} height={24} />
+					)}
+					<p className="text-sm text-center">
+						{props.category === "bookmarks"
+							? "Remove from bookmarks"
+							: "Remove from likes"}
+					</p>
 				</div>
 			</div>
 			{showNewDeckModal &&
 				createPortal(
 					<CreateDeckModal
+						category={props.category}
 						onCreated={async (deck) => {
 							const result = await saveTweet(props.tweet, deck);
 							if (result.isErr()) {
@@ -204,7 +235,7 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 		if (decksEventTarget.currentDeck === props.deck.id)
 			components.SelectDeckPopup.hide();
 
-		if (await isTweetInDeck(props.tweet)) return;
+		if (await isTweetInDeck(props.tweet, props.deck.category)) return;
 		// if it was previously in the ungrouped "deck", it's supposed to be brought back.
 		// although, it needs to be found in the original list, not the DeckTweetList...
 		// TODO: move this into a helper function?
@@ -276,9 +307,12 @@ function DeckCard(props: { deck: DatabaseDeck; tweet: string }) {
 
 function InternalSelectDeckPopup(props: {
 	tweet: string;
+	category: "bookmarks" | "likes";
 	onReady: () => void;
 }) {
-	const decks = useLiveQuery(getUserDecksAutomatically);
+	const decks = useLiveQuery(() =>
+		getUserDecksAutomatically(props.category),
+	);
 
 	useEffect(() => {
 		if (decks !== undefined) props.onReady();
@@ -286,12 +320,12 @@ function InternalSelectDeckPopup(props: {
 
 	return (
 		<div className="bg-fd-bg p-2 rounded-xl gap-1 flex flex-col w-sm shadow-twitter!">
-			<div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
+			<div className="flex flex-col gap-1 max-h-60 overflow-auto">
 				{(decks ?? []).map((d) => (
 					<DeckCard key={d.id} deck={d} tweet={props.tweet} />
 				))}
 			</div>
-			<ActionsCard tweet={props.tweet} />
+			<ActionsCard category={props.category} tweet={props.tweet} />
 		</div>
 	);
 }
@@ -353,7 +387,7 @@ export const SelectDeckPopup = (() => {
 	};
 
 	return {
-		show(initiator, mode = "tweet") {
+		show(initiator, category, mode = "tweet") {
 			console.log("showing SelectDeckPopup");
 			if (initiatorElement && initiatorElement !== initiator) hide();
 			switch (mode) {
@@ -422,6 +456,7 @@ export const SelectDeckPopup = (() => {
 						});
 					}}
 					tweet={currentTweet ?? ""}
+					category={category}
 				/>,
 			);
 		},
@@ -436,7 +471,11 @@ export const SelectDeckPopup = (() => {
 			return currentTweet !== undefined;
 		},
 	} satisfies {
-		show: (initiator: HTMLElement, mode: "tweet" | "masonry-cell") => void;
+		show: (
+			initiator: HTMLElement,
+			category: "bookmarks" | "likes",
+			mode: "tweet" | "masonry-cell",
+		) => void;
 		hide: () => void;
 		currentTweet?: string;
 		initiator?: HTMLElement;

@@ -6,7 +6,7 @@ import {
 	getTweetEntity,
 	tweetEntityLoaded,
 } from "@/src/internals/redux";
-import { db } from "./definition";
+import { type DatabasePotentiallyUngroupedTweet, db } from "./definition";
 import {
 	getTweetEntityPayloadFromDatabase,
 	getTweetEntityPayloadFromReduxStore,
@@ -20,7 +20,7 @@ export type DatabaseDecompressedPotentiallyUngroupedTweet = {
 
 export const addPotentiallyUngroupedTweet = async (
 	id: string,
-	category: "unbookmarked" | "intentional",
+	category: DatabasePotentiallyUngroupedTweet["category"],
 ) => {
 	console.log(
 		"saving",
@@ -42,12 +42,19 @@ export const addPotentiallyUngroupedTweet = async (
 	});
 };
 
-export const removePotentiallyUngroupedTweet = async (id: string) => {
-	await db.potentiallyUngrouped.delete([id, (await getUserId()) ?? ""]);
+export const removePotentiallyUngroupedTweet = async (
+	id: string,
+	categories: DatabasePotentiallyUngroupedTweet["category"][],
+) => {
+	const userId = (await getUserId()) ?? "";
+	await db.potentiallyUngrouped
+		.where("[id+user+category]")
+		.anyOf(categories.map((c) => [id, userId, c]))
+		.delete();
 };
 
 export const getPotentiallyUngroupedTweets = async (
-	category: "unbookmarked" | "intentional",
+	category: DatabasePotentiallyUngroupedTweet["category"],
 ): Promise<DatabaseDecompressedPotentiallyUngroupedTweet[]> => {
 	const user = (await getUserId()) ?? "";
 	return (
@@ -67,16 +74,18 @@ export const getPotentiallyUngroupedTweets = async (
 
 export const checkPotentiallyUngroupedTweets = async (
 	tweets: DatabaseDecompressedPotentiallyUngroupedTweet[],
+	category: DatabasePotentiallyUngroupedTweet["category"],
 ): Promise<DatabaseDecompressedPotentiallyUngroupedTweet[]> => {
-	const unbookmarked = tweets.filter((tweet) => {
+	const removed = tweets.filter((tweet) => {
 		if (!tweetEntityLoaded(tweet.id)) return false;
 		return getTweetEntity(tweet.id).match({
-			ok: (entity) => !entity.bookmarked,
+			ok: (entity) =>
+				!(category.includes("bookmark") ? entity.bookmarked : entity.favorited),
 			err: () => false,
 		});
 	});
-	const rest = tweets.filter((t) => !unbookmarked.some((ut) => ut.id === t.id));
-	for (const tweet of unbookmarked)
-		await removePotentiallyUngroupedTweet(tweet.id);
+	const rest = tweets.filter((t) => !removed.some((ut) => ut.id === t.id));
+	for (const tweet of removed)
+		await removePotentiallyUngroupedTweet(tweet.id, [category]);
 	return rest;
 };

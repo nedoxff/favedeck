@@ -7,10 +7,12 @@ import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { cn } from "@/src/helpers/cn";
 import BookmarkIcon from "~icons/mdi/bookmark";
 import DotsIcon from "~icons/mdi/dots-horizontal";
+import LikeIcon from "~icons/mdi/heart";
 import LockIcon from "~icons/mdi/lock-outline";
 import PlusIcon from "~icons/mdi/plus";
+import { DeckCategoryContext } from "../../common/contexts";
 import { TweetWrapper } from "../../external/TweetWrapper";
-import { type SortBookmarksActions, useSortBookmarksState } from "./state";
+import { type SortTweetsActions, useSortTweetsState } from "./state";
 
 function DeckItemPreview(props: {
 	className: string;
@@ -116,7 +118,7 @@ export function DraggableTweetCard(props: { id: string; index?: number }) {
 			}
 		>
 			<TweetWrapper
-				className="bg-fd-bg w-full overflow-hidden rounded-xl border-2 pointer-events-none"
+				className="bg-fd-bg w-full overflow-hidden rounded-xl border-fd-border border-2 pointer-events-none"
 				patchOptions={{
 					isClickable: false,
 					shouldDisplayBorder: false,
@@ -144,7 +146,7 @@ export function CustomDropCard(props: {
 		<div
 			ref={ref}
 			className={cn(
-				"transition-all group rounded-xl border-dashed border-2 flex flex-col gap-2 justify-center items-center h-full",
+				"transition-all group rounded-xl border-dashed border-fd-border border-2 flex flex-col gap-2 justify-center items-center h-full",
 				isDropTarget && "border-fd-primary!",
 				props.clickAction &&
 					cn(
@@ -167,14 +169,21 @@ export function CustomDropCard(props: {
 	);
 }
 
-export function CustomCardRow(props: { actions: SortBookmarksActions }) {
-	const { addedIntentionallyUngroupedTweets } = useSortBookmarksState();
+export function CustomCardRow(props: { actions: SortTweetsActions }) {
+	const category = useContext(DeckCategoryContext);
+	const { addedIntentionallyUngroupedTweets } = useSortTweetsState();
 
 	return (
 		<>
-			<CustomDropCard id="unbookmark">
-				<BookmarkIcon width={48} height={48} />
-				<p className="text-xl text-center">Remove from bookmarks</p>
+			<CustomDropCard id="uninteract">
+				{category === "bookmarks" ? (
+					<BookmarkIcon width={48} height={48} />
+				) : (
+					<LikeIcon width={48} height={48} />
+				)}
+				<p className="text-xl text-center">
+					Remove from {category === "bookmarks" ? "bookmarks" : "likes"}
+				</p>
 			</CustomDropCard>
 			<CustomDropCard
 				id="later"

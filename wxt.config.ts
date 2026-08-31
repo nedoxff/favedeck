@@ -29,9 +29,14 @@ export default defineConfig({
 		},
 	}),
 	manifest: {
-		permissions: ["storage", "tabs", "clipboardWrite"],
+		permissions: ["storage", "tabs", "clipboardWrite", "offscreen"],
 		host_permissions: ["*://*.x.com/*", "*://*.twitter.com/*"],
-		web_accessible_resources: [{ resources: ["img/**"], matches: ["*://*/*"] }],
+		web_accessible_resources: [
+			{
+				resources: ["img/**"],
+				matches: ["*://*/*"],
+			},
+		],
 		browser_specific_settings: {
 			gecko: {
 				id: "favedeck@nedoxff.marten",

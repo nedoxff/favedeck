@@ -1,4 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
+import { getProperty } from "dot-prop";
 import { forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
@@ -12,20 +13,23 @@ import { waitForSelector } from "@/src/helpers/observer";
 import { pauseTweetVideo } from "@/src/internals/goodies";
 import { webpack } from "@/src/internals/webpack";
 import BackIcon from "~icons/mdi/arrow-left";
+import BackupIcon from "~icons/mdi/backup-restore";
+import BookmarksIcon from "~icons/mdi/bookmark-outline";
 import SettingsIcon from "~icons/mdi/cog-outline";
 import VerticalMoreIcon from "~icons/mdi/dots-vertical";
+import LikesIcon from "~icons/mdi/heart-outline";
 import InformationIcon from "~icons/mdi/information-outline";
 import StarIcon from "~icons/mdi/star-four-points-outline";
-import UploadIcon from "~icons/mdi/upload-outline";
 import { IconButton } from "../common/IconButton";
+import Tabs from "../common/Tabs";
 import DeckDropdown from "../dropdown/DeckDropdown";
 import {
 	TwitterDropdown,
 	TwitterDropdownItem,
 } from "../dropdown/TwitterDropdown";
 import { tweetComponents } from "../external/Tweet";
-import ImportDeckModal from "../modals/ImportDeckModal";
-import SortBookmarksModal from "../modals/SortBookmarksModal/SortBookmarksModal";
+import BackupModal from "../modals/BackupModal";
+import SortBookmarksModal from "../modals/SortTweetsModal/SortBookmarksModal";
 import { components } from "../wrapper";
 import DeckAboutView from "./DeckAboutView";
 import { DeckBoard } from "./DeckBoard";
@@ -44,7 +48,7 @@ function InternalDeckRenderer(props: { deck: DatabaseDeck }) {
 			tweetsEventTarget.removeEventListener("components-available", listener);
 	}, []);
 
-	return props.deck.id === "all"
+	return props.deck.id.startsWith("all-")
 		? null
 		: tweetComponentsAvailable && (
 				<tweetComponents.ContextBridge>
@@ -57,7 +61,9 @@ function InternalDeckRenderer(props: { deck: DatabaseDeck }) {
 			);
 }
 
-function InternalDeckViewer() {
+function InternalDeckViewer(props: {
+	initialCategory?: "bookmarks" | "likes";
+}) {
 	// the section can be a deck id, or a special string like "about", "settings", etc.
 	const [currentSection, setCurrentSection] = useState<string | null>(
 		decksEventTarget.currentDeck,
@@ -71,8 +77,11 @@ function InternalDeckViewer() {
 		() => ["about", "settings"].includes(currentSection ?? ""),
 		[currentSection],
 	);
+	const [category, setCategory] = useState<"bookmarks" | "likes">(
+		props.initialCategory ?? "bookmarks",
+	);
 	const [showSortModal, setShowSortModal] = useState(false);
-	const [showImportModal, setShowImportModal] = useState(false);
+	const [showBackupModal, setShowBackupModal] = useState(false);
 
 	useEffect(() => {
 		const listener = (ev: CustomEvent<string | null>) =>
@@ -85,7 +94,7 @@ function InternalDeckViewer() {
 	useEffect(
 		() =>
 			queueMicrotask(() => {
-				currentSection === "all"
+				currentSection?.startsWith("all-")
 					? components.DeckViewer.originalContainer.show()
 					: components.DeckViewer.originalContainer.hide();
 			}),
@@ -101,9 +110,9 @@ function InternalDeckViewer() {
 			case "settings":
 				return <DeckSettingsView />;
 			default:
-				return <DeckBoard />;
+				return <DeckBoard category={category} />;
 		}
-	}, [currentSection, currentDeck, currentDeckLoaded]);
+	}, [currentSection, currentDeck, currentDeckLoaded, category]);
 
 	const viewerTitle = useMemo(() => {
 		if (currentDeck) return currentDeck.name;
@@ -128,12 +137,16 @@ function InternalDeckViewer() {
 							if (currentSection === null) webpack.common.history.push("/home");
 							else {
 								setCurrentSection(null);
+
 								if (
-									webpack.common.history._history.location.state ===
-									"from-deck-view"
+									getProperty<unknown, string, boolean | undefined>(
+										webpack.common.history._history.location.state,
+										"fromDeckView",
+										undefined,
+									)
 								)
 									webpack.common.history.goBack();
-								else webpack.common.history.push("/i/bookmarks");
+								else webpack.common.history.push("/i/history");
 							}
 						}}
 					>
@@ -167,18 +180,20 @@ function InternalDeckViewer() {
 							{({ setOpen }) => (
 								<>
 									<TwitterDropdownItem
-										icon={<UploadIcon width={24} height={24} />}
-										text="Import deck"
+										icon={<StarIcon width={24} height={24} />}
+										text={
+											category === "bookmarks" ? "Sort bookmarks" : "Sort likes"
+										}
 										onClick={() => {
-											setShowImportModal(true);
+											setShowSortModal(true);
 											setOpen(false);
 										}}
 									/>
 									<TwitterDropdownItem
-										icon={<StarIcon width={24} height={24} />}
-										text="Sort bookmarks"
+										icon={<BackupIcon width={24} height={24} />}
+										text="Backup"
 										onClick={() => {
-											setShowSortModal(true);
+											setShowBackupModal(true);
 											setOpen(false);
 										}}
 									/>
@@ -191,8 +206,11 @@ function InternalDeckViewer() {
 											decksEventTarget.setCurrentDeck("settings");
 											webpack.common.history.push({
 												hash: "#fd-settings",
-												pathname: "/i/bookmarks",
-												state: "from-deck-view",
+												pathname:
+													category === "bookmarks"
+														? "/i/history"
+														: "/i/history/likes",
+												state: { fromDeckView: true },
 											});
 										}}
 									/>
@@ -205,8 +223,11 @@ function InternalDeckViewer() {
 											decksEventTarget.setCurrentDeck("settings");
 											webpack.common.history.push({
 												hash: "#fd-about",
-												pathname: "/i/bookmarks",
-												state: "from-deck-view",
+												pathname:
+													category === "bookmarks"
+														? "/i/history"
+														: "/i/history/likes",
+												state: { fromDeckView: true },
 											});
 										}}
 									/>
@@ -218,17 +239,48 @@ function InternalDeckViewer() {
 
 				{showSortModal &&
 					createPortal(
-						<SortBookmarksModal onClose={() => setShowSortModal(false)} />,
+						<SortBookmarksModal
+							category={category}
+							onClose={() => setShowSortModal(false)}
+						/>,
 						document.body,
 					)}
 
-				{showImportModal &&
+				{showBackupModal &&
 					createPortal(
-						<ImportDeckModal onClose={() => setShowImportModal(false)} />,
+						<BackupModal onClose={() => setShowBackupModal(false)} />,
 						document.body,
 					)}
 			</div>
-			<hr className="border-t-2" />
+			{!currentSection && (
+				<Tabs
+					state={category}
+					onUpdate={(newCategory) =>
+						setCategory((current) => {
+							if (newCategory !== current)
+								webpack.common.history.replace(
+									newCategory === "bookmarks"
+										? "/i/history"
+										: "/i/history/likes",
+								);
+							return newCategory;
+						})
+					}
+					tabs={[
+						{
+							key: "bookmarks",
+							icon: <BookmarksIcon width={24} height={24} />,
+							text: "Bookmarks",
+						},
+						{
+							key: "likes",
+							icon: <LikesIcon width={24} height={24} />,
+							text: "Likes",
+						},
+					]}
+				/>
+			)}
+			<hr className="border-t border-fd-border" />
 			{sectionRenderer}
 		</div>
 	);
@@ -248,7 +300,7 @@ class DeckViewerEventTarget extends TypedEventTarget<{
 }
 
 export const DeckViewer: {
-	create: () => void;
+	create: (initialCategory?: "bookmarks" | "likes") => void;
 	hide: () => void;
 	isMounted: boolean;
 	checkTweet: (node: HTMLElement, id: string) => void;
@@ -265,7 +317,7 @@ export const DeckViewer: {
 	const eventTarget: DeckViewerEventTarget = new DeckViewerEventTarget();
 
 	return {
-		async create() {
+		async create(initialCategory = "bookmarks") {
 			if (components.DeckViewer.isMounted) {
 				console.log("unmounting old DeckViewer");
 				components.DeckViewer.hide();
@@ -279,7 +331,7 @@ export const DeckViewer: {
 
 			console.log("mounting new DeckViewer");
 			root = createRoot(container);
-			root.render(<InternalDeckViewer />);
+			root.render(<InternalDeckViewer initialCategory={initialCategory} />);
 			eventTarget.dispatchMounted();
 		},
 		hide() {
@@ -298,9 +350,14 @@ export const DeckViewer: {
 			if (
 				this.isMounted &&
 				(decksEventTarget.currentDeck === null ||
-					decksEventTarget.currentDeck === "all")
+					decksEventTarget.currentDeck.startsWith("all-"))
 			) {
-				const decked = await isTweetInDeck(id);
+				const category = decksEventTarget.currentDeck?.startsWith("all-")
+					? (decksEventTarget.currentDeck.replaceAll("all-", "") as
+							| "bookmarks"
+							| "likes")
+					: undefined;
+				const decked = await isTweetInDeck(id, category);
 				node.style.backgroundColor = decked
 					? "color-mix(in srgb, var(--fd-primary), transparent 85%)"
 					: "transparent";

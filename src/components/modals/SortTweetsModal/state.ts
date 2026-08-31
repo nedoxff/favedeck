@@ -2,7 +2,7 @@ import type { DragDropEvents } from "@dnd-kit/react";
 import { create } from "zustand";
 import type { FavedeckSettings } from "@/src/features/storage/settings";
 
-export interface SortBookmarksState {
+export interface SortTweetsState {
 	allTweets: string[];
 	sortedTweets: string[];
 	selectedInterface:
@@ -15,7 +15,7 @@ export interface SortBookmarksState {
 	reset: () => void;
 	refetchTweetEntries: (force?: boolean) => Promise<void>;
 	setRefetchTweetEntries: (
-		callback: SortBookmarksState["refetchTweetEntries"],
+		callback: SortTweetsState["refetchTweetEntries"],
 	) => void;
 
 	setSelectedInterface: (
@@ -28,14 +28,14 @@ export interface SortBookmarksState {
 	setIsFetchingTweets: (isFetching: boolean) => void;
 }
 
-export interface SortBookmarksActions {
+export interface SortTweetsActions {
 	onDragOver: DragDropEvents["dragover"];
 	onDragEnd: DragDropEvents["dragend"];
 	addTweetToNewDeck: (tweet?: PendingNewDeckTweet) => void;
 	appendIntentionallyUngroupedTweets: () => Promise<void>;
 }
 
-export const useSortBookmarksState = create<SortBookmarksState>((set) => ({
+export const useSortTweetsState = create<SortTweetsState>((set) => ({
 	addedIntentionallyUngroupedTweets: false,
 	isFetchingTweets: false,
 	isDone: false,
