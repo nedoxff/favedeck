@@ -26,6 +26,10 @@ export const kv = {
 	settings: createGettersSetters<FavedeckSettings>("settings"),
 
 	lastBackupTimestamp: createGettersSetters<number>("lastBackupTimestamp"),
+	changesSinceLastBackup: createGettersSetters<boolean>(
+		"changesSinceLastBackup",
+	),
+
 	sortTweetsState: createGettersSetters<{
 		previousCursor: CursorTimelineEntry;
 		currentCursor: CursorTimelineEntry;

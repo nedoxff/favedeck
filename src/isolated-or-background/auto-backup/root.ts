@@ -1,6 +1,7 @@
 import { get, set } from "idb-keyval";
 import { messenger } from "@/src/helpers/messaging/extension";
 import { sendToContent } from "@/src/helpers/messaging/utils";
+import { AUTO_BACKUP_CHUNK_SIZE } from "./writer";
 
 export interface AutoBackupEvents {
 	requestTimestamp: Record<string, never>;
@@ -32,7 +33,6 @@ export interface AutoBackup {
 
 export const AUTO_BACKUP_TIMESTAMP_KEY = "autoBackupTimestamp";
 export const AUTO_BACKUP_DATA_KEY = "autoBackupData";
-export const AUTO_BACKUP_CHUNK_SIZE = 1024 * 1024; // mb
 
 export const autoBackup: AutoBackup = (() => {
 	let chunks: Uint8Array[] = [];

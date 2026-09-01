@@ -67,13 +67,15 @@ const initializeMessageListener = () =>
 					return;
 				}
 
+				const changesSinceLastBackup =
+					(await kv.changesSinceLastBackup.get()) ?? false;
 				const factualDifference = timestamp - lastTimestamp;
 				const requiredDifference =
 					1000 *
 					60 *
 					60 *
 					(preference === "hour" ? 1 : preference === "day" ? 24 : 24 * 7);
-				if (factualDifference >= requiredDifference)
+				if (factualDifference >= requiredDifference && changesSinceLastBackup)
 					components.BackupDetectedModal.performAutoBackup();
 			};
 
@@ -402,19 +404,24 @@ const injectTweetObserver = () =>
 	});
 
 const checkPrimaryColumn = (el: HTMLElement) => {
-	if (
-		!webpack.common.history._history.location.pathname.includes("history") ||
-		document.querySelector("#favedeck-viewer") !== null
-	)
+	if (!webpack.common.history._history.location.pathname.includes("history"))
 		return;
-	el.style.position = "relative";
-	components.DeckViewer.originalContainer.value = el
-		.childNodes[0] as HTMLElement;
 
-	const div = document.createElement("div");
-	div.classList.add("favedeck-root");
-	div.id = "favedeck-viewer";
-	el.prepend(div);
+	const viewerUnmounted =
+		components.DeckViewer.originalContainer.value &&
+		!components.DeckViewer.isMounted;
+	if (viewerUnmounted || !components.DeckViewer.originalContainer.value) {
+		el.style.position = "relative";
+		components.DeckViewer.originalContainer.value = el
+			.childNodes[0] as HTMLElement;
+
+		const div = document.createElement("div");
+		div.classList.add("favedeck-root");
+		div.id = "favedeck-viewer";
+		el.prepend(div);
+	}
+	if (viewerUnmounted)
+		components.DeckViewer.create(components.DeckViewer.category);
 };
 
 const injectFiberObserver = () =>

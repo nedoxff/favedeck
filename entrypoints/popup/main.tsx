@@ -37,6 +37,7 @@ import { popupStorage } from "./helpers/storage.ts";
 		usePopupState.setState({ state: message.data });
 		trySyncPopup();
 	});
+
 	if (currentTab?.id) trySyncPopup();
 })();
 

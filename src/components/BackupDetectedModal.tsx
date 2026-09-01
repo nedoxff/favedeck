@@ -135,16 +135,18 @@ export const BackupDetectedModal = (() => {
 				type: "begin",
 				data: {},
 			});
-			const result = await backupSystem.create(
-				FULL_BACKUP_OPTIONS,
-				new ForwarderWriter(),
-			);
+			const writer = new ForwarderWriter();
+			const result = await backupSystem.create(FULL_BACKUP_OPTIONS, writer);
+			await writer.flush();
 			await websiteMessenger.sendMessage("autoBackup:forward", {
 				type: "end",
 				data: {},
 			});
-			if (result.isOk()) console.log("successfully performed auto-backup");
-			else {
+			if (result.isOk()) {
+				await kv.changesSinceLastBackup.set(false);
+				await kv.lastBackupTimestamp.set(Date.now());
+				console.log("successfully performed auto-backup");
+			} else {
 				console.error("failed to perform auto-backup", result.error);
 				components.Toast.error("Failed to perform auto-backup", result.error);
 			}

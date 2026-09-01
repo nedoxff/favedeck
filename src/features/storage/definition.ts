@@ -1,4 +1,6 @@
 import { Dexie, type EntityTable, type Table } from "dexie";
+import { getProperty } from "dot-prop";
+import { kv } from "./kv";
 
 export interface DatabaseTweet {
 	user: string;
@@ -38,6 +40,19 @@ export interface DatabasePotentiallyUngroupedTweet {
 	payload: Blob;
 }
 
+Dexie.on("storagemutated", async (parts) => {
+	const ignoredFields = ["lastBackupTimestamp", "changesSinceLastBackup"];
+	const ignoreMutation = Object.values(parts).some(
+		(p) =>
+			ignoredFields.includes(getProperty(p, "from")) ||
+			ignoredFields.includes(getProperty(p, "to")),
+	);
+	if (((await kv.changesSinceLastBackup.get()) ?? false) || ignoreMutation)
+		return;
+	console.log("toggling changesSinceLastBackup", parts);
+	await kv.changesSinceLastBackup.set(true);
+});
+
 export const db = new Dexie("favedeck") as Dexie & {
 	tweets: Table<DatabaseTweet, [string, string, string]>;
 	decks: EntityTable<DatabaseDeck, "id">;
@@ -59,13 +74,35 @@ db.version(1).stores({
 
 db.version(2)
 	.stores({
-		potentiallyUngrouped: "[id+user+category], [user+category]",
+		potentiallyUngrouped: null,
+		potentiallyUngrouped_temp: "[id+user+category], [user+category]",
 	})
 	.upgrade(async (tx) => {
+		const records = await tx
+			.table<DatabasePotentiallyUngroupedTweet>("potentiallyUngrouped")
+			.toArray();
+		await tx
+			.table<DatabasePotentiallyUngroupedTweet>("potentiallyUngrouped_temp")
+			.bulkAdd(records);
+
 		await tx
 			.table<DatabaseDeck>("decks")
 			.toCollection()
 			.modify((deck) => {
 				deck.category = "bookmarks";
 			});
+	});
+
+db.version(3)
+	.stores({
+		potentiallyUngrouped: "[id+user+category], [user+category]",
+		potentiallyUngrouped_temp: null,
+	})
+	.upgrade(async (tx) => {
+		const records = await tx
+			.table<DatabasePotentiallyUngroupedTweet>("potentiallyUngrouped_temp")
+			.toArray();
+		await tx
+			.table<DatabasePotentiallyUngroupedTweet>("potentiallyUngrouped")
+			.bulkAdd(records);
 	});

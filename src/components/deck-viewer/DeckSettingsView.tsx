@@ -5,6 +5,7 @@ import {
 	type FavedeckSettings,
 	setSetting,
 } from "@/src/features/storage/settings";
+import { formatTimeAgo } from "@/src/helpers/date";
 import ChevronDownIcon from "~icons/mdi/chevron-down";
 import Checkbox from "../common/Checkbox";
 import ListTile from "../common/ListTile";
@@ -16,6 +17,7 @@ import { components } from "../wrapper";
 
 export default function DeckSettingsView() {
 	const settings = useLiveQuery(kv.settings.get);
+	const lastBackupTimestamp = useLiveQuery(kv.lastBackupTimestamp.get);
 
 	return (
 		settings && (
@@ -216,18 +218,25 @@ export default function DeckSettingsView() {
 					}
 				/>
 
-				<button
-					onClick={() => {
-						components.BackupDetectedModal.performAutoBackup();
-						components.Toast.success(
-							"Successfully began performing auto-backup",
-						);
-					}}
-					type="button"
-					className="ml-5 mt-2 flex justify-center items-center rounded-full w-fit text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center! cursor-pointer"
-				>
-					Trigger auto-backup
-				</button>
+				<div className="flex flex-row items-center gap-4 px-5 py-2">
+					<button
+						onClick={() => {
+							components.BackupDetectedModal.performAutoBackup();
+							components.Toast.success(
+								"Successfully began performing auto-backup",
+							);
+						}}
+						type="button"
+						className="flex justify-center items-center rounded-full w-fit text-white font-bold bg-fd-primary! disabled:shadow-darken! hover:shadow-darken! py-2 px-4 text-center! cursor-pointer"
+					>
+						Trigger auto-backup
+					</button>
+					{lastBackupTimestamp && (
+						<p className="opacity-75">
+							Last backup: <b>{formatTimeAgo(new Date(lastBackupTimestamp))}</b>
+						</p>
+					)}
+				</div>
 			</div>
 		)
 	);

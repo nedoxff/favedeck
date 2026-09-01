@@ -33,11 +33,7 @@ export default (() => {
 		abortDownload: async () => _abortController.abort(),
 		beginDownload: (configuration) =>
 			Result.tryPromise(async () => {
-				if (!streamSaver) {
-					const modulePath = "streamsaver";
-					streamSaver = (await import(/* @vite-ignore */ modulePath))
-						.default as typeof import("streamsaver");
-				}
+				if (!streamSaver) streamSaver = await import("streamsaver");
 				_abortController = new AbortController();
 				_state = {
 					state: "processing",

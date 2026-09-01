@@ -309,15 +309,18 @@ export const DeckViewer: {
 		show: () => void;
 		hide: () => void;
 	};
+	category?: "bookmarks" | "likes";
 	on: DeckViewerEventTarget["addEventListener"];
 } = (() => {
 	let root: Root | undefined;
 	let originalContainer: HTMLElement | undefined;
 	let container: HTMLElement | undefined;
+	let lastCategory: "bookmarks" | "likes" | undefined;
 	const eventTarget: DeckViewerEventTarget = new DeckViewerEventTarget();
 
 	return {
 		async create(initialCategory = "bookmarks") {
+			lastCategory = initialCategory;
 			if (components.DeckViewer.isMounted) {
 				console.log("unmounting old DeckViewer");
 				components.DeckViewer.hide();
@@ -345,6 +348,9 @@ export const DeckViewer: {
 		},
 		get isMounted() {
 			return root !== undefined && (container?.isConnected ?? false);
+		},
+		get category() {
+			return lastCategory;
 		},
 		async checkTweet(node, id) {
 			if (
