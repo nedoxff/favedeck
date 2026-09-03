@@ -293,7 +293,7 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 	// note: thank your past self for implementing react proxies.
 	return (
 		<div className="grow p-4">
-			<DeckCategoryContext.Provider value={props.deck.category}>
+			<DeckCategoryContext value={props.deck.category}>
 				<GenericTweetMasonry<TweetMasonryInfo>
 					deck={props.deck}
 					fetcher={async (start, stop) =>
@@ -363,7 +363,7 @@ export function DeckMasonryList(props: { deck: DatabaseDeck }) {
 					rowGutter={8}
 					columnCount={2}
 				/>
-			</DeckCategoryContext.Provider>
+			</DeckCategoryContext>
 		</div>
 	);
 }

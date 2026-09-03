@@ -380,7 +380,7 @@ export default function SortBookmarksModal(props: {
 	}, [selectedInterface]);
 
 	return (
-		<DeckCategoryContext.Provider value={props.category}>
+		<DeckCategoryContext value={props.category}>
 			<TwitterModal className="p-0 w-[95%] h-[95%] relative" onClose={onClose}>
 				<div className="flex flex-row justify-between items-center pt-8 px-8">
 					<div className="flex flex-row gap-4 items-center">
@@ -430,6 +430,6 @@ export default function SortBookmarksModal(props: {
 					}}
 				/>
 			)}
-		</DeckCategoryContext.Provider>
+		</DeckCategoryContext>
 	);
 }

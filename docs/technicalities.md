@@ -14,12 +14,12 @@ While this seems reasonable from an end-user perspective, the (un)bookmark endpo
 
 The way React is handled in this extension is probably one of the weirdest things ever and I haven't seen this being applied in any other projects (yet).
 
-Twitter is rendered with React <sup>(shockers)</sup>. favedeck is also rendered with React. However, during development favedeck used its own instance of React (v19) to render popups and other components.
+Twitter is rendered with React <sup>(shockers)</sup>. favedeck is also rendered with React. However, during development favedeck used its own instance of React to render popups and other components.
 
 The issue with that is Twitter's components rely on `Context`s. A lot of `Context`s. Another silly thing is that you cannot pass `Context`s (or components at all, for that matter) between React instances. This left me in an awkward situation where to render a tweet outside the timeline I had to:
 
 - Create a container using favedeck's React instance,
-- Copy all the contexts and the `Tweet` component from Twitter's React instance (v18),
+- Copy all the contexts and the `Tweet` component from Twitter's React instance,
 - Render the `Tweet` inside `createRoot(favedeckContainer)`.
 
 This was very much a disaster and led to a lot of bad glue code being written. Eventually, I wanted to try a rather dumb idea, which turned out to work surprisingly well:
@@ -76,25 +76,3 @@ function DeckTweetList() {
 
 > [!NOTE]
 > The important thing to mention here is that **the popup code is exempt from this hijacking**. It renders React just like it would regularly, which is the reason why `Twitter is being rendered with React vXX.X.X` is displayed in the popup under "Debug Information".
-
-## [`Context`s](#contexts)
-
-**Don't** do:
-
-```ts
-const SomeContext = createContext<string>(":3");
-
-function SomeComponent() {
-	return <SomeContext value=">:3">...</SomeContext>
-}
-```
-
-The Twitter client will throw a cryptic error since this is React v19 syntax. Instead, use `SomeContext.Provider`:
-
-```ts
-const SomeContext = createContext<string>(":3");
-
-function SomeComponent() {
-	return <SomeContext.Provider value=">:3">...</SomeContext.Provider>
-}
-```

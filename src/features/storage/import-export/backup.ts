@@ -251,12 +251,6 @@ export const backupSystem: MigrationSystem<Blob> & {
 				const user = await getUserId();
 				if (!user) throw new Error("Couldn't get user ID");
 
-				const meta = await readAndParseEntry<BackupMigrationMeta>("meta.json");
-				if (meta.exporter !== user)
-					throw new Error(
-						`Exporter doesn't match the user ID (${user} ≠ ${meta.exporter})`,
-					);
-
 				const files = {
 					kv: await readAndParseEntry<{ key: string; value: unknown }[]>(
 						"db/kv.json",

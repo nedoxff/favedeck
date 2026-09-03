@@ -1,4 +1,5 @@
 import { Result, type UnhandledException } from "better-result";
+import { mergician } from "mergician";
 import { type Memoized, memoize } from "micro-memoize";
 import { WebpackNotFoundError } from "../helpers/errors";
 import type { TwitterThemeModule } from "../types/theme";
@@ -137,9 +138,16 @@ export const webpack: WebpackHelper = {
 				react: {
 					React: (yield* webpack.findByProperty<ReactType>("useMemo", "React"))
 						.module,
-					ReactDOM: (yield* webpack.findByProperty<
-						ReactDOMType & ReactDOMClientType
-					>("createPortal", "ReactDOM")).module,
+					ReactDOM: mergician(
+						(yield* webpack.findByProperty<ReactDOMClientType>(
+							"createRoot",
+							"ReactDOMClient",
+						)).module,
+						(yield* webpack.findByProperty<ReactDOMType>(
+							"createPortal",
+							"ReactDOM",
+						)).module,
+					) as ReactDOMType & ReactDOMClientType,
 					JSXRuntime: (yield* webpack.findByProperty<ReactJSXRuntimeType>(
 						"jsx",
 						"react/jsx-runtime",

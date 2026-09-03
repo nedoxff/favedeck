@@ -29,7 +29,6 @@ export default defineWxtModule((wxt) => {
 						chunkFileNames: "chunks/[name]-[hash].js",
 						assetFileNames: "assets/[name]-[hash][extname]",
 					},
-					external: ["streamsaver"],
 				},
 				outDir: resolve(wxt.config.outDir, "content-scripts/esm"),
 				emptyOutDir: true,

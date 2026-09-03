@@ -1,11 +1,10 @@
 import { BlobWriter } from "@zip.js/zip.js";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { Dispatch, SetStateAction } from "react";
+import { createPortal } from "react-dom";
 import { useDropzone } from "react-dropzone";
 import sanitize from "sanitize-filename";
-import {
-	getDeckThumbnails,
-} from "@/src/features/storage/decks";
+import { getDeckThumbnails } from "@/src/features/storage/decks";
 import { type DatabaseDeck, db } from "@/src/features/storage/definition";
 import {
 	type BackupArchiveInformation,
@@ -24,6 +23,7 @@ import Checkbox from "../common/Checkbox";
 import Spinner from "../common/Spinner";
 import Tabs from "../common/Tabs";
 import { components } from "../wrapper";
+import ConfirmModal from "./ConfirmModal";
 import { TwitterModal } from "./TwitterModal";
 
 // this is the same as the ImportDeckModalDropzone but whatever...
@@ -315,11 +315,30 @@ function RestoreBackupTab(props: { onClose: () => void }) {
 	const [isProcessing, setIsProcessing] = useState(false);
 	const [error, setError] = useState<string | undefined>(undefined);
 	const [options, setOptions] = useState<BackupOptions>(FULL_BACKUP_OPTIONS);
+	const [showConfirmModal, setShowConfirmModal] = useState(false);
 
 	const [file, setFile] = useState<File | undefined>(undefined);
 	const [info, setInfo] = useState<BackupArchiveInformation | undefined>(
 		undefined,
 	);
+
+	const restore = useCallback(() => {
+		if (!file) return;
+		setIsProcessing(true);
+		setError(undefined);
+		console.time(`restore backup from ${file.name}`);
+		backupSystem.restore(file, options).then((result) => {
+			console.timeEnd(`restore backup from ${file.name}`);
+			setIsProcessing(false);
+			if (result.isOk()) {
+				props.onClose();
+				components.Toast.success(`Successfully restored the backup!`);
+			} else {
+				console.error("failed to restore a backup", result.error);
+				setError(`${result.error}`);
+			}
+		});
+	}, [file]);
 
 	return (
 		<>
@@ -399,21 +418,8 @@ function RestoreBackupTab(props: { onClose: () => void }) {
 				<button
 					onClick={() => {
 						if (!file) return;
-						setIsProcessing(true);
-						setError(undefined);
-
-						console.time(`restore backup from ${file.name}`);
-						backupSystem.restore(file, options).then((result) => {
-							console.timeEnd(`restore backup from ${file.name}`);
-							setIsProcessing(false);
-							if (result.isOk()) {
-								props.onClose();
-								components.Toast.success(`Successfully restored the backup!`);
-							} else {
-								console.error("failed to restore a backup", result.error);
-								setError(`${result.error}`);
-							}
-						});
+						if (info.sameUser) restore();
+						else setShowConfirmModal(true);
 					}}
 					disabled={isProcessing}
 					type="button"
@@ -436,6 +442,37 @@ function RestoreBackupTab(props: { onClose: () => void }) {
 			>
 				Cancel
 			</button>
+
+			{showConfirmModal &&
+				createPortal(
+					<ConfirmModal
+						title="Warning!"
+						description={
+							<>
+								This backup was created by a different user and may cause the
+								extension to behave weirdly if you try to restore it anyway.
+								<br />
+								<b>
+									It is highly recommended not to restore it; only do it if you
+									absolutely know what you're doing (e.g. having multiple
+									accounts in one browser)
+								</b>
+								<br />
+								This is a requested feature that will probably become supported
+								in future versions.
+							</>
+						}
+						confirmIsDangerous
+						confirmText="I understand the risks and potential consequences of my actions and wish to restore this backup anyway"
+						onCancelled={() => setShowConfirmModal(false)}
+						onConfirmed={() => {
+							setShowConfirmModal(false);
+							restore();
+						}}
+						className="w-xl"
+					/>,
+					document.body,
+				)}
 		</>
 	);
 }
@@ -444,7 +481,7 @@ export default function BackupModal(props: { onClose: () => void }) {
 	const [tab, setTab] = useState<"create" | "restore">("create");
 
 	return (
-		<TwitterModal onClose={props.onClose} className="w-lg gap-">
+		<TwitterModal onClose={props.onClose} className="w-lg">
 			<Tabs
 				classNames={{ tab: "rounded-xl" }}
 				state={tab}

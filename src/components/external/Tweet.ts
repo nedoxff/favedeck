@@ -25,19 +25,24 @@ export const tweetComponents: {
 
 export const getTweetComponentsFromFiber = (fiber: Fiber) =>
 	Result.try(() => {
-		const contexts = bippy
-			.getFiberStack(fiber)
-			.filter(
-				(f) =>
-					typeof f.type === "object" &&
-					f.type !== null &&
-					"value" in f.memoizedProps &&
-					f.type._context,
-			)
-			.map((f) => ({
-				context: f.type._context,
-				value: f.memoizedProps.value,
-			}));
+		const contexts: { context: bippy.ReactContext<unknown>; value: unknown }[] =
+			[];
+		bippy.traverseFiber(
+			fiber,
+			(parentFiber) => {
+				if (
+					parentFiber.type &&
+					typeof parentFiber.type === "object" &&
+					parentFiber.type.$$typeof === Symbol.for("react.context")
+				) {
+					contexts.push({
+						context: parentFiber.type,
+						value: parentFiber.memoizedProps.value,
+					});
+				}
+			},
+			true,
+		);
 
 		const type = bippy.getType(fiber);
 		if (!type)
@@ -49,7 +54,8 @@ export const getTweetComponentsFromFiber = (fiber: Fiber) =>
 		tweetComponents.ContextBridge = (props: { children?: ReactNode }) =>
 			contexts.reduceRight<React.ReactNode>((acc, cur) => {
 				return webpack.common.react.React.createElement(
-					cur.context.Provider,
+					// @ts-expect-error
+					cur.context,
 					{ value: cur.value },
 					acc,
 				);

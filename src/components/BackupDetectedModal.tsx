@@ -40,16 +40,16 @@ function InternalBackupDetectedModal(props: { timestamp: number }) {
 					setProcessingState("Restoring backup");
 					const blob = new Blob(chunks as BlobPart[]);
 					backupSystem.restore(blob, FULL_BACKUP_OPTIONS).then((result) => {
-						if (result.isOk())
-							components.Toast.success("Successfully restored backup!");
-						else
-							components.Toast.error("Failed to restore backup!", result.error);
-
 						internalsEventTarget.removeEventListener(
 							"auto-backup-message",
 							messageListener,
 						);
-						BackupDetectedModal.hide();
+						BackupDetectedModal.hide(result.isOk());
+
+						if (result.isOk())
+							components.Toast.success("Successfully restored backup!");
+						else
+							components.Toast.error("Failed to restore backup!", result.error);
 					});
 					break;
 				}
@@ -121,9 +121,9 @@ export const BackupDetectedModal = (() => {
 			root = createRoot(container);
 			root.render(<InternalBackupDetectedModal timestamp={timestamp} />);
 		},
-		hide() {
+		hide(setTimestamp = true) {
 			if (!root || !container || !lastTimestamp) return;
-			kv.lastBackupTimestamp.set(lastTimestamp);
+			if (setTimestamp) kv.lastBackupTimestamp.set(lastTimestamp);
 			root.unmount();
 			root = undefined;
 			container.remove();
@@ -153,7 +153,7 @@ export const BackupDetectedModal = (() => {
 		},
 	} satisfies {
 		show: (timestamp: number) => void;
-		hide: () => void;
+		hide: (setTimestamp?: boolean) => void;
 		performAutoBackup: () => Promise<void>;
 	};
 })();

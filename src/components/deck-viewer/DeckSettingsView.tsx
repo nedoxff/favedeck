@@ -2,6 +2,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { forwardRef } from "react";
 import { kv } from "@/src/features/storage/kv";
 import {
+	DEFAULT_SETTINGS,
 	type FavedeckSettings,
 	setSetting,
 } from "@/src/features/storage/settings";
@@ -175,7 +176,10 @@ export default function DeckSettingsView() {
 													FavedeckSettings["autoBackupPreference"],
 													string
 												>
-											)[settings.autoBackupPreference]
+											)[
+												settings.autoBackupPreference ??
+													DEFAULT_SETTINGS.autoBackupPreference
+											]
 										}
 									</p>
 									<ChevronDownIcon width={24} height={24} />
@@ -231,11 +235,16 @@ export default function DeckSettingsView() {
 					>
 						Trigger auto-backup
 					</button>
-					{lastBackupTimestamp && (
-						<p className="opacity-75">
-							Last backup: <b>{formatTimeAgo(new Date(lastBackupTimestamp))}</b>
-						</p>
-					)}
+					<p className="opacity-75">
+						{lastBackupTimestamp ? (
+							<>
+								Last backup:{" "}
+								<b>{formatTimeAgo(new Date(lastBackupTimestamp))}</b>
+							</>
+						) : (
+							<>No backup was ever performed</>
+						)}
+					</p>
 				</div>
 			</div>
 		)

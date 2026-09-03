@@ -1,19 +1,21 @@
+import type { ReactNode } from "react";
 import { cn } from "@/src/helpers/cn";
 import { TwitterModal } from "./TwitterModal";
 
 export default function ConfirmModal(props: {
-	title: string;
-	description: string;
+	title: ReactNode;
+	description: ReactNode;
 	onConfirmed?: () => void;
 	onCancelled?: () => void;
-	confirmText?: string;
-	cancelText?: string;
+	confirmText?: ReactNode;
+	cancelText?: ReactNode;
 	confirmIsDangerous?: boolean;
+	className?: string;
 }) {
 	return (
-		<TwitterModal onClose={props.onCancelled}>
+		<TwitterModal className={props.className} onClose={props.onCancelled}>
 			<p className="font-bold text-2xl">{props.title}</p>
-			<p className="opacity-75">{props.description}</p>
+			<p className="opacity-75 text-justify">{props.description}</p>
 			<button
 				type="button"
 				onClick={props.onConfirmed}

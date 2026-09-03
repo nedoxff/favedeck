@@ -69,7 +69,7 @@ const initializeMessageListener = () =>
 
 				const changesSinceLastBackup =
 					(await kv.changesSinceLastBackup.get()) ?? false;
-				const factualDifference = timestamp - lastTimestamp;
+				const factualDifference = Date.now() - lastTimestamp;
 				const requiredDifference =
 					1000 *
 					60 *
