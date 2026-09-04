@@ -386,7 +386,7 @@ const SortableTweetWrapper = memo(function ScrollableTweetWrapper(props: {
 			{/* TODO: man this is so ugly */}
 			<IconButton
 				ref={handleRef}
-				className="absolute top left-5.5 top-16 z-1 opacity-75 group hover:opacity-100 hover:bg-fd-primary/25! transition-all"
+				className="absolute top left-5 bottom-2 z-1 opacity-75 group hover:opacity-100 hover:bg-fd-primary/25! transition-all"
 			>
 				<DragVerticalIcon
 					className="group-hover:text-fd-primary!"
