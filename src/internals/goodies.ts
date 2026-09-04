@@ -136,9 +136,15 @@ export const getRootNodeFromTweetElement = memoize((el: HTMLElement) =>
 	}),
 );
 
-export const pauseTweetVideo = (video: HTMLVideoElement) => {
+export const pauseTweetVideo = (video: HTMLElement) => {
+	const elementWithFiber = findParentNode(
+		video,
+		(el) => bippy.getFiberFromHostInstance(el) !== null,
+	);
+	if (!elementWithFiber)
+		return Result.err("couldn't get host fiber from video element's parents");
+
 	const fiber = bippy.getFiberFromHostInstance(video);
-	if (!fiber) return Result.err("couldn't get host fiber from video element");
 	const playerFiber = bippy.traverseFiber(
 		fiber,
 		(f) => {

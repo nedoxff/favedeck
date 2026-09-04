@@ -11,6 +11,7 @@ import type { DatabaseDeck } from "@/src/features/storage/definition";
 import { isTweetInDeck } from "@/src/features/storage/tweets";
 import { waitForSelector } from "@/src/helpers/observer";
 import { pauseTweetVideo } from "@/src/internals/goodies";
+import { matchers } from "@/src/internals/matchers";
 import { webpack } from "@/src/internals/webpack";
 import BackIcon from "~icons/mdi/arrow-left";
 import BackupIcon from "~icons/mdi/backup-restore";
@@ -398,10 +399,12 @@ export const DeckViewer: {
 				// pause all videos playing in the timeline just in case
 				queueMicrotask(() => {
 					if (!originalContainer) return;
-					for (const video of originalContainer.querySelectorAll("video")) {
-						const result = pauseTweetVideo(video);
+					for (const element of originalContainer.querySelectorAll(
+						matchers.videoComponent.querySelector,
+					)) {
+						const result = pauseTweetVideo(element as HTMLElement);
 						if (result.isErr())
-							console.warn("failed to pause video", video, result.error);
+							console.warn("failed to pause video", element, result.error);
 					}
 				});
 			},

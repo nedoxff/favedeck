@@ -35,8 +35,8 @@ Without it, favedeck can't render any content."
 			case "redux":
 				return (
 					<SimpleTooltip
-						content="The Redux component is responsible for adding tweet entities & talking to the Twitter API (unbookmarking/fetching timelines).
-Without it, decks can't be viewed, and the &quot;Sort Bookmarks&quot; modal cannot be used."
+						content="The Redux component is responsible for adding tweet entities & talking to the Twitter API (unbookmarking/unliking/fetching timelines).
+Without it, decks can't be viewed, and the &quot;Sort Bookmarks/Likes&quot; modal cannot be used."
 					>
 						Redux
 					</SimpleTooltip>
@@ -45,7 +45,7 @@ Without it, decks can't be viewed, and the &quot;Sort Bookmarks&quot; modal cann
 				return (
 					<SimpleTooltip
 						content="The React component that renders tweets. Requires the Fiber Observer to be found.
-Without it, decks can't be viewed, and the &quot;Sort Bookmarks&quot; modal cannot be used."
+Without it, decks can't be viewed, and the &quot;Sort Bookmarks/Likes&quot; modal cannot be used."
 					>
 						Tweet Component
 					</SimpleTooltip>
@@ -54,7 +54,7 @@ Without it, decks can't be viewed, and the &quot;Sort Bookmarks&quot; modal cann
 				return (
 					<SimpleTooltip
 						content="The Message Listener syncs the popup with the scripts running inside the webpage.
-It also updates the icon of the extension to match your themes's primary color."
+It also updates the icon of the extension to match your themes's primary color and handles auto-backups."
 					>
 						Message Listener
 					</SimpleTooltip>

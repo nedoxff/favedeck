@@ -23,6 +23,10 @@ export const matchers = {
 		querySelector: "div[data-testid=primaryColumn]",
 		matcher: (el: HTMLElement) => el.dataset.testid === "primaryColumn",
 	},
+	videoComponent: {
+		querySelector: "div[data-testid=videoComponent]",
+		matcher: (el: HTMLElement) => el.dataset.testid === "videoComponent",
+	},
 };
 
 export const findParentNode = (
