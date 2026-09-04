@@ -1,5 +1,6 @@
 import { Result } from "better-result";
 import sanitize from "sanitize-filename";
+import streamSaver from "streamsaver";
 import { messenger } from "@/src/helpers/messaging/extension";
 import { sendToContent } from "@/src/helpers/messaging/utils";
 import { type DeckDownloaderArgumentList, download } from "./downloader";
@@ -13,7 +14,6 @@ export default (() => {
 	let _abortController: AbortController;
 	let _state: DeckDownloaderState;
 	let _continuousUpdates: boolean;
-	let streamSaver: typeof import("streamsaver") | undefined;
 
 	const updateState: DeckDownloaderArgumentList["updateState"] = async (
 		transformer,
@@ -33,7 +33,6 @@ export default (() => {
 		abortDownload: async () => _abortController.abort(),
 		beginDownload: (configuration) =>
 			Result.tryPromise(async () => {
-				if (!streamSaver) streamSaver = await import("streamsaver");
 				_abortController = new AbortController();
 				_state = {
 					state: "processing",

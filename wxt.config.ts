@@ -26,9 +26,6 @@ export default defineConfig({
 		},
 		build: {
 			sourcemap: true,
-			rollupOptions: {
-				external: ["streamsaver"],
-			},
 		},
 	}),
 	manifest: {
@@ -72,6 +69,10 @@ const twitterReactHijacker = async (): Promise<Plugin> => {
 			__dirname,
 			"src/internals/proxies/react-jsx-runtime-proxy.ts",
 		),
+		streamsaver: path.resolve(
+			__dirname,
+			"src/internals/proxies/streamsaver-mock.ts",
+		),
 	};
 	const SOURCES: Set<string> = new Set([
 		"react",
@@ -81,11 +82,17 @@ const twitterReactHijacker = async (): Promise<Plugin> => {
 		"react/jsx-dev-runtime",
 	]);
 	let ignore: boolean;
+	let mockStreamsaver: boolean;
 
 	return {
 		name: "twitter-react-hijacker",
 		enforce: "pre",
 		configResolved(config) {
+			// this is really ugly but i don't want to patch streamsaver either
+			mockStreamsaver =
+				config.define?.["import.meta.env.FIREFOX"] === "false" &&
+				typeof config.build.lib !== "boolean" &&
+				config.build.lib.name === "background";
 			ignore =
 				typeof config.build.lib !== "boolean" &&
 				config.build.lib.name === "_content"
@@ -95,7 +102,11 @@ const twitterReactHijacker = async (): Promise<Plugin> => {
 						) || config.command === "serve";
 		},
 		async resolveId(source, importer) {
-			if (!SOURCES.has(source) || !importer || ignore) return null;
+			if (
+				!(SOURCES.has(source) && importer && !ignore) &&
+				!(source === "streamsaver" && mockStreamsaver)
+			)
+				return null;
 			return resolveMap[source];
 		},
 	};
